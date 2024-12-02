@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.0;
+pragma solidity ^0.8.0;
 
 import {Ownable, Context} from "openzeppelin-contracts/access/Ownable.sol";
 import {EVCUtil} from "evc/utils/EVCUtil.sol";

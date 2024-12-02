@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.0;
+pragma solidity ^0.8.0;
 
 import {MaglevBase} from "./MaglevBase.sol";
 
@@ -24,7 +24,7 @@ contract MaglevConstantSum is MaglevBase {
         priceB = params.priceB;
     }
 
-    function k(uint256 r0, uint256 r1) internal view returns (uint256) {
+    function k(uint256 r0, uint256 r1) public view returns (uint256) {
         return (r0 * priceA) + (r1 * priceB);
     }
 

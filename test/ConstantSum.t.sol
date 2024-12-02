@@ -3,15 +3,14 @@
 pragma solidity ^0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
-import {EVaultTestBase, TestERC20} from "evk-test/unit/evault/EVaultTestBase.t.sol";
-import {IEVault, IERC20, IBorrowing, IERC4626} from "evk/EVault/IEVault.sol";
-import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
 
-import {MaglevBase} from "../src/MaglevBase.sol";
-import {MaglevConstantSum} from "../src/MaglevConstantSum.sol";
+import {EVaultTestBase, TestERC20} from "evk-test/unit/evault/EVaultTestBase.t.sol";
+import {IEVault} from "evk/EVault/IEVault.sol";
+
+import {MaglevBase, MaglevConstantSum as Maglev} from "../src/MaglevConstantSum.sol";
 
 contract ConstantSumTest is EVaultTestBase {
-    MaglevConstantSum public maglev;
+    Maglev public maglev;
 
     address public depositor = makeAddr("depositor");
     address public owner = makeAddr("owner");
@@ -47,9 +46,9 @@ contract ConstantSumTest is EVaultTestBase {
         // Setup Maglev
 
         vm.prank(owner);
-        maglev = new MaglevConstantSum(
+        maglev = new Maglev(
             MaglevBase.BaseParams({evc: address(evc), vault0: address(eTST), vault1: address(eTST2), myAccount: holder}),
-            MaglevConstantSum.ConstantSumParams({fee: 0, priceA: 1, priceB: 1})
+            Maglev.ConstantSumParams({fee: 0, priceA: 1, priceB: 1})
         );
 
         vm.prank(holder);
@@ -122,7 +121,7 @@ contract ConstantSumTest is EVaultTestBase {
 
     function test_quoteGivenIn() public {
         vm.prank(owner);
-        maglev.setConstantSumParams(MaglevConstantSum.ConstantSumParams({fee: 0.003e18, priceA: 1, priceB: 1}));
+        maglev.setConstantSumParams(Maglev.ConstantSumParams({fee: 0.003e18, priceA: 1, priceB: 1}));
 
         assetTST.mint(address(this), 100e18);
         uint256 q = maglev.quoteGivenIn(1e18, true);
@@ -135,7 +134,7 @@ contract ConstantSumTest is EVaultTestBase {
 
     function test_quoteGivenOut() public {
         vm.prank(owner);
-        maglev.setConstantSumParams(MaglevConstantSum.ConstantSumParams({fee: 0.003e18, priceA: 1, priceB: 1}));
+        maglev.setConstantSumParams(Maglev.ConstantSumParams({fee: 0.003e18, priceA: 1, priceB: 1}));
 
         assetTST.mint(address(this), 100e18);
 
@@ -152,7 +151,7 @@ contract ConstantSumTest is EVaultTestBase {
         amount1 = bound(amount1, 1e18, 25e18);
 
         vm.prank(owner);
-        maglev.setConstantSumParams(MaglevConstantSum.ConstantSumParams({fee: uint64(fee), priceA: 1, priceB: 1}));
+        maglev.setConstantSumParams(Maglev.ConstantSumParams({fee: uint64(fee), priceA: 1, priceB: 1}));
 
         assetTST.mint(address(this), 100e18);
         assetTST2.mint(address(this), 100e18);
