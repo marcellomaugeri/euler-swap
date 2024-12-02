@@ -48,7 +48,8 @@ contract ConstantSumTest is EVaultTestBase {
 
         vm.prank(owner);
         maglev = new MaglevConstantSum(
-            MaglevBase.Params({evc: address(evc), vault0: address(eTST), vault1: address(eTST2), myAccount: holder}), 0
+            MaglevBase.BaseParams({evc: address(evc), vault0: address(eTST), vault1: address(eTST2), myAccount: holder}),
+            MaglevConstantSum.ConstantSumParams({fee: 0, priceA: 1, priceB: 1})
         );
 
         vm.prank(holder);
@@ -121,7 +122,7 @@ contract ConstantSumTest is EVaultTestBase {
 
     function test_quoteGivenIn() public {
         vm.prank(owner);
-        maglev.setFee(0.003e18);
+        maglev.setConstantSumParams(MaglevConstantSum.ConstantSumParams({fee: 0.003e18, priceA: 1, priceB: 1}));
 
         assetTST.mint(address(this), 100e18);
         uint256 q = maglev.quoteGivenIn(1e18, true);
@@ -134,7 +135,7 @@ contract ConstantSumTest is EVaultTestBase {
 
     function test_quoteGivenOut() public {
         vm.prank(owner);
-        maglev.setFee(0.003e18);
+        maglev.setConstantSumParams(MaglevConstantSum.ConstantSumParams({fee: 0.003e18, priceA: 1, priceB: 1}));
 
         assetTST.mint(address(this), 100e18);
 
@@ -151,7 +152,7 @@ contract ConstantSumTest is EVaultTestBase {
         amount1 = bound(amount1, 1e18, 25e18);
 
         vm.prank(owner);
-        maglev.setFee(fee);
+        maglev.setConstantSumParams(MaglevConstantSum.ConstantSumParams({fee: uint64(fee), priceA: 1, priceB: 1}));
 
         assetTST.mint(address(this), 100e18);
         assetTST2.mint(address(this), 100e18);

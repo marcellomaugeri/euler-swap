@@ -29,14 +29,14 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         return EVCUtil._msgSender();
     }
 
-    struct Params {
+    struct BaseParams {
         address evc;
         address vault0;
         address vault1;
         address myAccount;
     }
 
-    constructor(Params memory params) EVCUtil(params.evc) Ownable(msg.sender) {
+    constructor(BaseParams memory params) EVCUtil(params.evc) Ownable(msg.sender) {
         vault0 = params.vault0;
         vault1 = params.vault1;
         asset0 = IEVault(vault0).asset();

@@ -3,20 +3,29 @@ pragma solidity >=0.8.0;
 
 import {MaglevBase} from "./MaglevBase.sol";
 
-/// @dev Simple constant-sum curve. FIXME: Assumes tokens are 1:1 pegged and have same decimals.
 contract MaglevConstantSum is MaglevBase {
-    uint256 fee;
+    uint64 fee;
+    uint96 priceA;
+    uint96 priceB;
 
-    constructor(MaglevBase.Params memory params, uint256 _fee) MaglevBase(params) {
-        fee = _fee;
+    struct ConstantSumParams {
+        uint64 fee;
+        uint96 priceA;
+        uint96 priceB;
     }
 
-    function setFee(uint256 newFee) external onlyOwner {
-        fee = newFee;
+    constructor(BaseParams memory baseParams, ConstantSumParams memory params) MaglevBase(baseParams) {
+        setConstantSumParams(params);
     }
 
-    function k(uint256 r0, uint256 r1) internal pure returns (uint256) {
-        return r0 + r1;
+    function setConstantSumParams(ConstantSumParams memory params) public onlyOwner {
+        fee = params.fee;
+        priceA = params.priceA;
+        priceB = params.priceB;
+    }
+
+    function k(uint256 r0, uint256 r1) internal view returns (uint256) {
+        return (r0 * priceA) + (r1 * priceB);
     }
 
     function verify(
