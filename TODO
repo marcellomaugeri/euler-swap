@@ -1,0 +1,26 @@
+* quoting should consider reserves, utilisation
+* structured errors
+* better error messages when exceeding virtual reserves
+* pause guardian
+? re-sync reserves: if the vault balances change externally (ie holder repays, interest earned/charged), then the virtual reserves will get out-of-sync with real world
+? alternate curves
+? registry contract
+? transparent proxy so AMM address can stay constant
+
+docs
+  high-level concept
+  how to setup and operate a maglev
+  interest costs
+  low-level detail of how system works for auditors
+  information for aggregators
+    how to maintain quotes off-chain, including tracking cash from VaultStatus logs of underlying vaults
+
+tests
+  prices
+  alternate decimals
+  choosing virtual reserves to stay below target LTVs
+  uniswap callback, flash swaps
+  hitting reserve/utilisation limits
+  changing reserves
+  changing fees/prices
+  onlyOwner methods can't be called by others
