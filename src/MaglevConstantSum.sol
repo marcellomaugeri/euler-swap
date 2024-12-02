@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.0;
 
-import {BaseAMMLev} from "./BaseAMMLev.sol";
+import {MaglevBase} from "./MaglevBase.sol";
 
 /// @dev Simple constant-sum curve. FIXME: Assumes tokens are 1:1 pegged and have same decimals.
-contract AMMLevConstantSum is BaseAMMLev {
+contract MaglevConstantSum is MaglevBase {
     uint256 fee;
 
-    constructor(BaseAMMLev.Params memory params, uint256 _fee) BaseAMMLev(params) {
+    constructor(MaglevBase.Params memory params, uint256 _fee) MaglevBase(params) {
         fee = _fee;
     }
 

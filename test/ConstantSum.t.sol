@@ -7,11 +7,11 @@ import {EVaultTestBase, TestERC20} from "evk-test/unit/evault/EVaultTestBase.t.s
 import {IEVault, IERC20, IBorrowing, IERC4626} from "evk/EVault/IEVault.sol";
 import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
 
-import {BaseAMMLev} from "../../src/AMMLev/BaseAMMLev.sol";
-import {AMMLevConstantSum as AMMLev} from "../../src/AMMLev/AMMLevConstantSum.sol";
+import {MaglevBase} from "../src/MaglevBase.sol";
+import {MaglevConstantSum} from "../src/MaglevConstantSum.sol";
 
-contract AMMLevTest is EVaultTestBase {
-    AMMLev public ammlev;
+contract ConstantSumTest is EVaultTestBase {
+    MaglevConstantSum public maglev;
 
     address public depositor = makeAddr("depositor");
     address public owner = makeAddr("owner");
@@ -44,18 +44,18 @@ contract AMMLevTest is EVaultTestBase {
         _mintAndDeposit(holder, eTST, 10e18);
         _mintAndDeposit(holder, eTST2, 10e18);
 
-        // Setup AMMLev
+        // Setup Maglev
 
         vm.prank(owner);
-        ammlev = new AMMLev(
-            BaseAMMLev.Params({evc: address(evc), vault0: address(eTST), vault1: address(eTST2), myAccount: holder}), 0
+        maglev = new MaglevConstantSum(
+            MaglevBase.Params({evc: address(evc), vault0: address(eTST), vault1: address(eTST2), myAccount: holder}), 0
         );
 
         vm.prank(holder);
-        evc.setAccountOperator(holder, address(ammlev), true);
+        evc.setAccountOperator(holder, address(maglev), true);
 
         vm.prank(owner);
-        ammlev.configure(100e18, 100e18);
+        maglev.configure(100e18, 100e18);
     }
 
     function _mintAndDeposit(address who, IEVault vault, uint256 amount) internal {
@@ -75,19 +75,19 @@ contract AMMLevTest is EVaultTestBase {
 
         logState();
 
-        assetTST.transfer(address(ammlev), amount);
-        ammlev.swap(0, amount, address(this), "");
+        assetTST.transfer(address(maglev), amount);
+        maglev.swap(0, amount, address(this), "");
         assertEq(assetTST2.balanceOf(address(this)), amount);
 
         logState();
 
         uint256 amount2 = 50e18;
         assetTST2.mint(address(this), amount2);
-        assetTST2.transfer(address(ammlev), amount2);
-        ammlev.swap(amount2, 0, address(this), "");
+        assetTST2.transfer(address(maglev), amount2);
+        maglev.swap(amount2, 0, address(this), "");
 
-        assetTST2.transfer(address(ammlev), 1e18);
-        ammlev.swap(1e18, 0, address(this), "");
+        assetTST2.transfer(address(maglev), 1e18);
+        maglev.swap(1e18, 0, address(this), "");
 
         logState();
     }
@@ -97,14 +97,14 @@ contract AMMLevTest is EVaultTestBase {
         amount2 = bound(amount2, 1e18, 50e18);
 
         assetTST.mint(address(this), amount1);
-        assetTST.transfer(address(ammlev), amount1);
-        ammlev.swap(0, amount1, address(this), "");
+        assetTST.transfer(address(maglev), amount1);
+        maglev.swap(0, amount1, address(this), "");
         assertEq(assetTST.balanceOf(address(this)), 0);
         assertEq(assetTST2.balanceOf(address(this)), amount1);
 
         assetTST2.mint(address(this), amount2);
-        assetTST2.transfer(address(ammlev), amount2);
-        ammlev.swap(amount2, 0, address(this), "");
+        assetTST2.transfer(address(maglev), amount2);
+        maglev.swap(amount2, 0, address(this), "");
         assertEq(assetTST.balanceOf(address(this)), amount2);
         assertEq(assetTST2.balanceOf(address(this)), amount1);
     }
@@ -121,28 +121,28 @@ contract AMMLevTest is EVaultTestBase {
 
     function test_quoteGivenIn() public {
         vm.prank(owner);
-        ammlev.setFee(0.003e18);
+        maglev.setFee(0.003e18);
 
         assetTST.mint(address(this), 100e18);
-        uint256 q = ammlev.quoteGivenIn(1e18, true);
+        uint256 q = maglev.quoteGivenIn(1e18, true);
         assertLt(q, 1e18);
-        assetTST.transfer(address(ammlev), 1e18);
+        assetTST.transfer(address(maglev), 1e18);
 
-        ammlev.swap(0, q, recipient, "");
+        maglev.swap(0, q, recipient, "");
         assertEq(assetTST2.balanceOf(recipient), q);
     }
 
     function test_quoteGivenOut() public {
         vm.prank(owner);
-        ammlev.setFee(0.003e18);
+        maglev.setFee(0.003e18);
 
         assetTST.mint(address(this), 100e18);
 
-        uint256 q = ammlev.quoteGivenOut(1e18, true);
+        uint256 q = maglev.quoteGivenOut(1e18, true);
         assertGt(q, 1e18);
-        assetTST.transfer(address(ammlev), q);
+        assetTST.transfer(address(maglev), q);
 
-        ammlev.swap(0, 1e18, recipient, "");
+        maglev.swap(0, 1e18, recipient, "");
         assertEq(assetTST2.balanceOf(recipient), 1e18);
     }
 
@@ -151,7 +151,7 @@ contract AMMLevTest is EVaultTestBase {
         amount1 = bound(amount1, 1e18, 25e18);
 
         vm.prank(owner);
-        ammlev.setFee(fee);
+        maglev.setFee(fee);
 
         assetTST.mint(address(this), 100e18);
         assetTST2.mint(address(this), 100e18);
@@ -176,13 +176,13 @@ contract AMMLevTest is EVaultTestBase {
             a2 = 0;
         }
 
-        tt.transfer(address(ammlev), needed - 2);
+        tt.transfer(address(maglev), needed - 2);
 
         vm.expectRevert(bytes("k not satisfied"));
-        ammlev.swap(a1, a2, recipient, "");
+        maglev.swap(a1, a2, recipient, "");
 
-        tt.transfer(address(ammlev), 2);
-        ammlev.swap(a1, a2, recipient, "");
+        tt.transfer(address(maglev), 2);
+        maglev.swap(a1, a2, recipient, "");
 
         assertEq(tt2.balanceOf(recipient), amount1);
     }
