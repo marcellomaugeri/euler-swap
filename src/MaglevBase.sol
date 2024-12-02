@@ -25,7 +25,7 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         locked = 0;
     }
 
-    function _msgSender() internal view override (Context, EVCUtil) returns (address) {
+    function _msgSender() internal view override(Context, EVCUtil) returns (address) {
         return EVCUtil._msgSender();
     }
 
