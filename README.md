@@ -20,6 +20,52 @@ Since the level of acceptable borrowing risk may not be the same for every user,
 
 Maglev is contract designed to be used as an [EVC operator](https://evc.wtf/docs/whitepaper/#operators). This means that a user, known as a *holder*, does not give up control over their funds to a smart contract, but instead retains it in their wallet. The holder can be any compatible address, including standard multisig wallets or even a simple EOA.
 
+### Usage
+
+The following are the high-level steps required to use Maglev:
+
+* Deposit funds into one or both of the vaults
+* Deploy the desired Maglev contract, choosing parameters such as the two vaults, and the desired `fee`
+* Calculate the desired [virtual reserves](#virtual-reserves) and set these values by invoking `setVirtualReserves()`
+* Install the Maglev contract as an operator for your account
+* Invoke the `configure()` function on the Maglev contract
+
+At this point, anyone can invoke `swap()` on the Maglev contract, and this will perform borrowing and transferring activity between the two vaults.
+
+### Virtual Reserves
+
+The initial deposits in the vaults represent the initial investment, and are swapped back and forth in response to swapping activity. In a conventional AMM such as Uniswap, these balance are called *reserves*. However, if swapping was constrained to these assets alone, then this would imply a hard limit on the size of swaps that can be serviced. To increase the effective funds, Maglev AMMs are configured with *virtual reserves*. These are typically larger than the size of the conventional reserves, which signifies that not only can all the assets be swapped from one vault to another, but even more assets can be borrowed on the Maglev's account.
+
+Virtual reserves control the maximum debt that the Maglev contract will attempt to acquire on each of its two vaults. Each vault can be configured independently.
+
+For example, if the initial investment has a NAV of $1000, and virtual reserves are configured at $5000 for each vault, then the maximum LTV loan that the AMM will support will be `5000/6000 = 0.8333`. In order to leave a safety buffer, it is recommended to select a maximum LTV that is below the borrowing LTV of the vault.
+
+Note that it depends on the [curve] if the maximum LTV can actually be achieved. A constant product will only approach these reserve levels asymptotically, since each unit will get more and more expensive. However, with constant sum, this LTV can be achieved directly.
+
+### Desynchronised Virtual Reserves
+
+The Maglev contract tracks what it believes the reserves to be by caching their values in storage. These reserves are updated on each swap. However, since the balance is not actually held by the Maglev contract (it is simply an operator), the actual underlying balances may get out of sync. This can happen gradually as interest is accrued, or suddenly if the holder moves funds or the position is liquidated.
+
+When this occurs, the `syncVirtualReserves()` should be invoked. This determines the actual balances (and debts) of the holder, and adjusts them by the configured virtual reserve levels.
+
+
+
+## Curves
+
+### Constant Sum
+
+This "curve" simply adds the values of the two reserves together and ensures that after a swap this sum has not decreased. This curve is mostly suitable for assets that are pegged to the same value, such as stable/stable pairs.
+
+This curve supports a price fraction so that the two tokens can have different relative values, which can be useful if the peg is other than 1:1, or if the tokens have differing decimals.
+
+In this curve, the entire virtual reserves can be consumed, and since each marginal unit of the swap has the same price, there is no direct incentive to deleverage the position. However, for the same reason this does allow fixed fees for swaps of any allowed size (fixed price impact).
+
+### Constant Product
+
+This is the traditional Uniswap2 curve that preserves the product of the two reserves. The larger a swap, the higher the price impact. Furthermore, the more profitable it is to arbitrage a disbalanced pool back to its wider market price.
+
+
+
 ## License
 
 (c) 2024 Euler Labs Ltd.
