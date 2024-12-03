@@ -36,13 +36,13 @@ contract ConstantSumTest is MaglevTestBase {
         uint256 amount = 25e18;
         assetTST.mint(address(this), amount);
 
-        logState();
+        logState(address(maglev));
 
         assetTST.transfer(address(maglev), amount);
         maglev.swap(0, amount, address(this), "");
         assertEq(assetTST2.balanceOf(address(this)), amount);
 
-        logState();
+        logState(address(maglev));
 
         uint256 amount2 = 50e18;
         assetTST2.mint(address(this), amount2);
@@ -52,7 +52,7 @@ contract ConstantSumTest is MaglevTestBase {
         assetTST2.transfer(address(maglev), 1e18);
         maglev.swap(1e18, 0, address(this), "");
 
-        logState();
+        logState(address(maglev));
     }
 
     function test_reserveLimit() public {
@@ -112,18 +112,6 @@ contract ConstantSumTest is MaglevTestBase {
         maglev.swap(amount2, 0, address(this), "");
         assertEq(assetTST.balanceOf(address(this)), amount2);
         assertEq(assetTST2.balanceOf(address(this)), amount1);
-    }
-
-    function logState() internal view {
-        console.log("--------------------");
-        console.log("Account States:");
-        console.log("HOLDER");
-        console.log("  eTST Vault assets:  ", eTST.convertToAssets(eTST.balanceOf(holder)));
-        console.log("  eTST Vault debt:    ", eTST.debtOf(holder));
-        console.log("  eTST2 Vault assets: ", eTST2.convertToAssets(eTST2.balanceOf(holder)));
-        console.log("  eTST2 Vault debt:   ", eTST2.debtOf(holder));
-        console.log("  reserve0:           ", maglev.reserve0());
-        console.log("  reserve1:           ", maglev.reserve1());
     }
 
     function test_quoteExactInput() public {

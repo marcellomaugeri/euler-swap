@@ -56,4 +56,16 @@ contract MaglevTestBase is EVaultTestBase {
         vm.prank(who);
         vault.deposit(amount, who);
     }
+
+    function logState(address ml) internal view {
+        console.log("--------------------");
+        console.log("Account States:");
+        console.log("HOLDER");
+        console.log("  eTST Vault assets:  ", eTST.convertToAssets(eTST.balanceOf(holder)));
+        console.log("  eTST Vault debt:    ", eTST.debtOf(holder));
+        console.log("  eTST2 Vault assets: ", eTST2.convertToAssets(eTST2.balanceOf(holder)));
+        console.log("  eTST2 Vault debt:   ", eTST2.debtOf(holder));
+        console.log("  reserve0:           ", MaglevBase(ml).reserve0());
+        console.log("  reserve1:           ", MaglevBase(ml).reserve1());
+    }
 }
