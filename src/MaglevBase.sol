@@ -64,13 +64,17 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         IEVC(evc).enableCollateral(myAccount, vault1);
     }
 
-    /// @dev Call whenever NAV changes significantly
     function setVirtualReserves(uint112 vr0, uint112 vr1) external onlyOwner {
         virtualReserve0 = vr0;
         virtualReserve1 = vr1;
 
-        reserve0 = adjustReserve(vr0, vault0);
-        reserve1 = adjustReserve(vr1, vault1);
+        syncVirtualReserves();
+    }
+
+    /// @dev Call whenever underlying balances change externally
+    function syncVirtualReserves() public onlyOwner {
+        reserve0 = adjustReserve(virtualReserve0, vault0);
+        reserve1 = adjustReserve(virtualReserve1, vault1);
     }
 
     // Swapper interface
