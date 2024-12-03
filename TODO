@@ -7,12 +7,8 @@
 ? transparent proxy so AMM address can stay constant
 
 docs
-  high-level concept
-  how to setup and operate a maglev
-    choosing virtual reserves to stay below target LTVs
-    when to update virtual reserves
-  interest costs
   low-level detail of how system works for auditors
+  how to add a curve
   information for aggregators
     how to maintain quotes off-chain, including tracking cash from VaultStatus logs of underlying vaults
 
