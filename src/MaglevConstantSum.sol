@@ -30,12 +30,12 @@ contract MaglevConstantSum is MaglevBase {
         return (r0 * priceA) + (r1 * priceB);
     }
 
-    function verify(
-        uint256 amount0In,
-        uint256 amount1In,
-        uint256 newReserve0,
-        uint256 newReserve1
-    ) internal view virtual override {
+    function verify(uint256 amount0In, uint256 amount1In, uint256 newReserve0, uint256 newReserve1)
+        internal
+        view
+        virtual
+        override
+    {
         uint256 kBefore = k(reserve0, reserve1);
         uint256 kAfter = k(newReserve0 - (amount0In * fee / 1e18), newReserve1 - (amount1In * fee / 1e18));
         require(kAfter >= kBefore, KNotSatisfied());

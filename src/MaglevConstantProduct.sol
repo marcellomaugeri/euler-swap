@@ -24,12 +24,12 @@ contract MaglevConstantProduct is MaglevBase {
         return r0 * r1;
     }
 
-    function verify(
-        uint256 amount0In,
-        uint256 amount1In,
-        uint256 newReserve0,
-        uint256 newReserve1
-    ) internal view virtual override {
+    function verify(uint256 amount0In, uint256 amount1In, uint256 newReserve0, uint256 newReserve1)
+        internal
+        view
+        virtual
+        override
+    {
         uint256 kBefore = k(reserve0, reserve1);
         uint256 kAfter = k(newReserve0 - (amount0In * fee / 1e18), newReserve1 - (amount1In * fee / 1e18));
         require(kAfter >= kBefore, KNotSatisfied());
@@ -37,7 +37,13 @@ contract MaglevConstantProduct is MaglevBase {
 
     // FIXME: incorporate priceA and priceB
 
-    function computeQuote(uint256 amount, bool exactIn, bool asset0IsInput) internal view virtual override returns (uint256) {
+    function computeQuote(uint256 amount, bool exactIn, bool asset0IsInput)
+        internal
+        view
+        virtual
+        override
+        returns (uint256)
+    {
         uint256 reserveIn = asset0IsInput ? reserve0 : reserve1;
         uint256 reserveOut = asset0IsInput ? reserve1 : reserve0;
 

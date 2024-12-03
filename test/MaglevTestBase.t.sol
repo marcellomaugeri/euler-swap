@@ -15,7 +15,7 @@ contract MaglevTestBase is EVaultTestBase {
     address public holder = makeAddr("holder");
     address public recipient = makeAddr("recipient");
 
-    function setUp() public override virtual {
+    function setUp() public virtual override {
         super.setUp();
 
         // Vault config
@@ -43,7 +43,8 @@ contract MaglevTestBase is EVaultTestBase {
     }
 
     function _getMaglevBaseParams() internal view returns (MaglevBase.BaseParams memory) {
-        return MaglevBase.BaseParams({evc: address(evc), vault0: address(eTST), vault1: address(eTST2), myAccount: holder});
+        return
+            MaglevBase.BaseParams({evc: address(evc), vault0: address(eTST), vault1: address(eTST2), myAccount: holder});
     }
 
     function _mintAndDeposit(address who, IEVault vault, uint256 amount) internal {

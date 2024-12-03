@@ -197,12 +197,10 @@ abstract contract MaglevBase is EVCUtil, Ownable {
 
     // To be implemented by sub-class
 
-    function verify(
-        uint256 amount0In,
-        uint256 amount1In,
-        uint256 newReserve0,
-        uint256 newReserve1
-    ) internal view virtual;
+    function verify(uint256 amount0In, uint256 amount1In, uint256 newReserve0, uint256 newReserve1)
+        internal
+        view
+        virtual;
 
     function computeQuote(uint256 amount, bool exactIn, bool asset0IsInput) internal view virtual returns (uint256);
 }

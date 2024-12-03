@@ -13,14 +13,11 @@ import {MaglevConstantProduct as Maglev} from "../src/MaglevConstantProduct.sol"
 contract ConstantProductTest is MaglevTestBase {
     Maglev public maglev;
 
-    function setUp() public override virtual {
+    function setUp() public virtual override {
         super.setUp();
 
         vm.prank(owner);
-        maglev = new Maglev(
-            _getMaglevBaseParams(),
-            Maglev.ConstantProductParams({fee: 0})
-        );
+        maglev = new Maglev(_getMaglevBaseParams(), Maglev.ConstantProductParams({fee: 0}));
 
         vm.prank(holder);
         evc.setAccountOperator(holder, address(maglev), true);
@@ -75,6 +72,7 @@ contract ConstantProductTest is MaglevTestBase {
 
         t2.transfer(address(maglev), q);
         if (dir) maglev.swap(amount - 2, 0, address(this), ""); // - 2 due to rounding
+
         else maglev.swap(0, amount - 2, address(this), "");
 
         uint256 q2 = maglev.quoteExactInput(address(t1), address(t2), amount);

@@ -13,14 +13,11 @@ import {MaglevConstantSum as Maglev} from "../src/MaglevConstantSum.sol";
 contract ConstantSumTest is MaglevTestBase {
     Maglev public maglev;
 
-    function setUp() public override virtual {
+    function setUp() public virtual override {
         super.setUp();
 
         vm.prank(owner);
-        maglev = new Maglev(
-            _getMaglevBaseParams(),
-            Maglev.ConstantSumParams({fee: 0, priceA: 1, priceB: 1})
-        );
+        maglev = new Maglev(_getMaglevBaseParams(), Maglev.ConstantSumParams({fee: 0, priceA: 1, priceB: 1}));
 
         vm.prank(holder);
         evc.setAccountOperator(holder, address(maglev), true);
