@@ -3,6 +3,7 @@
 * better error messages when exceeding virtual reserves
 * pause guardian
 ? re-sync reserves: if the vault balances change externally (ie holder repays, interest earned/charged), then the virtual reserves will get out-of-sync with real world
+  ? there is a race-condition when updating reserves: a swap could happen in between calculation and update
 ? alternate curves
 ? registry contract
 ? transparent proxy so AMM address can stay constant
@@ -19,6 +20,7 @@ tests
   prices
   alternate decimals
   choosing virtual reserves to stay below target LTVs
+  when exchange rate in vaults != 1
   uniswap callback, flash swaps
   hitting reserve/utilisation limits
   changing reserves
