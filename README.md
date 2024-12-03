@@ -28,20 +28,20 @@ Given a fixed size investment, Maglev aims to increase the size of trades that c
 
 Because the total size of the position can be many times larger than your initial investment (depending on how much LTV/leverage is allowed on the underlying lending pools), the swapping fees earned can be magnified.
 
-The down-side is that while the AMM holds this leveraged position, it is paying interest on the loan. Fortunately, this is partially compensated by the fact that the AMM is earning interest on the collateral.
+The down-side is that while the AMM holds this leveraged position, it is paying interest on the loan. Fortunately, this is partially compensated by the fact that the AMM is earning interest on the collateral. In addition, points and rewards may be earned on collateral/borrows.
 
 ## Operation
 
 Since the level of acceptable borrowing risk may not be the same for every user, pooled deposits are not yet possible, and each Maglev instance manages funds for a single user (who of course may operate on behalf of pooled funds).
 
-Maglev is contract designed to be used as an [EVC operator](https://evc.wtf/docs/whitepaper/#operators). This means that a user, known as a *holder*, does not give up control over their funds to a smart contract, but instead retains it in their wallet. The holder can be any compatible address, including standard multisig wallets or even a simple EOA.
+Maglev is a contract designed to be used as an [EVC operator](https://evc.wtf/docs/whitepaper/#operators). This means that the user, known as the *holder*, does not give up control over their funds to a smart contract, but instead retains it in their wallet. The holder can be any compatible address, including standard multisig wallets or even an EOA.
 
 ### Usage
 
 The following are the high-level steps required to use Maglev:
 
 * Deposit funds into one or both of the vaults
-* Deploy the desired Maglev contract, choosing parameters such as the two vaults, and the desired `fee`
+* Deploy the desired Maglev contract, choosing parameters such as the vaults and the desired `fee`
 * Calculate the desired [virtual reserves](#virtual-reserves) and set these values by invoking `setVirtualReserves()`
 * Install the Maglev contract as an operator for your account
 * Invoke the `configure()` function on the Maglev contract
@@ -78,7 +78,7 @@ In this curve, the entire virtual reserves can be consumed, and since each margi
 
 ### Constant Product
 
-This is the traditional Uniswap2 curve that preserves the product of the two reserves. The larger a swap, the higher the price impact. Furthermore, the more profitable it is to arbitrage a disbalanced pool back to its wider market price.
+This is the traditional Uniswap2 curve that preserves the product of the two reserves. The larger a swap, the higher the price impact and the more profitable it is to arbitrage a disbalanced pool back to its wider market price.
 
 
 
