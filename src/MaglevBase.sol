@@ -65,12 +65,12 @@ abstract contract MaglevBase is EVCUtil, Ownable {
     }
 
     /// @dev Call whenever NAV changes significantly
-    function setVirtualReserves(uint112 _reserve0, uint112 _reserve1) external onlyOwner {
-        virtualReserve0 = _reserve0;
-        virtualReserve1 = _reserve1;
+    function setVirtualReserves(uint112 vr0, uint112 vr1) external onlyOwner {
+        virtualReserve0 = vr0;
+        virtualReserve1 = vr1;
 
-        reserve0 = adjustReserve(_reserve0, vault0);
-        reserve1 = adjustReserve(_reserve1, vault1);
+        reserve0 = adjustReserve(vr0, vault0);
+        reserve1 = adjustReserve(vr1, vault1);
     }
 
     // Swapper interface
@@ -176,7 +176,11 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         }
     }
 
-    function getQuote(address tokenIn, address tokenOut, uint256 amount, bool exactIn) internal view returns (uint256) {
+    function getQuote(address tokenIn, address tokenOut, uint256 amount, bool exactIn)
+        internal
+        view
+        returns (uint256)
+    {
         bool asset0IsInput;
         if (tokenIn == asset0 && tokenOut == asset1) asset0IsInput = true;
         else if (tokenIn == asset1 && tokenOut == asset0) asset0IsInput = false;
@@ -185,11 +189,13 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         uint256 quote = exactIn ? quoteGivenIn(amount, asset0IsInput) : quoteGivenOut(amount, asset0IsInput);
 
         require(quote <= (asset0IsInput ? reserve1 : reserve0), InsufficientReserves());
-        require(quote <= IERC20(asset0IsInput ? asset1 : asset0).balanceOf(asset0IsInput ? vault1 : vault0), InsufficientCash());
+        require(
+            quote <= IERC20(asset0IsInput ? asset1 : asset0).balanceOf(asset0IsInput ? vault1 : vault0),
+            InsufficientCash()
+        );
 
         return quote;
     }
-
 
     // To be implemented by sub-class
 
