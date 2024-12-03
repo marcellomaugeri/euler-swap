@@ -8,6 +8,8 @@ contract MaglevConstantSum is MaglevBase {
     uint96 priceA;
     uint96 priceB;
 
+    error KNotSatisfied();
+
     struct ConstantSumParams {
         uint64 fee;
         uint96 priceA;
@@ -38,7 +40,7 @@ contract MaglevConstantSum is MaglevBase {
     ) internal view virtual override {
         uint256 kBefore = k(oldReserve0, oldReserve1);
         uint256 kAfter = k(newReserve0 - (amount0In * fee / 1e18), newReserve1 - (amount1In * fee / 1e18));
-        require(kAfter >= kBefore, "k not satisfied");
+        require(kAfter >= kBefore, KNotSatisfied());
     }
 
     // FIXME: quote functions should consider limits like reserve size and vault utilisation

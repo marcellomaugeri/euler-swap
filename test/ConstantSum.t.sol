@@ -178,7 +178,7 @@ contract ConstantSumTest is EVaultTestBase {
 
         tt.transfer(address(maglev), needed - 2);
 
-        vm.expectRevert(bytes("k not satisfied"));
+        vm.expectRevert(Maglev.KNotSatisfied.selector);
         maglev.swap(a1, a2, recipient, "");
 
         tt.transfer(address(maglev), 2);

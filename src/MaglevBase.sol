@@ -18,8 +18,11 @@ abstract contract MaglevBase is EVCUtil, Ownable {
     uint112 public reserve1;
     uint32 private locked;
 
+    error Reentrancy();
+    error Overflow();
+
     modifier nonReentrant() {
-        require(locked == 0, "reentrancy");
+        require(locked == 0, Reentrancy());
         locked = 1;
         _;
         locked = 0;
@@ -85,7 +88,7 @@ abstract contract MaglevBase is EVCUtil, Ownable {
             uint256 newReserve0 = oldReserve0 + amount0In - amount0Out;
             uint256 newReserve1 = oldReserve1 + amount1In - amount1Out;
 
-            require(newReserve0 <= type(uint112).max && newReserve1 <= type(uint112).max, "overflow");
+            require(newReserve0 <= type(uint112).max && newReserve1 <= type(uint112).max, Overflow());
             verify(oldReserve0, oldReserve1, amount0In, amount1In, newReserve0, newReserve1);
 
             reserve0 = uint112(newReserve0);
