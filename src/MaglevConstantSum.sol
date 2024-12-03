@@ -43,13 +43,11 @@ contract MaglevConstantSum is MaglevBase {
         require(kAfter >= kBefore, KNotSatisfied());
     }
 
-    // FIXME: quote functions should consider limits like reserve size and vault utilisation
-
-    function quoteGivenIn(uint256 amount, bool) public view returns (uint256) {
+    function quoteGivenIn(uint256 amount, bool) internal view virtual override returns (uint256) {
         return amount * (1e18 - fee) / 1e18;
     }
 
-    function quoteGivenOut(uint256 amount, bool) public view returns (uint256) {
+    function quoteGivenOut(uint256 amount, bool) internal view virtual override returns (uint256) {
         return amount * 1e18 / (1e18 - fee);
     }
 }

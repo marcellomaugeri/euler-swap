@@ -166,12 +166,12 @@ contract ConstantSumTest is EVaultTestBase {
         console.log("  reserve1:           ", maglev.reserve1());
     }
 
-    function test_quoteGivenIn() public {
+    function test_quoteExactInput() public {
         vm.prank(owner);
         maglev.setConstantSumParams(Maglev.ConstantSumParams({fee: 0.003e18, priceA: 1, priceB: 1}));
 
         assetTST.mint(address(this), 100e18);
-        uint256 q = maglev.quoteGivenIn(1e18, true);
+        uint256 q = maglev.quoteExactInput(address(assetTST), address(assetTST2), 1e18);
         assertLt(q, 1e18);
         assetTST.transfer(address(maglev), 1e18);
 
@@ -179,13 +179,13 @@ contract ConstantSumTest is EVaultTestBase {
         assertEq(assetTST2.balanceOf(recipient), q);
     }
 
-    function test_quoteGivenOut() public {
+    function test_quoteExactOutput() public {
         vm.prank(owner);
         maglev.setConstantSumParams(Maglev.ConstantSumParams({fee: 0.003e18, priceA: 1, priceB: 1}));
 
         assetTST.mint(address(this), 100e18);
 
-        uint256 q = maglev.quoteGivenOut(1e18, true);
+        uint256 q = maglev.quoteExactOutput(address(assetTST), address(assetTST2), 1e18);
         assertGt(q, 1e18);
         assetTST.transfer(address(maglev), q);
 

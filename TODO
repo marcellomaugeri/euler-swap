@@ -8,15 +8,15 @@
 docs
   high-level concept
   how to setup and operate a maglev
+    choosing virtual reserves to stay below target LTVs
   interest costs
   low-level detail of how system works for auditors
   information for aggregators
     how to maintain quotes off-chain, including tracking cash from VaultStatus logs of underlying vaults
 
 tests
-  prices
-  alternate decimals
-  choosing virtual reserves to stay below target LTVs
+  prices/alternate decimals
+    especially quoting
   when exchange rate in vaults != 1
   uniswap callback, flash swaps
   hitting reserve/utilisation limits

@@ -23,6 +23,9 @@ abstract contract MaglevBase is EVCUtil, Ownable {
 
     error Reentrancy();
     error Overflow();
+    error UnsupportedPair();
+    error InsufficientReserves();
+    error InsufficientCash();
 
     modifier nonReentrant() {
         require(locked == 0, Reentrancy());
@@ -50,6 +53,8 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         myAccount = params.myAccount;
     }
 
+    // Owner functions
+
     /// @dev Call *after* installing as operator
     function configure() external onlyOwner {
         IERC20(asset0).approve(vault0, type(uint256).max);
@@ -67,6 +72,8 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         reserve0 = adjustReserve(_reserve0, vault0);
         reserve1 = adjustReserve(_reserve1, vault1);
     }
+
+    // Swapper interface
 
     function swap(uint256 amount0Out, uint256 amount1Out, address to, bytes calldata data)
         external
@@ -105,6 +112,14 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         }
     }
 
+    function quoteExactInput(address tokenIn, address tokenOut, uint256 amountIn) external view returns (uint256) {
+        return getQuote(tokenIn, tokenOut, amountIn, true);
+    }
+
+    function quoteExactOutput(address tokenIn, address tokenOut, uint256 amountOut) external view returns (uint256) {
+        return getQuote(tokenIn, tokenOut, amountOut, false);
+    }
+
     // Internal utilities
 
     function myDebt(address vault) internal view returns (uint256) {
@@ -134,9 +149,9 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         uint256 balance = myBalance(vault);
 
         if (balance > 0) {
-            uint256 a = amount < balance ? amount : balance;
-            IEVC(evc).call(vault, myAccount, 0, abi.encodeCall(IERC4626.withdraw, (a, to, myAccount)));
-            amount -= a;
+            uint256 avail = amount < balance ? amount : balance;
+            IEVC(evc).call(vault, myAccount, 0, abi.encodeCall(IERC4626.withdraw, (avail, to, myAccount)));
+            amount -= avail;
         }
 
         if (amount > 0) {
@@ -161,7 +176,22 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         }
     }
 
-    // Verification implemented by sub-class
+    function getQuote(address tokenIn, address tokenOut, uint256 amount, bool exactIn) internal view returns (uint256) {
+        bool asset0IsInput;
+        if (tokenIn == asset0 && tokenOut == asset1) asset0IsInput = true;
+        else if (tokenIn == asset1 && tokenOut == asset0) asset0IsInput = false;
+        else revert UnsupportedPair();
+
+        uint256 quote = exactIn ? quoteGivenIn(amount, asset0IsInput) : quoteGivenOut(amount, asset0IsInput);
+
+        require(quote <= (asset0IsInput ? reserve1 : reserve0), InsufficientReserves());
+        require(quote <= IERC20(asset0IsInput ? asset1 : asset0).balanceOf(asset0IsInput ? vault1 : vault0), InsufficientCash());
+
+        return quote;
+    }
+
+
+    // To be implemented by sub-class
 
     function verify(
         uint256 oldReserve0,
@@ -171,4 +201,7 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         uint256 newReserve0,
         uint256 newReserve1
     ) internal view virtual;
+
+    function quoteGivenIn(uint256 amount, bool asset0IsInput) internal view virtual returns (uint256);
+    function quoteGivenOut(uint256 amount, bool asset0IsInput) internal view virtual returns (uint256);
 }
