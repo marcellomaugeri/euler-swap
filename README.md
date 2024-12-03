@@ -16,9 +16,9 @@ The down-side is that while the AMM holds this leveraged position, it is paying 
 
 ## Operation
 
-Since the level of acceptable borrowing risk may not be the same for every user, pooled deposits are not yet possible, and each Maglev instance manages funds for a single user (who of course may be a common enterprise).
+Since the level of acceptable borrowing risk may not be the same for every user, pooled deposits are not yet possible, and each Maglev instance manages funds for a single user (who of course may operate on behalf of pooled funds).
 
-Maglev is contract designed to be used as an [EVC operator](https://evc.wtf/docs/whitepaper/#operators)
+Maglev is contract designed to be used as an [EVC operator](https://evc.wtf/docs/whitepaper/#operators). This means that a user, known as a *holder*, does not give up control over their funds to a smart contract, but instead retains it in their wallet. The holder can be any compatible address, including standard multisig wallets or even a simple EOA.
 
 ## License
 

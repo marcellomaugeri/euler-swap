@@ -99,13 +99,11 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         // Verify curve invariant is satisified
 
         {
-            uint256 oldReserve0 = reserve0;
-            uint256 oldReserve1 = reserve1;
-            uint256 newReserve0 = oldReserve0 + amount0In - amount0Out;
-            uint256 newReserve1 = oldReserve1 + amount1In - amount1Out;
+            uint256 newReserve0 = reserve0 + amount0In - amount0Out;
+            uint256 newReserve1 = reserve1 + amount1In - amount1Out;
 
             require(newReserve0 <= type(uint112).max && newReserve1 <= type(uint112).max, Overflow());
-            verify(oldReserve0, oldReserve1, amount0In, amount1In, newReserve0, newReserve1);
+            verify(amount0In, amount1In, newReserve0, newReserve1);
 
             reserve0 = uint112(newReserve0);
             reserve1 = uint112(newReserve1);
@@ -113,11 +111,11 @@ abstract contract MaglevBase is EVCUtil, Ownable {
     }
 
     function quoteExactInput(address tokenIn, address tokenOut, uint256 amountIn) external view returns (uint256) {
-        return getQuote(tokenIn, tokenOut, amountIn, true);
+        return _computeQuote(tokenIn, tokenOut, amountIn, true);
     }
 
     function quoteExactOutput(address tokenIn, address tokenOut, uint256 amountOut) external view returns (uint256) {
-        return getQuote(tokenIn, tokenOut, amountOut, false);
+        return _computeQuote(tokenIn, tokenOut, amountOut, false);
     }
 
     // Internal utilities
@@ -176,7 +174,7 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         }
     }
 
-    function getQuote(address tokenIn, address tokenOut, uint256 amount, bool exactIn)
+    function _computeQuote(address tokenIn, address tokenOut, uint256 amount, bool exactIn)
         internal
         view
         returns (uint256)
@@ -186,7 +184,7 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         else if (tokenIn == asset1 && tokenOut == asset0) asset0IsInput = false;
         else revert UnsupportedPair();
 
-        uint256 quote = exactIn ? quoteGivenIn(amount, asset0IsInput) : quoteGivenOut(amount, asset0IsInput);
+        uint256 quote = computeQuote(amount, exactIn, asset0IsInput);
 
         require(quote <= (asset0IsInput ? reserve1 : reserve0), InsufficientReserves());
         require(
@@ -200,14 +198,11 @@ abstract contract MaglevBase is EVCUtil, Ownable {
     // To be implemented by sub-class
 
     function verify(
-        uint256 oldReserve0,
-        uint256 oldReserve1,
         uint256 amount0In,
         uint256 amount1In,
         uint256 newReserve0,
         uint256 newReserve1
     ) internal view virtual;
 
-    function quoteGivenIn(uint256 amount, bool asset0IsInput) internal view virtual returns (uint256);
-    function quoteGivenOut(uint256 amount, bool asset0IsInput) internal view virtual returns (uint256);
+    function computeQuote(uint256 amount, bool exactIn, bool asset0IsInput) internal view virtual returns (uint256);
 }

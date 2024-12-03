@@ -31,23 +31,23 @@ contract MaglevConstantSum is MaglevBase {
     }
 
     function verify(
-        uint256 oldReserve0,
-        uint256 oldReserve1,
         uint256 amount0In,
         uint256 amount1In,
         uint256 newReserve0,
         uint256 newReserve1
     ) internal view virtual override {
-        uint256 kBefore = k(oldReserve0, oldReserve1);
+        uint256 kBefore = k(reserve0, reserve1);
         uint256 kAfter = k(newReserve0 - (amount0In * fee / 1e18), newReserve1 - (amount1In * fee / 1e18));
         require(kAfter >= kBefore, KNotSatisfied());
     }
 
-    function quoteGivenIn(uint256 amount, bool) internal view virtual override returns (uint256) {
-        return amount * (1e18 - fee) / 1e18;
-    }
+    // FIXME: incorporate priceA and priceB
 
-    function quoteGivenOut(uint256 amount, bool) internal view virtual override returns (uint256) {
-        return amount * 1e18 / (1e18 - fee);
+    function computeQuote(uint256 amount, bool exactIn, bool) internal view virtual override returns (uint256) {
+        if (exactIn) {
+            return amount * (1e18 - fee) / 1e18;
+        } else {
+            return amount * 1e18 / (1e18 - fee);
+        }
     }
 }
