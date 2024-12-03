@@ -18,6 +18,9 @@ abstract contract MaglevBase is EVCUtil, Ownable {
     uint112 public reserve1;
     uint32 private locked;
 
+    uint112 public virtualReserve0;
+    uint112 public virtualReserve1;
+
     error Reentrancy();
     error Overflow();
 
@@ -48,15 +51,21 @@ abstract contract MaglevBase is EVCUtil, Ownable {
     }
 
     /// @dev Call *after* installing as operator
-    function configure(uint112 _reserve0, uint112 _reserve1) external onlyOwner {
-        reserve0 = _reserve0;
-        reserve1 = _reserve1;
-
+    function configure() external onlyOwner {
         IERC20(asset0).approve(vault0, type(uint256).max);
         IERC20(asset1).approve(vault1, type(uint256).max);
 
         IEVC(evc).enableCollateral(myAccount, vault0);
         IEVC(evc).enableCollateral(myAccount, vault1);
+    }
+
+    /// @dev Call whenever NAV changes significantly
+    function setVirtualReserves(uint112 _reserve0, uint112 _reserve1) external onlyOwner {
+        virtualReserve0 = _reserve0;
+        virtualReserve1 = _reserve1;
+
+        reserve0 = adjustReserve(_reserve0, vault0);
+        reserve1 = adjustReserve(_reserve1, vault1);
     }
 
     function swap(uint256 amount0Out, uint256 amount1Out, address to, bytes calldata data)
@@ -96,12 +105,33 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         }
     }
 
-    function withdrawAssets(address vault, uint256 amount, address to) internal {
-        uint256 balance;
-        {
-            uint256 shares = IEVault(vault).balanceOf(myAccount);
-            balance = shares == 0 ? 0 : IEVault(vault).convertToAssets(shares);
+    // Internal utilities
+
+    function myDebt(address vault) internal view returns (uint256) {
+        return IEVault(vault).debtOf(myAccount);
+    }
+
+    function myBalance(address vault) internal view returns (uint256) {
+        uint256 shares = IEVault(vault).balanceOf(myAccount);
+        return shares == 0 ? 0 : IEVault(vault).convertToAssets(shares);
+    }
+
+    function adjustReserve(uint112 reserve, address vault) internal view returns (uint112) {
+        uint256 adjusted;
+        uint256 debt = myDebt(vault);
+
+        if (debt != 0) {
+            adjusted = reserve > debt ? reserve - debt : 0;
+        } else {
+            adjusted = reserve + myBalance(vault);
         }
+
+        require(adjusted <= type(uint112).max, Overflow());
+        return uint112(adjusted);
+    }
+
+    function withdrawAssets(address vault, uint256 amount, address to) internal {
+        uint256 balance = myBalance(vault);
 
         if (balance > 0) {
             uint256 a = amount < balance ? amount : balance;
@@ -118,7 +148,7 @@ abstract contract MaglevBase is EVCUtil, Ownable {
     function depositAssets(address vault, uint256 amount) internal {
         IEVault(vault).deposit(amount, myAccount);
 
-        uint256 debt = IEVault(vault).debtOf(myAccount);
+        uint256 debt = myDebt(vault);
 
         if (debt > 0) {
             IEVC(evc).call(

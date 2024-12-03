@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 import {MaglevBase} from "./MaglevBase.sol";
 
 contract MaglevConstantSum is MaglevBase {
-    uint64 fee;
-    uint96 priceA;
-    uint96 priceB;
+    uint64 public fee;
+    uint96 public priceA;
+    uint96 public priceB;
 
     error KNotSatisfied();
 

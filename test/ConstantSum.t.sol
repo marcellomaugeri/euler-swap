@@ -55,7 +55,10 @@ contract ConstantSumTest is EVaultTestBase {
         evc.setAccountOperator(holder, address(maglev), true);
 
         vm.prank(owner);
-        maglev.configure(100e18, 100e18);
+        maglev.configure();
+
+        vm.prank(owner);
+        maglev.setVirtualReserves(50e18, 50e18);
     }
 
     function _mintAndDeposit(address who, IEVault vault, uint256 amount) internal {
@@ -92,6 +95,48 @@ contract ConstantSumTest is EVaultTestBase {
         logState();
     }
 
+    function test_reserveLimit() public {
+        assertEq(maglev.virtualReserve0(), 50e18);
+        assertEq(maglev.virtualReserve1(), 50e18);
+        assertEq(maglev.reserve0(), 60e18);
+        assertEq(maglev.reserve1(), 60e18);
+
+        assetTST.mint(address(this), 1000e18);
+
+        uint256 snapshot = vm.snapshotState();
+
+        {
+            uint256 amount = 60.000001e18;
+            assetTST.transfer(address(maglev), amount);
+            vm.expectRevert(); // FIXME: which error?
+            maglev.swap(0, amount, address(this), "");
+        }
+
+        vm.revertToState(snapshot);
+
+        {
+            uint256 amount = 60e18;
+            assetTST.transfer(address(maglev), amount);
+            maglev.swap(0, amount, address(this), "");
+        }
+
+        assertEq(eTST2.debtOf(holder), 50e18);
+        assertEq(maglev.reserve0(), 120e18);
+        assertEq(maglev.reserve1(), 0e18);
+
+        vm.prank(owner);
+        maglev.setVirtualReserves(60e18, 55e18);
+
+        assertEq(maglev.reserve0(), 130e18);
+        assertEq(maglev.reserve1(), 5e18);
+
+        vm.prank(owner);
+        maglev.setVirtualReserves(40e18, 45e18);
+
+        assertEq(maglev.reserve0(), 110e18);
+        assertEq(maglev.reserve1(), 0e18);
+    }
+
     function test_basicSwapFuzz(uint256 amount1, uint256 amount2) public {
         amount1 = bound(amount1, 1e18, 25e18);
         amount2 = bound(amount2, 1e18, 50e18);
@@ -117,6 +162,8 @@ contract ConstantSumTest is EVaultTestBase {
         console.log("  eTST Vault debt:    ", eTST.debtOf(holder));
         console.log("  eTST2 Vault assets: ", eTST2.convertToAssets(eTST2.balanceOf(holder)));
         console.log("  eTST2 Vault debt:   ", eTST2.debtOf(holder));
+        console.log("  reserve0:           ", maglev.reserve0());
+        console.log("  reserve1:           ", maglev.reserve1());
     }
 
     function test_quoteGivenIn() public {
