@@ -1,6 +1,6 @@
-* quoting should consider reserves, utilisation
-* better error messages when exceeding virtual reserves
 * pause guardian
+* events
+  * reserve change on each swap
 ? alternate curves
 ? registry contract
 ? transparent proxy so AMM address can stay constant
@@ -9,6 +9,7 @@ docs
   high-level concept
   how to setup and operate a maglev
     choosing virtual reserves to stay below target LTVs
+    when to update virtual reserves
   interest costs
   low-level detail of how system works for auditors
   information for aggregators
