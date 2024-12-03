@@ -35,8 +35,6 @@ contract MaglevConstantProduct is MaglevBase {
         require(kAfter >= kBefore, KNotSatisfied());
     }
 
-    // FIXME: incorporate priceA and priceB
-
     function computeQuote(uint256 amount, bool exactIn, bool asset0IsInput)
         internal
         view
