@@ -56,7 +56,7 @@ Virtual reserves control the maximum debt that the Maglev contract will attempt 
 
 For example, if the initial investment has a NAV of $1000, and virtual reserves are configured at $5000 for each vault, then the maximum LTV loan that the AMM will support will be `5000/6000 = 0.8333`. In order to leave a safety buffer, it is recommended to select a maximum LTV that is below the borrowing LTV of the vault.
 
-Note that it depends on the [curve] if the maximum LTV can actually be achieved. A constant product will only approach these reserve levels asymptotically, since each unit will get more and more expensive. However, with constant sum, this LTV can be achieved directly.
+Note that it depends on the [curve](#curves) if the maximum LTV can actually be achieved. A constant product will only approach these reserve levels asymptotically, since each unit will get more and more expensive. However, with constant sum, this LTV can be achieved directly.
 
 ### Desynchronised Virtual Reserves
 
