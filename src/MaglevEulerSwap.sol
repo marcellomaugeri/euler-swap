@@ -29,6 +29,11 @@ contract MaglevEulerSwap is MaglevBase {
         uint256 py = 1e18;
         uint256 cx = 0.40e18;
         uint256 cy = 0.85e18;
+
+        //require(_verify(49e18, 51e18, px, py, 50e18, 50e18, cx, cy), KNotSatisfied());
+
+        console.log("QQ", newReserve0, newReserve1);
+        console.log("ZZ", virtualReserve0, virtualReserve1);
         require(_verify(newReserve0, newReserve1, px, py, virtualReserve0, virtualReserve1, cx, cy), KNotSatisfied());
     }
 

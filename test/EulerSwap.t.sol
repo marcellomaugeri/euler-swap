@@ -31,7 +31,7 @@ contract EulerSwapTest is MaglevTestBase {
 
     function test_basicSwap() public {
         uint256 amountIn = 1e18;
-        uint256 amountOut = 0.3e18;
+        uint256 amountOut = 0.9999999e18;
 
         assetTST.mint(address(this), amountIn);
 

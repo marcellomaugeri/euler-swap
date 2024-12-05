@@ -69,6 +69,9 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         virtualReserve1 = vr1;
 
         syncVirtualReserves();
+
+        virtualReserve0 = reserve0;
+        virtualReserve1 = reserve1;
     }
 
     /// @dev Call whenever underlying balances change externally
