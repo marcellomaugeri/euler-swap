@@ -26,7 +26,7 @@ contract ConstantSumTest is MaglevTestBase {
         maglev.configure();
 
         vm.prank(owner);
-        maglev.setVirtualReserves(50e18, 50e18);
+        maglev.setDebtLimit(50e18, 50e18);
     }
 
     function test_basicSwapReport() public {
@@ -53,8 +53,8 @@ contract ConstantSumTest is MaglevTestBase {
     }
 
     function test_reserveLimit() public {
-        assertEq(maglev.virtualReserve0(), 50e18);
-        assertEq(maglev.virtualReserve1(), 50e18);
+        assertEq(maglev.initialReserve0(), 60e18);
+        assertEq(maglev.initialReserve1(), 60e18);
         assertEq(maglev.reserve0(), 60e18);
         assertEq(maglev.reserve1(), 60e18);
 
@@ -77,21 +77,39 @@ contract ConstantSumTest is MaglevTestBase {
             maglev.swap(0, amount, address(this), "");
         }
 
+        assertEq(eTST.balanceOf(holder), 70e18);
         assertEq(eTST2.debtOf(holder), 50e18);
         assertEq(maglev.reserve0(), 120e18);
         assertEq(maglev.reserve1(), 0e18);
 
-        vm.prank(owner);
-        maglev.setVirtualReserves(60e18, 55e18);
+        // Same debt limit means reserves not affected
 
-        assertEq(maglev.reserve0(), 130e18);
+        vm.prank(owner);
+        maglev.setDebtLimit(50e18, 50e18);
+        assertEq(maglev.reserve0(), 120e18);
+        assertEq(maglev.reserve1(), 0e18);
+
+        // Increase debt limit on one side
+
+        vm.prank(owner);
+        maglev.setDebtLimit(50e18, 55e18);
+        assertEq(maglev.reserve0(), 120e18);
         assertEq(maglev.reserve1(), 5e18);
 
+        // And the other
+
         vm.prank(owner);
-        maglev.setVirtualReserves(40e18, 45e18);
+        maglev.setDebtLimit(55e18, 55e18);
+        assertEq(maglev.reserve0(), 125e18);
+        assertEq(maglev.reserve1(), 5e18);
+
+        // Shrink debt limit
+
+        vm.prank(owner);
+        maglev.setDebtLimit(40e18, 45e18);
 
         assertEq(maglev.reserve0(), 110e18);
-        assertEq(maglev.reserve1(), 0e18);
+        assertEq(maglev.reserve1(), 0e18); // can't go below 0
     }
 
     function test_basicSwapFuzz(uint256 amount1, uint256 amount2) public {

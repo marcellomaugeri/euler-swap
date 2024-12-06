@@ -33,8 +33,8 @@ contract MaglevEulerSwap is MaglevBase {
         //require(_verify(49e18, 51e18, px, py, 50e18, 50e18, cx, cy), KNotSatisfied());
 
         console.log("QQ", newReserve0, newReserve1);
-        console.log("ZZ", virtualReserve0, virtualReserve1);
-        require(_verify(newReserve0, newReserve1, px, py, virtualReserve0, virtualReserve1, cx, cy), KNotSatisfied());
+        console.log("ZZ", initialReserve0, initialReserve1);
+        require(_verify(newReserve0, newReserve1, px, py, initialReserve0, initialReserve1, cx, cy), KNotSatisfied());
     }
 
     function computeQuote(uint256, bool, bool)

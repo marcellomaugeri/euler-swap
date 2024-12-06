@@ -26,7 +26,7 @@ contract ConstantProductTest is MaglevTestBase {
         maglev.configure();
 
         vm.prank(owner);
-        maglev.setVirtualReserves(50e18, 50e18);
+        maglev.setDebtLimit(50e18, 50e18);
     }
 
     function test_fee_exactIn(uint256 amount, bool dir) public {

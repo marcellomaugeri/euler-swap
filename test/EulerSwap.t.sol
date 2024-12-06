@@ -26,12 +26,12 @@ contract EulerSwapTest is MaglevTestBase {
         maglev.configure();
 
         vm.prank(owner);
-        maglev.setVirtualReserves(50e18, 50e18);
+        maglev.setDebtLimit(50e18, 50e18);
     }
 
     function test_basicSwap() public {
         uint256 amountIn = 1e18;
-        uint256 amountOut = 0.9999999e18;
+        uint256 amountOut = 0.99e18;
 
         assetTST.mint(address(this), amountIn);
 

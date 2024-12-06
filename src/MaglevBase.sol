@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import {console} from "forge-std/Test.sol";
 import {Ownable, Context} from "openzeppelin-contracts/access/Ownable.sol";
 import {EVCUtil} from "evc/utils/EVCUtil.sol";
 import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
@@ -18,8 +19,8 @@ abstract contract MaglevBase is EVCUtil, Ownable {
     uint112 public reserve1;
     uint32 private locked;
 
-    uint112 public virtualReserve0;
-    uint112 public virtualReserve1;
+    uint112 public initialReserve0;
+    uint112 public initialReserve1;
 
     error Reentrancy();
     error Overflow();
@@ -64,20 +65,9 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         IEVC(evc).enableCollateral(myAccount, vault1);
     }
 
-    function setVirtualReserves(uint112 vr0, uint112 vr1) external onlyOwner {
-        virtualReserve0 = vr0;
-        virtualReserve1 = vr1;
-
-        syncVirtualReserves();
-
-        virtualReserve0 = reserve0;
-        virtualReserve1 = reserve1;
-    }
-
-    /// @dev Call whenever underlying balances change externally
-    function syncVirtualReserves() public onlyOwner {
-        reserve0 = adjustReserve(virtualReserve0, vault0);
-        reserve1 = adjustReserve(virtualReserve1, vault1);
+    function setDebtLimit(uint112 debtLimit0, uint112 debtLimit1) external onlyOwner {
+        reserve0 = initialReserve0 = adjustReserve(debtLimit0, vault0);
+        reserve1 = initialReserve1 = adjustReserve(debtLimit1, vault1);
     }
 
     // Swapper interface
