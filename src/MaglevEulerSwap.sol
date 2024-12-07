@@ -71,8 +71,8 @@ contract MaglevEulerSwap is MaglevBase {
         uint a = cy;
         int b = (int(px) * 1e18 / int(py)) * (int(xt) - int(x0)) / 1e18 + int(y0) * (1e18 - 2 * int(cy)) / 1e18;
         int c = (int(cy) - 1e18) * int(y0)**2 / 1e18 / 1e18;
-        uint discriminant = uint(int(uint(b**2) / 1e18) - 4 * int(a) * int(c) / 1e18);
-        uint numerator = uint(-b + int(uint(sqrt(discriminant) * 1e9)));
+        uint discriminant = uint(int(uint(b**2)) - 4 * int(a) * int(c));
+        uint numerator = uint(-b + int(uint(sqrt(discriminant))));
         uint denominator = 2 * a;
         return numerator * 1e18 / denominator;
     }
