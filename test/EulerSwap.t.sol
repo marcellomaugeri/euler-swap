@@ -61,10 +61,51 @@ contract EulerSwapTest is MaglevTestBase {
 
         t2.transfer(address(maglev), q);
         if (dir) maglev.swap(amount - 2, 0, address(this), ""); // - 2 due to rounding
-
         else maglev.swap(0, amount - 2, address(this), "");
 
         uint256 q2 = maglev.quoteExactInput(address(t1), address(t2), amount);
         assertApproxEqAbs(q, q2, 0.00000001e18);
+    }
+
+    function test_fuzzParams(uint256 amount, uint256 amount2, uint256 px, uint256 py, uint256 cx, uint256 cy, bool dir) public {
+        amount = bound(amount, 0.1e18, 25e18);
+        amount2 = bound(amount2, 0.1e18, 25e18);
+        px = bound(px, 1e18, 1e18);
+        py = bound(py, 1e18, 1e18);
+        cx = bound(cx, 0.01e18, 0.99e18);
+        cy = bound(cy, 0.01e18, 0.99e18);
+
+        int256 origNav = getHolderNAV();
+
+        vm.prank(owner);
+        maglev.setEulerSwapParams(Maglev.EulerSwapParams({
+            px: px,
+            py: py,
+            cx: cx,
+            cy: cy
+        }));
+
+        TestERC20 t1;
+        TestERC20 t2;
+        if (dir) (t1, t2) = (assetTST, assetTST2);
+        else (t1, t2) = (assetTST2, assetTST);
+
+        t1.mint(address(this), amount);
+        uint256 q = maglev.quoteExactInput(address(t1), address(t2), amount);
+
+        t1.transfer(address(maglev), amount);
+        if (dir) maglev.swap(0, q, address(this), "");
+        else maglev.swap(q, 0, address(this), "");
+        assertEq(t2.balanceOf(address(this)), q);
+
+        t2.mint(address(this), amount2);
+        uint256 q2 = maglev.quoteExactInput(address(t2), address(t1), amount2);
+
+        t2.transfer(address(maglev), amount2);
+        if (dir) maglev.swap(q2, 0, address(this), "");
+        else maglev.swap(0, q2, address(this), "");
+        assertEq(t1.balanceOf(address(this)), q2);
+
+        assertGe(getHolderNAV(), origNav);
     }
 }

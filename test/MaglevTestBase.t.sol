@@ -58,6 +58,18 @@ contract MaglevTestBase is EVaultTestBase {
         vault.deposit(amount, who);
     }
 
+    function getHolderNAV() public view returns (int256) {
+        uint256 balance0 = eTST.convertToAssets(eTST.balanceOf(holder));
+        uint256 debt0 = eTST.debtOf(holder);
+        uint256 balance1 = eTST2.convertToAssets(eTST2.balanceOf(holder));
+        uint256 debt1 = eTST2.debtOf(holder);
+
+        uint256 balValue = oracle.getQuote(balance0, address(assetTST), unitOfAccount) + oracle.getQuote(balance1, address(assetTST2), unitOfAccount);
+        uint256 debtValue = oracle.getQuote(debt0, address(assetTST), unitOfAccount) + oracle.getQuote(debt1, address(assetTST2), unitOfAccount);
+
+        return int(balValue) - int(debtValue);
+    }
+
     function logState(address ml) internal view {
         console.log("--------------------");
         console.log("Account States:");
