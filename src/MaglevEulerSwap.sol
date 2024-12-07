@@ -5,11 +5,18 @@ import {console} from "forge-std/Test.sol";
 import {MaglevBase} from "./MaglevBase.sol";
 
 contract MaglevEulerSwap is MaglevBase {
+    uint256 public _px;
+    uint256 public _py;
+    uint256 public _cx;
+    uint256 public _cy;
 
     error KNotSatisfied();
 
     struct EulerSwapParams {
-        uint256 junk;
+        uint256 px;
+        uint256 py;
+        uint256 cx;
+        uint256 cy;
     }
 
     constructor(BaseParams memory baseParams, EulerSwapParams memory params) MaglevBase(baseParams) {
@@ -17,6 +24,10 @@ contract MaglevEulerSwap is MaglevBase {
     }
 
     function setEulerSwapParams(EulerSwapParams memory params) public onlyOwner {
+        _px = params.px;
+        _py = params.py;
+        _cx = params.cx;
+        _cy = params.cy;
     }
 
     function verify(uint256, uint256, uint256 newReserve0, uint256 newReserve1)
@@ -25,33 +36,51 @@ contract MaglevEulerSwap is MaglevBase {
         virtual
         override
     {
-        uint256 px = 1e18;
-        uint256 py = 1e18;
-        uint256 cx = 0.40e18;
-        uint256 cy = 0.85e18;
-
-        //require(_verify(49e18, 51e18, px, py, 50e18, 50e18, cx, cy), KNotSatisfied());
-
-        console.log("QQ", newReserve0, newReserve1);
-        console.log("ZZ", initialReserve0, initialReserve1);
-        require(_verify(newReserve0, newReserve1, px, py, initialReserve0, initialReserve1, cx, cy), KNotSatisfied());
+        require(verifyCurve(newReserve0, newReserve1, _px, _py, initialReserve0, initialReserve1, _cx, _cy), KNotSatisfied());
     }
 
-    function computeQuote(uint256, bool, bool)
+    uint256 private constant roundingCompensation = 1.0000000000001e18;
+
+    function computeQuote(uint256 amount, bool exactIn, bool asset0IsInput)
         internal
         view
         virtual
         override
         returns (uint256)
     {
-        return 0;
+        int dx;
+        int dy;
+
+        if (exactIn) {
+            if (asset0IsInput) dx = int(amount);
+            else dy = int(amount);
+        } else {
+            if (asset0IsInput) dy = -int(amount);
+            else dx = -int(amount);
+        }
+
+        (dx, dy) = simulateSwap(dx, dy, reserve0, reserve1, _px, _py, initialReserve0, initialReserve1, _cx, _cy);
+
+        uint output;
+
+        if (exactIn) {
+            if (asset0IsInput) output = uint(-dy);
+            else output = uint(-dx);
+            output = output * 1e18 / roundingCompensation;
+        } else {
+            if (asset0IsInput) output = uint(dx);
+            else output = uint(dy);
+            output = output * roundingCompensation / 1e18;
+        }
+
+        return output;
     }
 
 
 
     /////
 
-    function fx(uint xt, uint px, uint py, uint x0, uint y0, uint cx, uint cy) public pure returns (uint){
+    function fx(uint xt, uint px, uint py, uint x0, uint y0, uint cx, uint cy) internal pure returns (uint){
         require(xt > 0, "Reserves must be greater than zero");
         if (xt <= x0) {
             return fx1(xt, px, py, x0, y0, cx, cy);
@@ -60,12 +89,12 @@ contract MaglevEulerSwap is MaglevBase {
         }
     }
 
-    function fx1(uint xt, uint px, uint py, uint x0, uint y0, uint cx, uint cy) public pure returns (uint){
+    function fx1(uint xt, uint px, uint py, uint x0, uint y0, uint cx, uint) internal pure returns (uint){
         require(xt <= x0, "Invalid input coordinate");
         return y0 + px * 1e18 / py * (cx * (2 * x0 - xt) / 1e18 + (1e18 - cx) * x0 / 1e18 * x0 / xt - x0) / 1e18;
     }
 
-    function fx2(uint xt, uint px, uint py, uint x0, uint y0, uint cx, uint cy) public pure returns (uint){
+    function fx2(uint xt, uint px, uint py, uint x0, uint y0, uint, uint cy) internal pure returns (uint){
         require(xt > x0, "Invalid input coordinate");
         // intermediate values for solving quadratic equation
         uint a = cy;
@@ -77,7 +106,7 @@ contract MaglevEulerSwap is MaglevBase {
         return numerator * 1e18 / denominator;
     }
 
-    function fy(uint yt, uint px, uint py, uint x0, uint y0, uint cx, uint cy) public pure returns (uint){
+    function fy(uint yt, uint px, uint py, uint x0, uint y0, uint cx, uint cy) internal pure returns (uint){
         require(yt > 0, "Reserves must be greater than zero");
         if (yt <= y0) {
             return fx1(yt, py, px, y0, x0, cy, cx);
@@ -87,7 +116,7 @@ contract MaglevEulerSwap is MaglevBase {
     }
 
 
-    function swap(int dx, int dy, uint xt, uint yt, uint px, uint py, uint x0, uint y0, uint cx, uint cy) public pure returns (int, int) {
+    function simulateSwap(int dx, int dy, uint xt, uint yt, uint px, uint py, uint x0, uint y0, uint cx, uint cy) internal pure returns (int, int) {
         int xtNew = int(xt);
         int ytNew = int(yt);
 
@@ -102,33 +131,24 @@ contract MaglevEulerSwap is MaglevBase {
         dx = xtNew - int(xt);
         dy = ytNew - int(yt);
 
-        //   // check invariant
-        //   let invariantPassed = invariantCheck(xtNew, ytNew, parameters);
-
         return (dx, dy);
     }
 
-    function _verify(uint xt, uint yt, uint px, uint py, uint x0, uint y0, uint cx, uint cy) public pure returns (bool){
-        bool passed = false;
+    function verifyCurve(uint xt, uint yt, uint px, uint py, uint x0, uint y0, uint cx, uint cy) internal pure returns (bool){
         int delta = 0;
-        if(xt >= x0) {
+
+        if (xt >= x0) {
             delta = int(xt) - int(fy(yt, px, py, x0, y0, cx, cy));
-            console.log("xt: ", int(xt));
-            console.log("fy: ", int(fy(yt, px, py, x0, y0, cx, cy)));
         } else {
             delta = int(yt) - int(fx(xt, px, py, x0, y0, cx, cy));
-            console.log("yt: ", int(yt));
-            console.log("fx: ", int(fx(xt, px, py, x0, y0, cx, cy)));
         }
         
-        if (delta >= 0) {
-            // if distance is > zero, then point is above the curve, and invariant passes
-            passed = true;
-        } 
-        return passed;
+        // if distance is > zero, then point is above the curve, and invariant passes
+        return (delta >= 0);
     }
 
-    function sqrt(uint256 x) public pure returns (uint128) {
+    // EIP-7054
+    function sqrt(uint256 x) internal pure returns (uint128) {
         if (x == 0) return 0;
         else{
             uint256 xx = x;
