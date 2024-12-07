@@ -30,13 +30,10 @@ contract MaglevEulerSwap is MaglevBase {
         _cy = params.cy;
     }
 
-    function verify(uint256, uint256, uint256 newReserve0, uint256 newReserve1)
-        internal
-        view
-        virtual
-        override
-    {
-        require(verifyCurve(newReserve0, newReserve1, _px, _py, initialReserve0, initialReserve1, _cx, _cy), KNotSatisfied());
+    function verify(uint256, uint256, uint256 newReserve0, uint256 newReserve1) internal view virtual override {
+        require(
+            verifyCurve(newReserve0, newReserve1, _px, _py, initialReserve0, initialReserve1, _cx, _cy), KNotSatisfied()
+        );
     }
 
     uint256 private constant roundingCompensation = 1.0000000000001e18;
@@ -48,39 +45,41 @@ contract MaglevEulerSwap is MaglevBase {
         override
         returns (uint256)
     {
-        int dx;
-        int dy;
+        int256 dx;
+        int256 dy;
 
         if (exactIn) {
-            if (asset0IsInput) dx = int(amount);
-            else dy = int(amount);
+            if (asset0IsInput) dx = int256(amount);
+            else dy = int256(amount);
         } else {
-            if (asset0IsInput) dy = -int(amount);
-            else dx = -int(amount);
+            if (asset0IsInput) dy = -int256(amount);
+            else dx = -int256(amount);
         }
 
         (dx, dy) = simulateSwap(dx, dy, reserve0, reserve1, _px, _py, initialReserve0, initialReserve1, _cx, _cy);
 
-        uint output;
+        uint256 output;
 
         if (exactIn) {
-            if (asset0IsInput) output = uint(-dy);
-            else output = uint(-dx);
+            if (asset0IsInput) output = uint256(-dy);
+            else output = uint256(-dx);
             output = output * 1e18 / roundingCompensation;
         } else {
-            if (asset0IsInput) output = uint(dx);
-            else output = uint(dy);
+            if (asset0IsInput) output = uint256(dx);
+            else output = uint256(dy);
             output = output * roundingCompensation / 1e18;
         }
 
         return output;
     }
 
-
-
     /////
 
-    function fx(uint xt, uint px, uint py, uint x0, uint y0, uint cx, uint cy) internal pure returns (uint){
+    function fx(uint256 xt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 cx, uint256 cy)
+        internal
+        pure
+        returns (uint256)
+    {
         require(xt > 0, "Reserves must be greater than zero");
         if (xt <= x0) {
             return fx1(xt, px, py, x0, y0, cx, cy);
@@ -89,24 +88,37 @@ contract MaglevEulerSwap is MaglevBase {
         }
     }
 
-    function fx1(uint xt, uint px, uint py, uint x0, uint y0, uint cx, uint) internal pure returns (uint){
+    function fx1(uint256 xt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 cx, uint256)
+        internal
+        pure
+        returns (uint256)
+    {
         require(xt <= x0, "Invalid input coordinate");
         return y0 + px * 1e18 / py * (cx * (2 * x0 - xt) / 1e18 + (1e18 - cx) * x0 / 1e18 * x0 / xt - x0) / 1e18;
     }
 
-    function fx2(uint xt, uint px, uint py, uint x0, uint y0, uint, uint cy) internal pure returns (uint){
+    function fx2(uint256 xt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256, uint256 cy)
+        internal
+        pure
+        returns (uint256)
+    {
         require(xt > x0, "Invalid input coordinate");
         // intermediate values for solving quadratic equation
-        uint a = cy;
-        int b = (int(px) * 1e18 / int(py)) * (int(xt) - int(x0)) / 1e18 + int(y0) * (1e18 - 2 * int(cy)) / 1e18;
-        int c = (int(cy) - 1e18) * int(y0)**2 / 1e18 / 1e18;
-        uint discriminant = uint(int(uint(b**2)) - 4 * int(a) * int(c));
-        uint numerator = uint(-b + int(uint(sqrt(discriminant))));
-        uint denominator = 2 * a;
+        uint256 a = cy;
+        int256 b = (int256(px) * 1e18 / int256(py)) * (int256(xt) - int256(x0)) / 1e18
+            + int256(y0) * (1e18 - 2 * int256(cy)) / 1e18;
+        int256 c = (int256(cy) - 1e18) * int256(y0) ** 2 / 1e18 / 1e18;
+        uint256 discriminant = uint256(int256(uint256(b ** 2)) - 4 * int256(a) * int256(c));
+        uint256 numerator = uint256(-b + int256(uint256(sqrt(discriminant))));
+        uint256 denominator = 2 * a;
         return numerator * 1e18 / denominator;
     }
 
-    function fy(uint yt, uint px, uint py, uint x0, uint y0, uint cx, uint cy) internal pure returns (uint){
+    function fy(uint256 yt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 cx, uint256 cy)
+        internal
+        pure
+        returns (uint256)
+    {
         require(yt > 0, "Reserves must be greater than zero");
         if (yt <= y0) {
             return fx1(yt, py, px, y0, x0, cy, cx);
@@ -115,51 +127,84 @@ contract MaglevEulerSwap is MaglevBase {
         }
     }
 
-
-    function simulateSwap(int dx, int dy, uint xt, uint yt, uint px, uint py, uint x0, uint y0, uint cx, uint cy) internal pure returns (int, int) {
-        int xtNew = int(xt);
-        int ytNew = int(yt);
+    function simulateSwap(
+        int256 dx,
+        int256 dy,
+        uint256 xt,
+        uint256 yt,
+        uint256 px,
+        uint256 py,
+        uint256 x0,
+        uint256 y0,
+        uint256 cx,
+        uint256 cy
+    ) internal pure returns (int256, int256) {
+        int256 xtNew = int256(xt);
+        int256 ytNew = int256(yt);
 
         if (dx != 0) {
             xtNew += dx;
-            ytNew = int(fx(uint(xtNew), px, py, x0, y0, cx, cy));
+            ytNew = int256(fx(uint256(xtNew), px, py, x0, y0, cx, cy));
         }
         if (dy != 0) {
             ytNew += dy;
-            xtNew = int(fy(uint(ytNew), px, py, x0, y0, cx, cy));
+            xtNew = int256(fy(uint256(ytNew), px, py, x0, y0, cx, cy));
         }
-        dx = xtNew - int(xt);
-        dy = ytNew - int(yt);
+        dx = xtNew - int256(xt);
+        dy = ytNew - int256(yt);
 
         return (dx, dy);
     }
 
-    function verifyCurve(uint xt, uint yt, uint px, uint py, uint x0, uint y0, uint cx, uint cy) internal pure returns (bool){
-        int delta = 0;
+    function verifyCurve(uint256 xt, uint256 yt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 cx, uint256 cy)
+        internal
+        pure
+        returns (bool)
+    {
+        int256 delta = 0;
 
         if (xt >= x0) {
-            delta = int(xt) - int(fy(yt, px, py, x0, y0, cx, cy));
+            delta = int256(xt) - int256(fy(yt, px, py, x0, y0, cx, cy));
         } else {
-            delta = int(yt) - int(fx(xt, px, py, x0, y0, cx, cy));
+            delta = int256(yt) - int256(fx(xt, px, py, x0, y0, cx, cy));
         }
-        
+
         // if distance is > zero, then point is above the curve, and invariant passes
         return (delta >= 0);
     }
 
     // EIP-7054
     function sqrt(uint256 x) internal pure returns (uint128) {
-        if (x == 0) return 0;
-        else{
+        if (x == 0) {
+            return 0;
+        } else {
             uint256 xx = x;
             uint256 r = 1;
-            if (xx >= 0x100000000000000000000000000000000) { xx >>= 128; r <<= 64; }
-            if (xx >= 0x10000000000000000) { xx >>= 64; r <<= 32; }
-            if (xx >= 0x100000000) { xx >>= 32; r <<= 16; }
-            if (xx >= 0x10000) { xx >>= 16; r <<= 8; }
-            if (xx >= 0x100) { xx >>= 8; r <<= 4; }
-            if (xx >= 0x10) { xx >>= 4; r <<= 2; }
-            if (xx >= 0x8) { r <<= 1; }
+            if (xx >= 0x100000000000000000000000000000000) {
+                xx >>= 128;
+                r <<= 64;
+            }
+            if (xx >= 0x10000000000000000) {
+                xx >>= 64;
+                r <<= 32;
+            }
+            if (xx >= 0x100000000) {
+                xx >>= 32;
+                r <<= 16;
+            }
+            if (xx >= 0x10000) {
+                xx >>= 16;
+                r <<= 8;
+            }
+            if (xx >= 0x100) {
+                xx >>= 8;
+                r <<= 4;
+            }
+            if (xx >= 0x10) {
+                xx >>= 4;
+                r <<= 2;
+            }
+            if (xx >= 0x8) r <<= 1;
             r = (r + x / r) >> 1;
             r = (r + x / r) >> 1;
             r = (r + x / r) >> 1;
@@ -168,7 +213,7 @@ contract MaglevEulerSwap is MaglevBase {
             r = (r + x / r) >> 1;
             r = (r + x / r) >> 1;
             uint256 r1 = x / r;
-            return uint128 (r < r1 ? r : r1);
+            return uint128(r < r1 ? r : r1);
         }
     }
 }

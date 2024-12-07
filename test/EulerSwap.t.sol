@@ -17,12 +17,8 @@ contract EulerSwapTest is MaglevTestBase {
         super.setUp();
 
         vm.prank(owner);
-        maglev = new Maglev(_getMaglevBaseParams(), Maglev.EulerSwapParams({
-            px: 1e18,
-            py: 1e18,
-            cx: 0.40e18,
-            cy: 0.85e18
-        }));
+        maglev =
+            new Maglev(_getMaglevBaseParams(), Maglev.EulerSwapParams({px: 1e18, py: 1e18, cx: 0.4e18, cy: 0.85e18}));
 
         vm.prank(holder);
         evc.setAccountOperator(holder, address(maglev), true);
@@ -45,7 +41,6 @@ contract EulerSwapTest is MaglevTestBase {
 
         assertEq(assetTST2.balanceOf(address(this)), amountOut);
     }
-
 
     function test_pathIndependent(uint256 amount, bool dir) public {
         amount = bound(amount, 0.1e18, 25e18);
