@@ -63,8 +63,6 @@ contract MaglevTestBase is EVaultTestBase {
         uint256 debt0 = eTST.debtOf(holder);
         uint256 balance1 = eTST2.convertToAssets(eTST2.balanceOf(holder));
         uint256 debt1 = eTST2.debtOf(holder);
-        console.log("V0",balance0,debt0);
-        console.log("V1",balance1,debt1);
 
         uint256 balValue = oracle.getQuote(balance0, address(assetTST), unitOfAccount) + oracle.getQuote(balance1, address(assetTST2), unitOfAccount);
         uint256 debtValue = oracle.getQuote(debt0, address(assetTST), unitOfAccount) + oracle.getQuote(debt1, address(assetTST2), unitOfAccount);
