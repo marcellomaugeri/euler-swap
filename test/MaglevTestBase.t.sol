@@ -64,10 +64,12 @@ contract MaglevTestBase is EVaultTestBase {
         uint256 balance1 = eTST2.convertToAssets(eTST2.balanceOf(holder));
         uint256 debt1 = eTST2.debtOf(holder);
 
-        uint256 balValue = oracle.getQuote(balance0, address(assetTST), unitOfAccount) + oracle.getQuote(balance1, address(assetTST2), unitOfAccount);
-        uint256 debtValue = oracle.getQuote(debt0, address(assetTST), unitOfAccount) + oracle.getQuote(debt1, address(assetTST2), unitOfAccount);
+        uint256 balValue = oracle.getQuote(balance0, address(assetTST), unitOfAccount)
+            + oracle.getQuote(balance1, address(assetTST2), unitOfAccount);
+        uint256 debtValue = oracle.getQuote(debt0, address(assetTST), unitOfAccount)
+            + oracle.getQuote(debt1, address(assetTST2), unitOfAccount);
 
-        return int(balValue) - int(debtValue);
+        return int256(balValue) - int256(debtValue);
     }
 
     modifier monotonicHolderNAV() {

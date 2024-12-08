@@ -43,21 +43,16 @@ contract EulerSwapTest is MaglevTestBase {
     }
 
     function test_price() public {
-        uint price = 0.5e18;
-        uint px = price;
-        uint py = 1e18;
+        uint256 price = 0.5e18;
+        uint256 px = price;
+        uint256 py = 1e18;
         oracle.setPrice(address(eTST), unitOfAccount, 0.5e18);
         oracle.setPrice(address(assetTST), unitOfAccount, 0.5e18);
 
         int256 origNAV = getHolderNAV();
 
         vm.prank(owner);
-        maglev.setEulerSwapParams(Maglev.EulerSwapParams({
-            px: px,
-            py: py,
-            cx: 0.4e18,
-            cy: 0.85e18
-        }));
+        maglev.setEulerSwapParams(Maglev.EulerSwapParams({px: px, py: py, cx: 0.4e18, cy: 0.85e18}));
 
         uint256 amountIn = 1e18;
         uint256 amountOut = maglev.quoteExactInput(address(assetTST), address(assetTST2), amountIn);
@@ -90,6 +85,7 @@ contract EulerSwapTest is MaglevTestBase {
 
         t2.transfer(address(maglev), q);
         if (dir) maglev.swap(amount - 2, 0, address(this), ""); // - 2 due to rounding
+
         else maglev.swap(0, amount - 2, address(this), "");
 
         uint256 q2 = maglev.quoteExactInput(address(t1), address(t2), amount);
@@ -103,18 +99,13 @@ contract EulerSwapTest is MaglevTestBase {
         cx = bound(cx, 0.01e18, 0.99e18);
         cy = bound(cy, 0.01e18, 0.99e18);
 
-        uint px = price;
-        uint py = 1e18;
+        uint256 px = price;
+        uint256 py = 1e18;
         oracle.setPrice(address(eTST), unitOfAccount, price);
         oracle.setPrice(address(assetTST), unitOfAccount, price);
 
         vm.prank(owner);
-        maglev.setEulerSwapParams(Maglev.EulerSwapParams({
-            px: px,
-            py: py,
-            cx: cx,
-            cy: cy
-        }));
+        maglev.setEulerSwapParams(Maglev.EulerSwapParams({px: px, py: py, cx: cx, cy: cy}));
 
         int256 origNAV = getHolderNAV();
 
