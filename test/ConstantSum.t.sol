@@ -29,7 +29,7 @@ contract ConstantSumTest is MaglevTestBase {
         maglev.setDebtLimit(50e18, 50e18);
     }
 
-    function test_basicSwapReport() public {
+    function test_basicSwapReport() public monotonicHolderNAV {
         uint256 amount = 25e18;
         assetTST.mint(address(this), amount);
 
@@ -52,7 +52,7 @@ contract ConstantSumTest is MaglevTestBase {
         logState(address(maglev));
     }
 
-    function test_reserveLimit() public {
+    function test_reserveLimit() public monotonicHolderNAV {
         assertEq(maglev.initialReserve0(), 60e18);
         assertEq(maglev.initialReserve1(), 60e18);
         assertEq(maglev.reserve0(), 60e18);
@@ -112,7 +112,7 @@ contract ConstantSumTest is MaglevTestBase {
         assertEq(maglev.reserve1(), 0e18); // can't go below 0
     }
 
-    function test_basicSwapFuzz(uint256 amount1, uint256 amount2) public {
+    function test_basicSwapFuzz(uint256 amount1, uint256 amount2) public monotonicHolderNAV {
         amount1 = bound(amount1, 1e18, 25e18);
         amount2 = bound(amount2, 1e18, 50e18);
 
@@ -129,7 +129,7 @@ contract ConstantSumTest is MaglevTestBase {
         assertEq(assetTST2.balanceOf(address(this)), amount1);
     }
 
-    function test_quoteExactInput() public {
+    function test_quoteExactInput() public monotonicHolderNAV {
         vm.prank(owner);
         maglev.setConstantSumParams(Maglev.ConstantSumParams({fee: 0.003e18, priceA: 1, priceB: 1}));
 
@@ -142,7 +142,7 @@ contract ConstantSumTest is MaglevTestBase {
         assertEq(assetTST2.balanceOf(recipient), q);
     }
 
-    function test_quoteExactOutput() public {
+    function test_quoteExactOutput() public monotonicHolderNAV {
         vm.prank(owner);
         maglev.setConstantSumParams(Maglev.ConstantSumParams({fee: 0.003e18, priceA: 1, priceB: 1}));
 
@@ -156,7 +156,7 @@ contract ConstantSumTest is MaglevTestBase {
         assertEq(assetTST2.balanceOf(recipient), 1e18);
     }
 
-    function test_fees(uint256 fee, uint256 amount1, bool token0) public {
+    function test_fees(uint256 fee, uint256 amount1, bool token0) public monotonicHolderNAV {
         fee = bound(fee, 0, 0.02e18);
         amount1 = bound(amount1, 1e18, 25e18);
 

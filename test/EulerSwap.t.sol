@@ -30,7 +30,7 @@ contract EulerSwapTest is MaglevTestBase {
         maglev.setDebtLimit(50e18, 50e18);
     }
 
-    function test_basicSwap() public {
+    function test_basicSwap() public monotonicHolderNAV {
         uint256 amountIn = 1e18;
         uint256 amountOut = maglev.quoteExactInput(address(assetTST), address(assetTST2), amountIn);
 
@@ -42,7 +42,36 @@ contract EulerSwapTest is MaglevTestBase {
         assertEq(assetTST2.balanceOf(address(this)), amountOut);
     }
 
-    function test_pathIndependent(uint256 amount, bool dir) public {
+    function test_price() public {
+        uint price = 0.5e18;
+        uint px = price;
+        uint py = 1e18;
+        oracle.setPrice(address(eTST), unitOfAccount, 0.5e18);
+        oracle.setPrice(address(assetTST), unitOfAccount, 0.5e18);
+
+        int256 origNAV = getHolderNAV();
+
+        vm.prank(owner);
+        maglev.setEulerSwapParams(Maglev.EulerSwapParams({
+            px: px,
+            py: py,
+            cx: 0.4e18,
+            cy: 0.85e18
+        }));
+
+        uint256 amountIn = 1e18;
+        uint256 amountOut = maglev.quoteExactInput(address(assetTST), address(assetTST2), amountIn);
+
+        assetTST.mint(address(this), amountIn);
+
+        assetTST.transfer(address(maglev), amountIn);
+        maglev.swap(0, amountOut, address(this), "");
+        assertEq(assetTST2.balanceOf(address(this)), amountOut);
+
+        assertGe(getHolderNAV(), origNAV);
+    }
+
+    function test_pathIndependent(uint256 amount, bool dir) public monotonicHolderNAV {
         amount = bound(amount, 0.1e18, 25e18);
 
         TestERC20 t1;
@@ -67,15 +96,17 @@ contract EulerSwapTest is MaglevTestBase {
         assertApproxEqAbs(q, q2, 0.00000001e18);
     }
 
-    function test_fuzzParams(uint256 amount, uint256 amount2, uint256 px, uint256 py, uint256 cx, uint256 cy, bool dir) public {
+    function test_fuzzParams(uint256 amount, uint256 amount2, uint256 price, uint256 cx, uint256 cy, bool dir) public {
         amount = bound(amount, 0.1e18, 25e18);
         amount2 = bound(amount2, 0.1e18, 25e18);
-        px = bound(px, 1e18, 1e18);
-        py = bound(py, 1e18, 1e18);
+        price = bound(price, 0.1e18, 10e18);
         cx = bound(cx, 0.01e18, 0.99e18);
         cy = bound(cy, 0.01e18, 0.99e18);
 
-        int256 origNav = getHolderNAV();
+        uint px = price;
+        uint py = 1e18;
+        oracle.setPrice(address(eTST), unitOfAccount, price);
+        oracle.setPrice(address(assetTST), unitOfAccount, price);
 
         vm.prank(owner);
         maglev.setEulerSwapParams(Maglev.EulerSwapParams({
@@ -84,6 +115,8 @@ contract EulerSwapTest is MaglevTestBase {
             cx: cx,
             cy: cy
         }));
+
+        int256 origNAV = getHolderNAV();
 
         TestERC20 t1;
         TestERC20 t2;
@@ -106,6 +139,6 @@ contract EulerSwapTest is MaglevTestBase {
         else maglev.swap(0, q2, address(this), "");
         assertEq(t1.balanceOf(address(this)), q2);
 
-        assertGe(getHolderNAV(), origNav);
+        assertGe(getHolderNAV(), origNAV);
     }
 }

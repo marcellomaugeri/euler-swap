@@ -29,7 +29,7 @@ contract ConstantProductTest is MaglevTestBase {
         maglev.setDebtLimit(50e18, 50e18);
     }
 
-    function test_fee_exactIn(uint256 amount, bool dir) public {
+    function test_fee_exactIn(uint256 amount, bool dir) public monotonicHolderNAV {
         amount = bound(amount, 0.1e18, 25e18);
 
         TestERC20 t1;
@@ -53,7 +53,7 @@ contract ConstantProductTest is MaglevTestBase {
         assertEq(t2.balanceOf(address(this)), q);
     }
 
-    function test_pathIndependent(uint256 amount, bool dir) public {
+    function test_pathIndependent(uint256 amount, bool dir) public monotonicHolderNAV {
         amount = bound(amount, 0.1e18, 25e18);
 
         TestERC20 t1;
