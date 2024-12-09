@@ -3,6 +3,9 @@
   * reserve change on each swap
 * ConstantSum: incorporate price multipliers in quote methods
 * natspec
+? onlyEVCAccountOwner
+? should uniswapV2Call take _msgSender instead of msg.sender?
+  - I think no, since swap isn't intended to be EVC-compatible
 ? alternate curves
 ? registry contract
 ? transparent proxy so AMM address can stay constant
