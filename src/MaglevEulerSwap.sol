@@ -32,9 +32,16 @@ contract MaglevEulerSwap is MaglevBase {
     }
 
     function verify(uint256, uint256, uint256 newReserve0, uint256 newReserve1) internal view virtual override {
-        require(
-            verifyCurve(newReserve0, newReserve1, _px, _py, initialReserve0, initialReserve1, _cx, _cy), KNotSatisfied()
-        );
+        int256 delta = 0;
+
+        if (newReserve0 >= initialReserve0) {
+            delta = int256(newReserve0) - int256(fy(newReserve1, _px, _py, initialReserve0, initialReserve1, _cx, _cy));
+        } else {
+            delta = int256(newReserve1) - int256(fx(newReserve0, _px, _py, initialReserve0, initialReserve1, _cx, _cy));
+        }
+
+        // if delta is > zero, then point is above the curve
+        require(delta >= 0 , KNotSatisfied());
     }
 
     uint256 private constant roundingCompensation = 1.0000000000001e18;
@@ -155,22 +162,5 @@ contract MaglevEulerSwap is MaglevBase {
         dy = ytNew - int256(yt);
 
         return (dx, dy);
-    }
-
-    function verifyCurve(uint256 xt, uint256 yt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 cx, uint256 cy)
-        internal
-        pure
-        returns (bool)
-    {
-        int256 delta = 0;
-
-        if (xt >= x0) {
-            delta = int256(xt) - int256(fy(yt, px, py, x0, y0, cx, cy));
-        } else {
-            delta = int256(yt) - int256(fx(xt, px, py, x0, y0, cx, cy));
-        }
-
-        // if distance is > zero, then point is above the curve, and invariant passes
-        return (delta >= 0);
     }
 }
