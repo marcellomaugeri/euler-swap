@@ -10,6 +10,7 @@ contract MaglevEulerSwap is MaglevBase {
     uint256 public _py;
     uint256 public _cx;
     uint256 public _cy;
+    uint256 public _fee;
 
     error KNotSatisfied();
     error ReservesZero();
@@ -20,6 +21,7 @@ contract MaglevEulerSwap is MaglevBase {
         uint256 py;
         uint256 cx;
         uint256 cy;
+        uint256 fee;
     }
 
     constructor(BaseParams memory baseParams, EulerSwapParams memory params) MaglevBase(baseParams) {
@@ -31,8 +33,10 @@ contract MaglevEulerSwap is MaglevBase {
         _py = params.py;
         _cx = params.cx;
         _cy = params.cy;
+        _fee = Math.max(params.fee, 1.0000000000001e18); // minimum fee required to compensate for rounding
     }
 
+    // FIXME: how to charge fees?
     function verify(uint256, uint256, uint256 newReserve0, uint256 newReserve1) internal view virtual override {
         int256 delta = 0;
 
@@ -42,11 +46,9 @@ contract MaglevEulerSwap is MaglevBase {
             delta = int256(newReserve1) - int256(fx(newReserve0, _px, _py, initialReserve0, initialReserve1, _cx, _cy));
         }
 
-        // if delta is > zero, then point is above the curve
+        // if delta is >= zero, then point is on or above the curve
         require(delta >= 0, KNotSatisfied());
     }
-
-    uint256 private constant roundingCompensation = 1.0000000000001e18;
 
     function computeQuote(uint256 amount, bool exactIn, bool asset0IsInput)
         internal
@@ -86,11 +88,11 @@ contract MaglevEulerSwap is MaglevBase {
         if (exactIn) {
             if (asset0IsInput) output = uint256(-dy);
             else output = uint256(-dx);
-            output = output * 1e18 / roundingCompensation;
+            output = output * 1e18 / _fee;
         } else {
             if (asset0IsInput) output = uint256(dx);
             else output = uint256(dy);
-            output = output * roundingCompensation / 1e18;
+            output = output * _fee / 1e18;
         }
     }
 

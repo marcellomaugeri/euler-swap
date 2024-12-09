@@ -2,6 +2,7 @@
 * events
   * reserve change on each swap
 * ConstantSum: incorporate price multipliers in quote methods
+* natspec
 ? alternate curves
 ? registry contract
 ? transparent proxy so AMM address can stay constant
