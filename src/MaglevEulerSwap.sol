@@ -12,6 +12,8 @@ contract MaglevEulerSwap is MaglevBase {
     uint256 public _cy;
 
     error KNotSatisfied();
+    error ReservesZero();
+    error InvalidInputCoordinate();
 
     struct EulerSwapParams {
         uint256 px;
@@ -51,7 +53,7 @@ contract MaglevEulerSwap is MaglevBase {
         view
         virtual
         override
-        returns (uint256)
+        returns (uint256 output)
     {
         int256 dx;
         int256 dy;
@@ -64,9 +66,22 @@ contract MaglevEulerSwap is MaglevBase {
             else dx = -int256(amount);
         }
 
-        (dx, dy) = simulateSwap(dx, dy, reserve0, reserve1, _px, _py, initialReserve0, initialReserve1, _cx, _cy);
+        {
+            int256 reserve0New = int256(uint256(reserve0));
+            int256 reserve1New = int256(uint256(reserve1));
 
-        uint256 output;
+            if (dx != 0) {
+                reserve0New += dx;
+                reserve1New = int256(fx(uint256(reserve0New), _px, _py, initialReserve0, initialReserve1, _cx, _cy));
+            }
+            if (dy != 0) {
+                reserve1New += dy;
+                reserve0New = int256(fy(uint256(reserve1New), _px, _py, initialReserve0, initialReserve1, _cx, _cy));
+            }
+
+            dx = reserve0New - int256(uint256(reserve0));
+            dy = reserve1New - int256(uint256(reserve1));
+        }
 
         if (exactIn) {
             if (asset0IsInput) output = uint256(-dy);
@@ -77,8 +92,6 @@ contract MaglevEulerSwap is MaglevBase {
             else output = uint256(dy);
             output = output * roundingCompensation / 1e18;
         }
-
-        return output;
     }
 
     /////
@@ -88,11 +101,24 @@ contract MaglevEulerSwap is MaglevBase {
         pure
         returns (uint256)
     {
-        require(xt > 0, "Reserves must be greater than zero");
+        require(xt > 0, ReservesZero());
         if (xt <= x0) {
             return fx1(xt, px, py, x0, y0, cx, cy);
         } else {
             return fx2(xt, px, py, x0, y0, cx, cy);
+        }
+    }
+
+    function fy(uint256 yt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 cx, uint256 cy)
+        internal
+        pure
+        returns (uint256)
+    {
+        require(yt > 0, ReservesZero());
+        if (yt <= y0) {
+            return fx1(yt, py, px, y0, x0, cy, cx);
+        } else {
+            return fx2(yt, py, px, y0, x0, cy, cx);
         }
     }
 
@@ -101,7 +127,7 @@ contract MaglevEulerSwap is MaglevBase {
         pure
         returns (uint256)
     {
-        require(xt <= x0, "Invalid input coordinate");
+        require(xt <= x0, InvalidInputCoordinate());
         return y0 + px * 1e18 / py * (cx * (2 * x0 - xt) / 1e18 + (1e18 - cx) * x0 / 1e18 * x0 / xt - x0) / 1e18;
     }
 
@@ -110,7 +136,7 @@ contract MaglevEulerSwap is MaglevBase {
         pure
         returns (uint256)
     {
-        require(xt > x0, "Invalid input coordinate");
+        require(xt > x0, InvalidInputCoordinate());
         // intermediate values for solving quadratic equation
         uint256 a = cy;
         int256 b = (int256(px) * 1e18 / int256(py)) * (int256(xt) - int256(x0)) / 1e18
@@ -120,47 +146,5 @@ contract MaglevEulerSwap is MaglevBase {
         uint256 numerator = uint256(-b + int256(uint256(Math.sqrt(discriminant))));
         uint256 denominator = 2 * a;
         return numerator * 1e18 / denominator;
-    }
-
-    function fy(uint256 yt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 cx, uint256 cy)
-        internal
-        pure
-        returns (uint256)
-    {
-        require(yt > 0, "Reserves must be greater than zero");
-        if (yt <= y0) {
-            return fx1(yt, py, px, y0, x0, cy, cx);
-        } else {
-            return fx2(yt, py, px, y0, x0, cy, cx);
-        }
-    }
-
-    function simulateSwap(
-        int256 dx,
-        int256 dy,
-        uint256 xt,
-        uint256 yt,
-        uint256 px,
-        uint256 py,
-        uint256 x0,
-        uint256 y0,
-        uint256 cx,
-        uint256 cy
-    ) internal pure returns (int256, int256) {
-        int256 xtNew = int256(xt);
-        int256 ytNew = int256(yt);
-
-        if (dx != 0) {
-            xtNew += dx;
-            ytNew = int256(fx(uint256(xtNew), px, py, x0, y0, cx, cy));
-        }
-        if (dy != 0) {
-            ytNew += dy;
-            xtNew = int256(fy(uint256(ytNew), px, py, x0, y0, cx, cy));
-        }
-        dx = xtNew - int256(xt);
-        dy = ytNew - int256(yt);
-
-        return (dx, dy);
     }
 }

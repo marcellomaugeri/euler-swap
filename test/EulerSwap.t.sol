@@ -30,9 +30,23 @@ contract EulerSwapTest is MaglevTestBase {
         maglev.setDebtLimit(50e18, 50e18);
     }
 
-    function test_basicSwap() public monotonicHolderNAV {
+    function test_basicSwap_exactIn() public monotonicHolderNAV {
         uint256 amountIn = 1e18;
         uint256 amountOut = maglev.quoteExactInput(address(assetTST), address(assetTST2), amountIn);
+        assertApproxEqAbs(amountOut, 0.9974e18, 0.0001e18);
+
+        assetTST.mint(address(this), amountIn);
+
+        assetTST.transfer(address(maglev), amountIn);
+        maglev.swap(0, amountOut, address(this), "");
+
+        assertEq(assetTST2.balanceOf(address(this)), amountOut);
+    }
+
+    function test_basicSwap_exactOut() public monotonicHolderNAV {
+        uint256 amountOut = 1e18;
+        uint256 amountIn = maglev.quoteExactOutput(address(assetTST), address(assetTST2), amountOut);
+        assertApproxEqAbs(amountIn, 1.0025e18, 0.0001e18);
 
         assetTST.mint(address(this), amountIn);
 
