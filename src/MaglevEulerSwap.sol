@@ -43,7 +43,7 @@ contract MaglevEulerSwap is MaglevBase {
         }
 
         // if delta is > zero, then point is above the curve
-        require(delta >= 0 , KNotSatisfied());
+        require(delta >= 0, KNotSatisfied());
     }
 
     uint256 private constant roundingCompensation = 1.0000000000001e18;
@@ -94,7 +94,7 @@ contract MaglevEulerSwap is MaglevBase {
         }
     }
 
-    /////
+    ///// Curve math routines
 
     function fx(uint256 xt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 cx, uint256 cy)
         internal
