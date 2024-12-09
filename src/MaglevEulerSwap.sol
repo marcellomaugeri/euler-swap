@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {console} from "forge-std/Test.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {MaglevBase} from "./MaglevBase.sol";
 
 contract MaglevEulerSwap is MaglevBase {
@@ -109,7 +110,7 @@ contract MaglevEulerSwap is MaglevBase {
             + int256(y0) * (1e18 - 2 * int256(cy)) / 1e18;
         int256 c = (int256(cy) - 1e18) * int256(y0) ** 2 / 1e18 / 1e18;
         uint256 discriminant = uint256(int256(uint256(b ** 2)) - 4 * int256(a) * int256(c));
-        uint256 numerator = uint256(-b + int256(uint256(sqrt(discriminant))));
+        uint256 numerator = uint256(-b + int256(uint256(Math.sqrt(discriminant))));
         uint256 denominator = 2 * a;
         return numerator * 1e18 / denominator;
     }
@@ -171,49 +172,5 @@ contract MaglevEulerSwap is MaglevBase {
 
         // if distance is > zero, then point is above the curve, and invariant passes
         return (delta >= 0);
-    }
-
-    // EIP-7054
-    function sqrt(uint256 x) internal pure returns (uint128) {
-        if (x == 0) {
-            return 0;
-        } else {
-            uint256 xx = x;
-            uint256 r = 1;
-            if (xx >= 0x100000000000000000000000000000000) {
-                xx >>= 128;
-                r <<= 64;
-            }
-            if (xx >= 0x10000000000000000) {
-                xx >>= 64;
-                r <<= 32;
-            }
-            if (xx >= 0x100000000) {
-                xx >>= 32;
-                r <<= 16;
-            }
-            if (xx >= 0x10000) {
-                xx >>= 16;
-                r <<= 8;
-            }
-            if (xx >= 0x100) {
-                xx >>= 8;
-                r <<= 4;
-            }
-            if (xx >= 0x10) {
-                xx >>= 4;
-                r <<= 2;
-            }
-            if (xx >= 0x8) r <<= 1;
-            r = (r + x / r) >> 1;
-            r = (r + x / r) >> 1;
-            r = (r + x / r) >> 1;
-            r = (r + x / r) >> 1;
-            r = (r + x / r) >> 1;
-            r = (r + x / r) >> 1;
-            r = (r + x / r) >> 1;
-            uint256 r1 = x / r;
-            return uint128(r < r1 ? r : r1);
-        }
     }
 }
