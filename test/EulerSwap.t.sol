@@ -13,12 +13,14 @@ import {MaglevEulerSwap as Maglev} from "../src/MaglevEulerSwap.sol";
 contract EulerSwapTest is MaglevTestBase {
     Maglev public maglev;
 
+    uint256 minFee = 0.0000000000001e18;
+
     function setUp() public virtual override {
         super.setUp();
 
         vm.prank(owner);
         maglev = new Maglev(
-            _getMaglevBaseParams(), Maglev.EulerSwapParams({px: 1e18, py: 1e18, cx: 0.4e18, cy: 0.85e18, fee: 0})
+            _getMaglevBaseParams(), Maglev.EulerSwapParams({px: 1e18, py: 1e18, cx: 0.4e18, cy: 0.85e18, fee: minFee})
         );
 
         vm.prank(holder);
@@ -67,7 +69,7 @@ contract EulerSwapTest is MaglevTestBase {
         int256 origNAV = getHolderNAV();
 
         vm.prank(owner);
-        maglev.setEulerSwapParams(Maglev.EulerSwapParams({px: px, py: py, cx: 0.4e18, cy: 0.85e18, fee: 0}));
+        maglev.setEulerSwapParams(Maglev.EulerSwapParams({px: px, py: py, cx: 0.4e18, cy: 0.85e18, fee: minFee}));
 
         uint256 amountIn = 1e18;
         uint256 amountOut = maglev.quoteExactInput(address(assetTST), address(assetTST2), amountIn);
@@ -120,7 +122,7 @@ contract EulerSwapTest is MaglevTestBase {
         oracle.setPrice(address(assetTST), unitOfAccount, price);
 
         vm.prank(owner);
-        maglev.setEulerSwapParams(Maglev.EulerSwapParams({px: px, py: py, cx: cx, cy: cy, fee: 0}));
+        maglev.setEulerSwapParams(Maglev.EulerSwapParams({px: px, py: py, cx: cx, cy: cy, fee: minFee}));
 
         int256 origNAV = getHolderNAV();
 
@@ -146,5 +148,20 @@ contract EulerSwapTest is MaglevTestBase {
         assertEq(t1.balanceOf(address(this)), q2);
 
         assertGe(getHolderNAV(), origNAV);
+    }
+
+    function test_roundingFailure() public {
+        vm.skip(true);
+
+        vm.prank(owner);
+        maglev.setEulerSwapParams(Maglev.EulerSwapParams({px: 1e18, py: 1e18, cx: 0.4e18, cy: 0.85e18, fee: 0}));
+
+        uint256 amountIn = 1.4e18;
+        uint256 amountOut = maglev.quoteExactInput(address(assetTST), address(assetTST2), amountIn);
+
+        assetTST.mint(address(this), amountIn);
+        assetTST.transfer(address(maglev), amountIn);
+        maglev.swap(0, amountOut, address(this), "");
+        assertEq(assetTST2.balanceOf(address(this)), amountOut);
     }
 }
