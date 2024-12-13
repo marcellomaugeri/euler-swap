@@ -33,8 +33,8 @@ contract MaglevEulerSwap is MaglevBase {
         _py = params.py;
         _cx = params.cx;
         _cy = params.cy;
-        _fee = 1e18 + params.fee;
-        //_fee = Math.max(1e18 + params.fee, 1.0000000000001e18); // minimum fee required to compensate for rounding
+        _fee = params.fee;
+        //_fee = Math.max(params.fee, 0.0000000000001e18); // minimum fee required to compensate for rounding
     }
 
     // FIXME: how to charge fees?
@@ -89,11 +89,11 @@ contract MaglevEulerSwap is MaglevBase {
         if (exactIn) {
             if (asset0IsInput) output = uint256(-dy);
             else output = uint256(-dx);
-            output = output * 1e18 / _fee;
+            output = output * 1e18 / (1e18 + _fee);
         } else {
             if (asset0IsInput) output = uint256(dx);
             else output = uint256(dy);
-            output = output * _fee / 1e18;
+            output = output * (1e18 + _fee) / 1e18;
         }
     }
 
