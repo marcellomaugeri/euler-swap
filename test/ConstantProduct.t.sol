@@ -16,17 +16,34 @@ contract ConstantProductTest is MaglevTestBase {
     function setUp() public virtual override {
         super.setUp();
 
+        createMaglev(50e18, 50e18, 0);
+    }
+
+    function createMaglev(uint112 debtLimit0, uint112 debtLimit1, uint256 fee) internal {
         vm.prank(owner);
-        maglev = new Maglev(_getMaglevBaseParams(), Maglev.ConstantProductParams({fee: 0}));
+        maglev = new Maglev(getMaglevBaseParams(debtLimit0, debtLimit1, fee));
 
         vm.prank(holder);
         evc.setAccountOperator(holder, address(maglev), true);
 
         vm.prank(owner);
         maglev.configure();
+    }
 
-        vm.prank(owner);
-        maglev.setDebtLimit(50e18, 50e18);
+    function test_basicExactIn() public monotonicHolderNAV {
+        uint256 amount = 1e18;
+
+        assetTST.mint(address(this), amount);
+
+        uint256 q = maglev.quoteExactInput(address(assetTST), address(assetTST2), amount);
+
+        assetTST.transfer(address(maglev), amount);
+
+        vm.expectRevert(Maglev.KNotSatisfied.selector);
+        maglev.swap(0, q+1, address(this), "");
+
+        maglev.swap(0, q, address(this), "");
+        assertEq(assetTST2.balanceOf(address(this)), q);
     }
 
     function test_fee_exactIn(uint256 amount, bool dir) public monotonicHolderNAV {
@@ -39,15 +56,20 @@ contract ConstantProductTest is MaglevTestBase {
 
         t1.mint(address(this), amount);
 
-        uint256 qOrig = maglev.quoteExactInput(address(assetTST), address(assetTST2), amount);
+        uint256 qOrig = maglev.quoteExactInput(address(assetTST), address(assetTST2), amount * 0.998e18 / 1e18);
 
-        vm.prank(owner);
-        maglev.setConstantProductParams(Maglev.ConstantProductParams({fee: 0.002e18}));
+        createMaglev(50e18, 50e18, 0.002e18);
 
         uint256 q = maglev.quoteExactInput(address(assetTST), address(assetTST2), amount);
-        assertApproxEqAbs(1e18 * q / qOrig, 0.998e18, 0.000000000001e18);
+
+        assertEq(qOrig, q);
 
         t1.transfer(address(maglev), amount);
+
+        vm.expectRevert(Maglev.KNotSatisfied.selector);
+        if (dir) maglev.swap(0, q+1, address(this), "");
+        else maglev.swap(q+1, 0, address(this), "");
+
         if (dir) maglev.swap(0, q, address(this), "");
         else maglev.swap(q, 0, address(this), "");
         assertEq(t2.balanceOf(address(this)), q);
@@ -72,7 +94,6 @@ contract ConstantProductTest is MaglevTestBase {
 
         t2.transfer(address(maglev), q);
         if (dir) maglev.swap(amount - 2, 0, address(this), ""); // - 2 due to rounding
-
         else maglev.swap(0, amount - 2, address(this), "");
 
         uint256 q2 = maglev.quoteExactInput(address(t1), address(t2), amount);

@@ -16,17 +16,18 @@ contract ConstantSumTest is MaglevTestBase {
     function setUp() public virtual override {
         super.setUp();
 
+        createMaglev(50e18, 50e18, 0, 1, 1);
+    }
+
+    function createMaglev(uint112 debtLimit0, uint112 debtLimit1, uint256 fee, uint256 priceA, uint256 priceB) internal {
         vm.prank(owner);
-        maglev = new Maglev(_getMaglevBaseParams(), Maglev.ConstantSumParams({fee: 0, priceA: 1, priceB: 1}));
+        maglev = new Maglev(getMaglevBaseParams(debtLimit0, debtLimit1, fee), Maglev.ConstantSumParams({priceA: priceA, priceB: priceB}));
 
         vm.prank(holder);
         evc.setAccountOperator(holder, address(maglev), true);
 
         vm.prank(owner);
         maglev.configure();
-
-        vm.prank(owner);
-        maglev.setDebtLimit(50e18, 50e18);
     }
 
     function test_basicSwapReport() public monotonicHolderNAV {
@@ -65,7 +66,7 @@ contract ConstantSumTest is MaglevTestBase {
         {
             uint256 amount = 60.000001e18;
             assetTST.transfer(address(maglev), amount);
-            vm.expectRevert(); // FIXME: which error?
+            vm.expectRevert(); // FIXME: currently an arithmetic underflow. should make this a proper error
             maglev.swap(0, amount, address(this), "");
         }
 
@@ -84,29 +85,28 @@ contract ConstantSumTest is MaglevTestBase {
 
         // Same debt limit means reserves not affected
 
-        vm.prank(owner);
-        maglev.setDebtLimit(50e18, 50e18);
+        createMaglev(50e18, 50e18, 0, 1, 1);
+
         assertEq(maglev.reserve0(), 120e18);
         assertEq(maglev.reserve1(), 0e18);
 
         // Increase debt limit on one side
 
-        vm.prank(owner);
-        maglev.setDebtLimit(50e18, 55e18);
+        createMaglev(50e18, 55e18, 0, 1, 1);
+
         assertEq(maglev.reserve0(), 120e18);
         assertEq(maglev.reserve1(), 5e18);
 
         // And the other
 
-        vm.prank(owner);
-        maglev.setDebtLimit(55e18, 55e18);
+        createMaglev(55e18, 55e18, 0, 1, 1);
+
         assertEq(maglev.reserve0(), 125e18);
         assertEq(maglev.reserve1(), 5e18);
 
         // Shrink debt limit
 
-        vm.prank(owner);
-        maglev.setDebtLimit(40e18, 45e18);
+        createMaglev(40e18, 45e18, 0, 1, 1);
 
         assertEq(maglev.reserve0(), 110e18);
         assertEq(maglev.reserve1(), 0e18); // can't go below 0
@@ -130,12 +130,12 @@ contract ConstantSumTest is MaglevTestBase {
     }
 
     function test_quoteExactInput() public monotonicHolderNAV {
-        vm.prank(owner);
-        maglev.setConstantSumParams(Maglev.ConstantSumParams({fee: 0.003e18, priceA: 1, priceB: 1}));
+        createMaglev(50e18, 50e18, 0.003e18, 1, 1);
 
         assetTST.mint(address(this), 100e18);
+
         uint256 q = maglev.quoteExactInput(address(assetTST), address(assetTST2), 1e18);
-        assertLt(q, 1e18);
+        assertEq(q, 0.997e18);
         assetTST.transfer(address(maglev), 1e18);
 
         maglev.swap(0, q, recipient, "");
@@ -143,13 +143,12 @@ contract ConstantSumTest is MaglevTestBase {
     }
 
     function test_quoteExactOutput() public monotonicHolderNAV {
-        vm.prank(owner);
-        maglev.setConstantSumParams(Maglev.ConstantSumParams({fee: 0.003e18, priceA: 1, priceB: 1}));
+        createMaglev(50e18, 50e18, 0.003e18, 1, 1);
 
         assetTST.mint(address(this), 100e18);
 
         uint256 q = maglev.quoteExactOutput(address(assetTST), address(assetTST2), 1e18);
-        assertGt(q, 1e18);
+        assertEq(q, 1.003009027081243732e18);
         assetTST.transfer(address(maglev), q);
 
         maglev.swap(0, 1e18, recipient, "");
@@ -160,13 +159,13 @@ contract ConstantSumTest is MaglevTestBase {
         fee = bound(fee, 0, 0.02e18);
         amount1 = bound(amount1, 1e18, 25e18);
 
-        vm.prank(owner);
-        maglev.setConstantSumParams(Maglev.ConstantSumParams({fee: uint64(fee), priceA: 1, priceB: 1}));
+        createMaglev(50e18, 50e18, fee, 1, 1);
 
         assetTST.mint(address(this), 100e18);
         assetTST2.mint(address(this), 100e18);
 
-        uint256 needed = amount1 * 1e18 / (1e18 - fee);
+        uint256 feeMultiplier = 1e18 - fee;
+        uint256 needed = (amount1 * 1e18 + (feeMultiplier - 1)) / feeMultiplier;
         console.log(amount1, needed, fee);
 
         TestERC20 tt;
@@ -186,12 +185,12 @@ contract ConstantSumTest is MaglevTestBase {
             a2 = 0;
         }
 
-        tt.transfer(address(maglev), needed - 2);
+        tt.transfer(address(maglev), needed - 1);
 
         vm.expectRevert(Maglev.KNotSatisfied.selector);
         maglev.swap(a1, a2, recipient, "");
 
-        tt.transfer(address(maglev), 2);
+        tt.transfer(address(maglev), 1);
         maglev.swap(a1, a2, recipient, "");
 
         assertEq(tt2.balanceOf(recipient), amount1);

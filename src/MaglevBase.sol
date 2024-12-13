@@ -14,6 +14,9 @@ abstract contract MaglevBase is EVCUtil, Ownable {
     address public immutable asset0;
     address public immutable asset1;
     address public immutable myAccount;
+    uint112 public immutable debtLimit0;
+    uint112 public immutable debtLimit1;
+    uint256 public immutable feeMultiplier;
 
     uint112 public reserve0;
     uint112 public reserve1;
@@ -25,6 +28,7 @@ abstract contract MaglevBase is EVCUtil, Ownable {
     error Reentrancy();
     error Overflow();
     error UnsupportedPair();
+    error BadFee();
     error InsufficientReserves();
     error InsufficientCash();
 
@@ -44,14 +48,22 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         address vault0;
         address vault1;
         address myAccount;
+        uint112 debtLimit0;
+        uint112 debtLimit1;
+        uint256 fee;
     }
 
     constructor(BaseParams memory params) EVCUtil(params.evc) Ownable(msg.sender) {
+        require(params.fee < 1e18, BadFee());
+
         vault0 = params.vault0;
         vault1 = params.vault1;
         asset0 = IEVault(vault0).asset();
         asset1 = IEVault(vault1).asset();
         myAccount = params.myAccount;
+        reserve0 = initialReserve0 = adjustReserve(params.debtLimit0, vault0);
+        reserve1 = initialReserve1 = adjustReserve(params.debtLimit1, vault1);
+        feeMultiplier = 1e18 - params.fee;
     }
 
     // Owner functions
@@ -63,11 +75,6 @@ abstract contract MaglevBase is EVCUtil, Ownable {
 
         IEVC(evc).enableCollateral(myAccount, vault0);
         IEVC(evc).enableCollateral(myAccount, vault1);
-    }
-
-    function setDebtLimit(uint112 debtLimit0, uint112 debtLimit1) external onlyOwner {
-        reserve0 = initialReserve0 = adjustReserve(debtLimit0, vault0);
-        reserve1 = initialReserve1 = adjustReserve(debtLimit1, vault1);
     }
 
     // Swapper interface
@@ -86,12 +93,19 @@ abstract contract MaglevBase is EVCUtil, Ownable {
 
         if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
 
-        // Deposit all available funds
+        // Deposit all available funds, adjust received amounts downward to collect fees
 
         uint256 amount0In = IERC20(asset0).balanceOf(address(this));
+        if (amount0In > 0) {
+            depositAssets(vault0, amount0In);
+            amount0In = amount0In * feeMultiplier / 1e18;
+        }
+
         uint256 amount1In = IERC20(asset1).balanceOf(address(this));
-        if (amount0In > 0) depositAssets(vault0, amount0In);
-        if (amount1In > 0) depositAssets(vault1, amount1In);
+        if (amount1In > 0) {
+            depositAssets(vault1, amount1In);
+            amount1In = amount1In * feeMultiplier / 1e18;
+        }
 
         // Verify curve invariant is satisified
 
@@ -176,6 +190,9 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         view
         returns (uint256)
     {
+        // exactIn: decrease received amountIn, rounding down
+        if (exactIn) amount = amount * feeMultiplier / 1e18;
+
         bool asset0IsInput;
         if (tokenIn == asset0 && tokenOut == asset1) asset0IsInput = true;
         else if (tokenIn == asset1 && tokenOut == asset0) asset0IsInput = false;
@@ -188,6 +205,9 @@ abstract contract MaglevBase is EVCUtil, Ownable {
             quote <= IERC20(asset0IsInput ? asset1 : asset0).balanceOf(asset0IsInput ? vault1 : vault0),
             InsufficientCash()
         );
+
+        // exactOut: increase required amountIn, rounding up
+        if (!exactIn) quote = (quote * 1e18 + (feeMultiplier - 1)) / feeMultiplier;
 
         return quote;
     }

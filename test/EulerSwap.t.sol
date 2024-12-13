@@ -13,25 +13,23 @@ import {MaglevEulerSwap as Maglev} from "../src/MaglevEulerSwap.sol";
 contract EulerSwapTest is MaglevTestBase {
     Maglev public maglev;
 
-    uint256 minFee = 0.0000000000001e18;
-
     function setUp() public virtual override {
         super.setUp();
 
+        createMaglev(50e18, 50e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
+    }
+
+    function createMaglev(uint112 debtLimit0, uint112 debtLimit1, uint256 fee, uint256 px, uint256 py, uint256 cx, uint256 cy) internal {
         vm.prank(owner);
-        maglev = new Maglev(
-            _getMaglevBaseParams(), Maglev.EulerSwapParams({px: 1e18, py: 1e18, cx: 0.4e18, cy: 0.85e18, fee: minFee})
-        );
+        maglev = new Maglev(getMaglevBaseParams(debtLimit0, debtLimit1, fee), Maglev.EulerSwapParams({px: px, py: py, cx: cx, cy: cy}));
 
         vm.prank(holder);
         evc.setAccountOperator(holder, address(maglev), true);
 
         vm.prank(owner);
         maglev.configure();
-
-        vm.prank(owner);
-        maglev.setDebtLimit(50e18, 50e18);
     }
+
 
     function test_basicSwap_exactIn() public monotonicHolderNAV {
         uint256 amountIn = 1e18;
@@ -59,7 +57,7 @@ contract EulerSwapTest is MaglevTestBase {
         assertEq(assetTST2.balanceOf(address(this)), amountOut);
     }
 
-    function test_price() public {
+    function test_altPrice() public {
         uint256 price = 0.5e18;
         uint256 px = price;
         uint256 py = 1e18;
@@ -68,8 +66,8 @@ contract EulerSwapTest is MaglevTestBase {
 
         int256 origNAV = getHolderNAV();
 
+        createMaglev(50e18, 50e18, 0, px, py, 0.4e18, 0.85e18);
         vm.prank(owner);
-        maglev.setEulerSwapParams(Maglev.EulerSwapParams({px: px, py: py, cx: 0.4e18, cy: 0.85e18, fee: minFee}));
 
         uint256 amountIn = 1e18;
         uint256 amountOut = maglev.quoteExactInput(address(assetTST), address(assetTST2), amountIn);
@@ -121,8 +119,7 @@ contract EulerSwapTest is MaglevTestBase {
         oracle.setPrice(address(eTST), unitOfAccount, price);
         oracle.setPrice(address(assetTST), unitOfAccount, price);
 
-        vm.prank(owner);
-        maglev.setEulerSwapParams(Maglev.EulerSwapParams({px: px, py: py, cx: cx, cy: cy, fee: minFee}));
+        createMaglev(50e18, 50e18, 0, px, py, cx, cy);
 
         int256 origNAV = getHolderNAV();
 
@@ -151,11 +148,6 @@ contract EulerSwapTest is MaglevTestBase {
     }
 
     function test_roundingFailure() public {
-        vm.skip(true);
-
-        vm.prank(owner);
-        maglev.setEulerSwapParams(Maglev.EulerSwapParams({px: 1e18, py: 1e18, cx: 0.4e18, cy: 0.85e18, fee: 0}));
-
         uint256 amountIn = 1.4e18;
         uint256 amountOut = maglev.quoteExactInput(address(assetTST), address(assetTST2), amountIn);
 
