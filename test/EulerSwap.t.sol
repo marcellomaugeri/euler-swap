@@ -167,7 +167,9 @@ contract EulerSwapTest is MaglevTestBase {
         assertEq(assetTST2.balanceOf(address(this)), amountOut);
     }
 
-    function test_fuzzAll(uint256 cx, uint256 cy, uint256 fee, uint256[8] calldata amounts, bool[8] calldata dirs) public {
+    function test_fuzzAll(uint256 cx, uint256 cy, uint256 fee, uint256[8] calldata amounts, bool[8] calldata dirs)
+        public
+    {
         cx = bound(cx, 0.01e18, 0.99e18);
         cy = bound(cy, 0.01e18, 0.99e18);
         fee = bound(fee, 0, 0.1e18);
