@@ -170,7 +170,6 @@ contract ConstantSumTest is MaglevTestBase {
 
         uint256 feeMultiplier = 1e18 - fee;
         uint256 needed = (amount1 * 1e18 + (feeMultiplier - 1)) / feeMultiplier;
-        console.log(amount1, needed, fee);
 
         TestERC20 tt;
         TestERC20 tt2;

@@ -166,4 +166,43 @@ contract EulerSwapTest is MaglevTestBase {
         maglev.swap(0, amountOut, address(this), "");
         assertEq(assetTST2.balanceOf(address(this)), amountOut);
     }
+
+    function test_fuzzAll(uint256 cx, uint256 cy, uint256 fee, uint256[8] calldata amounts, bool[8] calldata dirs) public {
+        cx = bound(cx, 0.01e18, 0.99e18);
+        cy = bound(cy, 0.01e18, 0.99e18);
+        fee = bound(fee, 0, 0.1e18);
+
+        createMaglev(50e18, 50e18, fee, 1e18, 1e18, cx, cy);
+
+        int256 origNAV = getHolderNAV();
+
+        for (uint256 i = 0; i < 8; i++) {
+            uint256 amount = bound(amounts[i], 0.1e18, 5e18);
+            bool dir = dirs[i];
+
+            TestERC20 t1;
+            TestERC20 t2;
+            if (dir) (t1, t2) = (assetTST, assetTST2);
+            else (t1, t2) = (assetTST2, assetTST);
+
+            t1.mint(address(this), amount);
+            uint256 q = maglev.quoteExactInput(address(t1), address(t2), amount);
+
+            t1.transfer(address(maglev), amount);
+
+            {
+                uint256 qPlus = q * 1.0000000000002e18 / 1e18;
+                vm.expectRevert();
+                if (dir) maglev.swap(0, qPlus, address(this), "");
+                else maglev.swap(qPlus, 0, address(this), "");
+            }
+
+            uint256 prevBal = t2.balanceOf(address(this));
+            if (dir) maglev.swap(0, q, address(this), "");
+            else maglev.swap(q, 0, address(this), "");
+            assertEq(t2.balanceOf(address(this)), q + prevBal);
+
+            assertGe(getHolderNAV(), origNAV);
+        }
+    }
 }
