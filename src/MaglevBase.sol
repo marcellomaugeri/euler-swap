@@ -17,13 +17,12 @@ abstract contract MaglevBase is EVCUtil, Ownable {
     uint112 public immutable debtLimit0;
     uint112 public immutable debtLimit1;
     uint256 public immutable feeMultiplier;
+    uint112 public immutable initialReserve0;
+    uint112 public immutable initialReserve1;
 
     uint112 public reserve0;
     uint112 public reserve1;
     uint32 private locked;
-
-    uint112 public initialReserve0;
-    uint112 public initialReserve1;
 
     error Reentrancy();
     error Overflow();
