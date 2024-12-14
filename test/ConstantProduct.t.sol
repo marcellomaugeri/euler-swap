@@ -20,13 +20,13 @@ contract ConstantProductTest is MaglevTestBase {
     }
 
     function createMaglev(uint112 debtLimit0, uint112 debtLimit1, uint256 fee) internal {
-        vm.prank(owner);
+        vm.prank(creator);
         maglev = new Maglev(getMaglevBaseParams(debtLimit0, debtLimit1, fee));
 
         vm.prank(holder);
         evc.setAccountOperator(holder, address(maglev), true);
 
-        vm.prank(owner);
+        vm.prank(anyone);
         maglev.configure();
     }
 

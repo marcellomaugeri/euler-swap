@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.27;
 
-import {Ownable, Context} from "openzeppelin-contracts/access/Ownable.sol";
 import {EVCUtil} from "evc/utils/EVCUtil.sol";
 import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
 import {IEVault, IERC20, IBorrowing, IERC4626, IRiskManager} from "evk/EVault/IEVault.sol";
 import {IUniswapV2Callee} from "./interfaces/IUniswapV2Callee.sol";
 
-abstract contract MaglevBase is EVCUtil, Ownable {
+abstract contract MaglevBase is EVCUtil {
     address public immutable vault0;
     address public immutable vault1;
     address public immutable asset0;
@@ -21,7 +20,7 @@ abstract contract MaglevBase is EVCUtil, Ownable {
 
     uint112 public reserve0;
     uint112 public reserve1;
-    uint32 public locked; // 0=unlocked, 1=reentrancy guard, 2=paused
+    uint32 public locked;
 
     error Locked();
     error Overflow();
@@ -37,10 +36,6 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         locked = 0;
     }
 
-    function _msgSender() internal view override(Context, EVCUtil) returns (address) {
-        return EVCUtil._msgSender();
-    }
-
     struct BaseParams {
         address evc;
         address vault0;
@@ -51,7 +46,7 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         uint256 fee;
     }
 
-    constructor(BaseParams memory params) EVCUtil(params.evc) Ownable(msg.sender) {
+    constructor(BaseParams memory params) EVCUtil(params.evc) {
         require(params.fee < 1e18, BadFee());
 
         vault0 = params.vault0;
@@ -59,30 +54,20 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         asset0 = IEVault(vault0).asset();
         asset1 = IEVault(vault1).asset();
         myAccount = params.myAccount;
-        reserve0 = initialReserve0 = adjustReserve(params.debtLimit0, vault0);
-        reserve1 = initialReserve1 = adjustReserve(params.debtLimit1, vault1);
+        reserve0 = initialReserve0 = offsetReserve(params.debtLimit0, vault0);
+        reserve1 = initialReserve1 = offsetReserve(params.debtLimit1, vault1);
         feeMultiplier = 1e18 - params.fee;
     }
 
     // Owner functions
 
     /// @dev Call *after* installing as operator
-    function configure() external onlyOwner {
+    function configure() external {
         IERC20(asset0).approve(vault0, type(uint256).max);
         IERC20(asset1).approve(vault1, type(uint256).max);
 
         IEVC(evc).enableCollateral(myAccount, vault0);
         IEVC(evc).enableCollateral(myAccount, vault1);
-    }
-
-    function pause() external onlyOwner {
-        require(locked == 0, Locked());
-        locked = 2;
-    }
-
-    function unpause() external onlyOwner {
-        require(locked == 2, Locked());
-        locked = 0;
     }
 
     // Swapper interface
@@ -148,18 +133,18 @@ abstract contract MaglevBase is EVCUtil, Ownable {
         return shares == 0 ? 0 : IEVault(vault).convertToAssets(shares);
     }
 
-    function adjustReserve(uint112 reserve, address vault) internal view returns (uint112) {
-        uint256 adjusted;
+    function offsetReserve(uint112 reserve, address vault) internal view returns (uint112) {
+        uint256 offset;
         uint256 debt = myDebt(vault);
 
         if (debt != 0) {
-            adjusted = reserve > debt ? reserve - debt : 0;
+            offset = reserve > debt ? reserve - debt : 0;
         } else {
-            adjusted = reserve + myBalance(vault);
+            offset = reserve + myBalance(vault);
         }
 
-        require(adjusted <= type(uint112).max, Overflow());
-        return uint112(adjusted);
+        require(offset <= type(uint112).max, Overflow());
+        return uint112(offset);
     }
 
     function withdrawAssets(address vault, uint256 amount, address to) internal {

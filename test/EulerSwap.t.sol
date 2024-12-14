@@ -28,7 +28,7 @@ contract EulerSwapTest is MaglevTestBase {
         uint256 cx,
         uint256 cy
     ) internal {
-        vm.prank(owner);
+        vm.prank(creator);
         maglev = new Maglev(
             getMaglevBaseParams(debtLimit0, debtLimit1, fee), Maglev.EulerSwapParams({priceX: px, priceY: py, concentrationX: cx, concentrationY: cy})
         );
@@ -36,7 +36,7 @@ contract EulerSwapTest is MaglevTestBase {
         vm.prank(holder);
         evc.setAccountOperator(holder, address(maglev), true);
 
-        vm.prank(owner);
+        vm.prank(anyone);
         maglev.configure();
     }
 
@@ -76,7 +76,6 @@ contract EulerSwapTest is MaglevTestBase {
         int256 origNAV = getHolderNAV();
 
         createMaglev(50e18, 50e18, 0, px, py, 0.4e18, 0.85e18);
-        vm.prank(owner);
 
         uint256 amountIn = 1e18;
         uint256 amountOut = maglev.quoteExactInput(address(assetTST), address(assetTST2), amountIn);

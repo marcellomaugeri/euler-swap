@@ -11,9 +11,10 @@ import {MaglevBase} from "../src/MaglevBase.sol";
 
 contract MaglevTestBase is EVaultTestBase {
     address public depositor = makeAddr("depositor");
-    address public owner = makeAddr("owner");
+    address public creator = makeAddr("creator");
     address public holder = makeAddr("holder");
     address public recipient = makeAddr("recipient");
+    address public anyone = makeAddr("anyone");
 
     function setUp() public virtual override {
         super.setUp();
