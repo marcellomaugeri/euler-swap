@@ -5,31 +5,27 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {MaglevBase} from "./MaglevBase.sol";
 
 contract MaglevEulerSwap is MaglevBase {
-    uint256 public priceX;
-    uint256 public priceY;
-    uint256 public concentrationX;
-    uint256 public concentrationY;
+    uint256 public immutable priceX;
+    uint256 public immutable priceY;
+    uint256 public immutable concentrationX;
+    uint256 public immutable concentrationY;
 
     error KNotSatisfied();
     error ReservesZero();
     error InvalidInputCoordinate();
 
     struct EulerSwapParams {
-        uint256 px;
-        uint256 py;
-        uint256 cx;
-        uint256 cy;
+        uint256 priceX;
+        uint256 priceY;
+        uint256 concentrationX;
+        uint256 concentrationY;
     }
 
     constructor(BaseParams memory baseParams, EulerSwapParams memory params) MaglevBase(baseParams) {
-        setEulerSwapParams(params);
-    }
-
-    function setEulerSwapParams(EulerSwapParams memory params) public onlyOwner {
-        priceX = params.px;
-        priceY = params.py;
-        concentrationX = params.cx;
-        concentrationY = params.cy;
+        priceX = params.priceX;
+        priceY = params.priceY;
+        concentrationX = params.concentrationX;
+        concentrationY = params.concentrationY;
     }
 
     // Due to rounding, computeQuote() may underestimate the amount required to
