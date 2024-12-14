@@ -42,9 +42,10 @@ The following are the high-level steps required to use Maglev:
 
 * Deposit funds into one or both of the vaults in proportion of the initial price
 * Deploy the desired Maglev contract, choosing parameters such as the vaults, debt limits, and the desired `fee`
-  * Note
+  * Note that the Maglev contract must be created after the funds are deposited, because its constructor will read the current debt and balances to setup its reserves cache
 * Install the Maglev contract as an operator for your account
-* Invoke the `configure()` function on the Maglev contract. This function can be invoked by anyone, and it is harmless to re-invoke it.
+* Invoke the `configure()` function on the Maglev contract
+  * This function can be invoked by anyone, and it is harmless to re-invoke it
 
 At this point, anyone can invoke `swap()` on the Maglev contract, and this will perform borrowing and transferring activity between the two vaults.
 
@@ -68,34 +69,60 @@ Note that it depends on the [curve](#curves) if the maximum LTV can actually be 
 
 ### Desynchronised Reserves
 
-The Maglev contract tracks what it believes the reserves (amount available plus borrowable) to be by caching in storage. These reserves are updated on each swap. However, since the balance is not actually held by the Maglev contract (it is simply an operator), the actual underlying balances may get out of sync. This can happen gradually as interest and fees are accrued, or suddenly if the holder moves funds or the position is liquidated.
+The Maglev contract tracks what it believes the reserves (amount available plus borrowable) to be by caching in storage. These reserves are updated on each swap. However, since the balance is not actually held by the Maglev contract (it is simply an operator), the actual underlying debts and balances may get out of sync. This can happen gradually as interest and fees are accrued, or suddenly if the holder moves funds or the position is liquidated.
 
-When this occurs, the `syncVirtualReserves()` should be invoked. This determines the actual balances (and debts) of the holder, and adjusts them by the configured virtual reserve levels.
+Normally this is not a problem, because swapping will still occur on the static curve. However, if there is a significant decrease in NAV then the desired LTVs may be exceeded (since the debt limit becomes higher relative to the NAV). If there is a significant increase in NAV then the AMM may become less capital efficient. To reset this, the Maglev instance should be uninstalled as an EVC operator, and a new one created and installed in its place.
 
 ### Fees
 
-FIXME
+Maglev collects swap fees in the input token.
+
+When quoting exact input swaps the effective input amount is decreased by the fee (rounding down) before consulting the curve. When quoting exact output swaps, the required input amount is increased by the fee (rounding up).
+
+After depositing but prior to verifying the curve invariant, all input amounts are adjusted down (rounding down).
+
+Since the full amount including fees is actually deposited (or repayed), fees have the effect of increasing the NAV of the position. However, they are not currently "fed back" into the reserves to be used by future swaps. If fees build up significantly, the Maglev instance should be [replaced](#desynchronised-reserves).
 
 
 ## Curves
 
 ### Constant Sum
 
-This "curve" simply adds the values of the two reserves together and ensures that after a swap this sum has not decreased. This curve is mostly suitable for assets that are pegged to the same value, such as stable/stable pairs.
+This "curve" simply adds the values of the two reserves together and ensures that after a swap this sum has not decreased. It is mostly suitable for assets that are pegged to the same value, such as stable-stable pairs.
 
 This curve supports a price fraction so that the two tokens can have different relative values, which can be useful if the peg is other than 1:1, or if the tokens have differing decimals.
 
-In this curve, the entire virtual reserves can be consumed, and since each marginal unit of the swap has the same price, there is no direct incentive to deleverage the position. However, for the same reason this does allow fixed fees for swaps of any allowed size (fixed price impact).
+In this curve, the entire virtual reserves can be consumed, and since each marginal unit of the swap has the same price, there is no direct incentive to deleverage the position. However, for the same reason this does allow fixed-size fees for swaps of any supported size (fixed price impact).
 
 ### Constant Product
 
-This is the traditional Uniswap2 curve that preserves the product of the two reserves. The larger a swap, the higher the price impact and the more profitable it is to arbitrage a disbalanced pool back to its wider market price.
+This is the traditional Uniswap2 curve that preserves the product of the two reserves. The larger a swap, the higher the price impact and the more profitable it is to arbitrage a disbalanced pool back to the market price.
+
+### EulerSwap Curve
+
+This is a new curve developed by Euler. It can be thought of as a hybrid between constant sum and constant product. The curve is defined piecewise: A piece to the left of an "initial reserves" point, and a piece to the right.
+
+Each piece has a `concentration` parameter that determines the trade-off between constant sum and constant product. The higher the concentration (closer to 1), the more it is similar to a constant sum, and the lower (closer to 0), constant product. The curve is also parameterise by a `price` parameter which determines the slope at the initial reserves point. There are actually two price parameters which can be considered the numerator and denominator of the price fraction.
+
+With careful parameter selection, the EulerSwap curve supports optimal tradeoffs between capital efficiency and arbitrage incentives.
 
 
 
 ## Todo
 
-* Can/should current reserves be calculated dynamically based on balances/debts/debt limits?
+* The EulerSwap curve has some numerical instability that we believe is caused by rounding
+  * We think the biggest effect is that it may cause some swaps to fail even if the the quoted amount is provided. Also, it may result in users slightly overpaying for swaps.
+  * The code currently has a roundingCompensation adjustment that seems to prevent this, but since we don't know a hard upper-bound it's hard to say if this solves it in all cases
+* Currently we have only been supporting stable-stable pairs
+  * What extra considerations would there be for floating pairs?
+* Automatically re-invest fees. There are a few options:
+  * Don't do anything: Re-deploing probably isn't a huge deal
+  * Increase the reserves by the fee amount
+  * Increase the reserves by the extra amount of possible leverage supported by the new fee
+  * Apply fees to a super-concentrated section of the curve (needs R&D)
+* Could current reserves be calculated dynamically based on balances/debts/debt limits?
+  * I guess you would lose a chunk of interest to arbitrage
+  * Donation attacks?
 
 
 ## License

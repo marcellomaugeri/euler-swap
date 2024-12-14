@@ -7,7 +7,7 @@
 * permit2 instead of regular approval: measure gas savings
 ? pause guardian
 ? how should aggregators find instances
-  ? registry contract
+  ? factory/registry contract
   ? fake registry contract that looks at the actually installed operators for a list of accounts
   ? transparent proxy so AMM address can stay constant
 
