@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.27;
 
-import {console} from "forge-std/Test.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {MaglevBase} from "./MaglevBase.sol";
 
 contract MaglevEulerSwap is MaglevBase {
-    uint256 public _px;
-    uint256 public _py;
-    uint256 public _cx;
-    uint256 public _cy;
+    uint256 public priceX;
+    uint256 public priceY;
+    uint256 public concentrationX;
+    uint256 public concentrationY;
 
     error KNotSatisfied();
     error ReservesZero();
@@ -27,26 +26,31 @@ contract MaglevEulerSwap is MaglevBase {
     }
 
     function setEulerSwapParams(EulerSwapParams memory params) public onlyOwner {
-        _px = params.px;
-        _py = params.py;
-        _cx = params.cx;
-        _cy = params.cy;
+        priceX = params.px;
+        priceY = params.py;
+        concentrationX = params.cx;
+        concentrationY = params.cy;
     }
+
+    // Due to rounding, computeQuote() may underestimate the amount required to
+    // pass the verify() function. In order to prevent swaps from failing, quotes
+    // are inflated by this compensation factor. FIXME: solve the rounding.
+    uint256 private constant roundingCompensation = 1.0000000000001e18;
 
     function verify(uint256 newReserve0, uint256 newReserve1) internal view virtual override {
         int256 delta = 0;
 
         if (newReserve0 >= initialReserve0) {
-            delta = int256(newReserve0) - int256(fy(newReserve1, _px, _py, initialReserve0, initialReserve1, _cx, _cy));
+            delta = int256(newReserve0)
+                - int256(fy(newReserve1, priceX, priceY, initialReserve0, initialReserve1, concentrationX, concentrationY));
         } else {
-            delta = int256(newReserve1) - int256(fx(newReserve0, _px, _py, initialReserve0, initialReserve1, _cx, _cy));
+            delta = int256(newReserve1)
+                - int256(fx(newReserve0, priceX, priceY, initialReserve0, initialReserve1, concentrationX, concentrationY));
         }
 
         // if delta is >= zero, then point is on or above the curve
         require(delta >= 0, KNotSatisfied());
     }
-
-    uint256 private constant roundingCompensation = 1.0000000000001e18;
 
     function computeQuote(uint256 amount, bool exactIn, bool asset0IsInput)
         internal
@@ -72,11 +76,31 @@ contract MaglevEulerSwap is MaglevBase {
 
             if (dx != 0) {
                 reserve0New += dx;
-                reserve1New = int256(fx(uint256(reserve0New), _px, _py, initialReserve0, initialReserve1, _cx, _cy));
+                reserve1New = int256(
+                    fx(
+                        uint256(reserve0New),
+                        priceX,
+                        priceY,
+                        initialReserve0,
+                        initialReserve1,
+                        concentrationX,
+                        concentrationY
+                    )
+                );
             }
             if (dy != 0) {
                 reserve1New += dy;
-                reserve0New = int256(fy(uint256(reserve1New), _px, _py, initialReserve0, initialReserve1, _cx, _cy));
+                reserve0New = int256(
+                    fy(
+                        uint256(reserve1New),
+                        priceX,
+                        priceY,
+                        initialReserve0,
+                        initialReserve1,
+                        concentrationX,
+                        concentrationY
+                    )
+                );
             }
 
             dx = reserve0New - int256(uint256(reserve0));

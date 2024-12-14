@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.27;
 
-import {console} from "forge-std/Test.sol";
 import {Ownable, Context} from "openzeppelin-contracts/access/Ownable.sol";
 import {EVCUtil} from "evc/utils/EVCUtil.sol";
 import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
@@ -22,9 +21,9 @@ abstract contract MaglevBase is EVCUtil, Ownable {
 
     uint112 public reserve0;
     uint112 public reserve1;
-    uint32 private locked;
+    uint32 public locked; // 0=unlocked, 1=reentrancy guard, 2=paused
 
-    error Reentrancy();
+    error Locked();
     error Overflow();
     error UnsupportedPair();
     error BadFee();
@@ -32,7 +31,7 @@ abstract contract MaglevBase is EVCUtil, Ownable {
     error InsufficientCash();
 
     modifier nonReentrant() {
-        require(locked == 0, Reentrancy());
+        require(locked == 0, Locked());
         locked = 1;
         _;
         locked = 0;
@@ -74,6 +73,16 @@ abstract contract MaglevBase is EVCUtil, Ownable {
 
         IEVC(evc).enableCollateral(myAccount, vault0);
         IEVC(evc).enableCollateral(myAccount, vault1);
+    }
+
+    function pause() external onlyOwner {
+        require(locked == 0, Locked());
+        locked = 2;
+    }
+
+    function unpause() external onlyOwner {
+        require(locked == 2, Locked());
+        locked = 0;
     }
 
     // Swapper interface
