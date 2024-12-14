@@ -15,8 +15,6 @@ abstract contract MaglevBase is EVCUtil {
     uint112 public immutable debtLimit0;
     uint112 public immutable debtLimit1;
     uint256 public immutable feeMultiplier;
-    uint112 public immutable initialReserve0;
-    uint112 public immutable initialReserve1;
 
     uint112 public reserve0;
     uint112 public reserve1;
@@ -54,8 +52,8 @@ abstract contract MaglevBase is EVCUtil {
         asset0 = IEVault(vault0).asset();
         asset1 = IEVault(vault1).asset();
         myAccount = params.myAccount;
-        reserve0 = initialReserve0 = offsetReserve(params.debtLimit0, vault0);
-        reserve1 = initialReserve1 = offsetReserve(params.debtLimit1, vault1);
+        reserve0 = offsetReserve(params.debtLimit0, vault0);
+        reserve1 = offsetReserve(params.debtLimit1, vault1);
         feeMultiplier = 1e18 - params.fee;
     }
 

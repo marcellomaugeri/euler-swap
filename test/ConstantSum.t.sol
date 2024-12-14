@@ -58,8 +58,6 @@ contract ConstantSumTest is MaglevTestBase {
     }
 
     function test_reserveLimit() public monotonicHolderNAV {
-        assertEq(maglev.initialReserve0(), 60e18);
-        assertEq(maglev.initialReserve1(), 60e18);
         assertEq(maglev.reserve0(), 60e18);
         assertEq(maglev.reserve1(), 60e18);
 

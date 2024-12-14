@@ -9,6 +9,8 @@ contract MaglevEulerSwap is MaglevBase {
     uint256 public immutable priceY;
     uint256 public immutable concentrationX;
     uint256 public immutable concentrationY;
+    uint112 public immutable initialReserve0;
+    uint112 public immutable initialReserve1;
 
     error KNotSatisfied();
     error ReservesZero();
@@ -26,6 +28,9 @@ contract MaglevEulerSwap is MaglevBase {
         priceY = params.priceY;
         concentrationX = params.concentrationX;
         concentrationY = params.concentrationY;
+
+        initialReserve0 = reserve0;
+        initialReserve1 = reserve1;
     }
 
     // Due to rounding, computeQuote() may underestimate the amount required to
