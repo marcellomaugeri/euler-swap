@@ -19,9 +19,13 @@ contract ConstantSumTest is MaglevTestBase {
         createMaglev(50e18, 50e18, 0, 1, 1);
     }
 
-    function createMaglev(uint112 debtLimit0, uint112 debtLimit1, uint256 fee, uint256 priceA, uint256 priceB) internal {
+    function createMaglev(uint112 debtLimit0, uint112 debtLimit1, uint256 fee, uint256 priceA, uint256 priceB)
+        internal
+    {
         vm.prank(owner);
-        maglev = new Maglev(getMaglevBaseParams(debtLimit0, debtLimit1, fee), Maglev.ConstantSumParams({priceA: priceA, priceB: priceB}));
+        maglev = new Maglev(
+            getMaglevBaseParams(debtLimit0, debtLimit1, fee), Maglev.ConstantSumParams({priceA: priceA, priceB: priceB})
+        );
 
         vm.prank(holder);
         evc.setAccountOperator(holder, address(maglev), true);

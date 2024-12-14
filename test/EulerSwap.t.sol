@@ -19,9 +19,19 @@ contract EulerSwapTest is MaglevTestBase {
         createMaglev(50e18, 50e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
     }
 
-    function createMaglev(uint112 debtLimit0, uint112 debtLimit1, uint256 fee, uint256 px, uint256 py, uint256 cx, uint256 cy) internal {
+    function createMaglev(
+        uint112 debtLimit0,
+        uint112 debtLimit1,
+        uint256 fee,
+        uint256 px,
+        uint256 py,
+        uint256 cx,
+        uint256 cy
+    ) internal {
         vm.prank(owner);
-        maglev = new Maglev(getMaglevBaseParams(debtLimit0, debtLimit1, fee), Maglev.EulerSwapParams({px: px, py: py, cx: cx, cy: cy}));
+        maglev = new Maglev(
+            getMaglevBaseParams(debtLimit0, debtLimit1, fee), Maglev.EulerSwapParams({px: px, py: py, cx: cx, cy: cy})
+        );
 
         vm.prank(holder);
         evc.setAccountOperator(holder, address(maglev), true);
@@ -29,7 +39,6 @@ contract EulerSwapTest is MaglevTestBase {
         vm.prank(owner);
         maglev.configure();
     }
-
 
     function test_basicSwap_exactIn() public monotonicHolderNAV {
         uint256 amountIn = 1e18;
@@ -147,6 +156,7 @@ contract EulerSwapTest is MaglevTestBase {
         assertGe(getHolderNAV(), origNAV);
     }
 
+    // To reproduce, change roundingCompensation to 1e18
     function test_roundingFailure() public {
         uint256 amountIn = 1.4e18;
         uint256 amountOut = maglev.quoteExactInput(address(assetTST), address(assetTST2), amountIn);

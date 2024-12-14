@@ -40,7 +40,7 @@ contract ConstantProductTest is MaglevTestBase {
         assetTST.transfer(address(maglev), amount);
 
         vm.expectRevert(Maglev.KNotSatisfied.selector);
-        maglev.swap(0, q+1, address(this), "");
+        maglev.swap(0, q + 1, address(this), "");
 
         maglev.swap(0, q, address(this), "");
         assertEq(assetTST2.balanceOf(address(this)), q);
@@ -67,8 +67,8 @@ contract ConstantProductTest is MaglevTestBase {
         t1.transfer(address(maglev), amount);
 
         vm.expectRevert(Maglev.KNotSatisfied.selector);
-        if (dir) maglev.swap(0, q+1, address(this), "");
-        else maglev.swap(q+1, 0, address(this), "");
+        if (dir) maglev.swap(0, q + 1, address(this), "");
+        else maglev.swap(q + 1, 0, address(this), "");
 
         if (dir) maglev.swap(0, q, address(this), "");
         else maglev.swap(q, 0, address(this), "");
@@ -94,6 +94,7 @@ contract ConstantProductTest is MaglevTestBase {
 
         t2.transfer(address(maglev), q);
         if (dir) maglev.swap(amount - 2, 0, address(this), ""); // - 2 due to rounding
+
         else maglev.swap(0, amount - 2, address(this), "");
 
         uint256 q2 = maglev.quoteExactInput(address(t1), address(t2), amount);
