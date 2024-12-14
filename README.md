@@ -127,6 +127,11 @@ With careful parameter selection, the EulerSwap curve supports optimal tradeoffs
 * Could current reserves be calculated dynamically based on balances/debts/debt limits?
   * I guess you would lose a chunk of interest to arbitrage
   * Donation attacks?
+* What can we do to make this easily integrated with aggregators/MEV bots/etc?
+  * For sure we need events. What should be logged?
+  * How to handle a discovery/tracking of the different Maglev instances?
+    * Factory? Registry? Maybe a fake factory that reads the actually installed operators from a set of addresses?
+* Other misc stuff (see `TODO` file)
 
 
 ## License
