@@ -114,7 +114,7 @@ abstract contract MaglevBase is EVCUtil, Ownable {
             uint256 newReserve1 = reserve1 + amount1In - amount1Out;
 
             require(newReserve0 <= type(uint112).max && newReserve1 <= type(uint112).max, Overflow());
-            verify(amount0In, amount1In, newReserve0, newReserve1);
+            verify(newReserve0, newReserve1);
 
             reserve0 = uint112(newReserve0);
             reserve1 = uint112(newReserve1);
@@ -214,7 +214,7 @@ abstract contract MaglevBase is EVCUtil, Ownable {
 
     // To be implemented by sub-class
 
-    function verify(uint256 amount0In, uint256 amount1In, uint256 newReserve0, uint256 newReserve1) internal virtual;
+    function verify(uint256 newReserve0, uint256 newReserve1) internal view virtual;
 
     function computeQuote(uint256 amount, bool exactIn, bool asset0IsInput) internal view virtual returns (uint256);
 }

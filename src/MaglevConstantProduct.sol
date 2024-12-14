@@ -12,7 +12,7 @@ contract MaglevConstantProduct is MaglevBase {
         return r0 * r1;
     }
 
-    function verify(uint256, uint256, uint256 newReserve0, uint256 newReserve1) internal view virtual override {
+    function verify(uint256 newReserve0, uint256 newReserve1) internal view virtual override {
         uint256 kBefore = k(reserve0, reserve1);
         uint256 kAfter = k(newReserve0, newReserve1);
         require(kAfter >= kBefore, KNotSatisfied());

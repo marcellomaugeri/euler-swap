@@ -33,7 +33,7 @@ contract MaglevEulerSwap is MaglevBase {
         _cy = params.cy;
     }
 
-    function verify(uint256, uint256, uint256 newReserve0, uint256 newReserve1) internal view virtual override {
+    function verify(uint256 newReserve0, uint256 newReserve1) internal view virtual override {
         int256 delta = 0;
 
         if (newReserve0 >= initialReserve0) {
