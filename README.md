@@ -2,9 +2,9 @@
 
 ![maglev logo](docs/maglev.png)
 
-Maglev is an Automated Market Maker (AMM) that uses [Euler Vaults](https://docs.euler.finance/euler-vault-kit-white-paper/) as leveraged lending products in order to extend the range of its reserves and thereby improve the capital efficiency of liquidity provisioning.
+Maglev is an Automated Market Maker (AMM) that uses [Euler Vaults](https://docs.euler.finance/euler-vault-kit-white-paper/) to *mag*nify capital efficiency using *lev*erage. By borrowing assets as needed, maglev AMMs can extend the range of their reserves and earn fees on trades several times larger than their liquidity outlay.
 
-To swappers, it presents a conventional Uniswap2-style interface but internally it supports custom pricing curves and other advanced functionality.
+To swappers, maglev presents a conventional Uniswap2-style interface but internally it supports custom pricing curves and other advanced functionality.
 
 <!-- TOC FOLLOWS -->
 <!-- START OF TOC -->
@@ -24,29 +24,40 @@ To swappers, it presents a conventional Uniswap2-style interface but internally 
 
 ## Concept
 
-Given a fixed size investment, Maglev aims to increase the size of trades that can be serviced, relative to a conventional AMM such as Uniswap. It does this by borrowing the "out token" and collateralising this loan with the received "in token". Later on, when somebody wishes to swap in the reverse direction, the loan can be repaid in exchange for receiving the collateral, unwinding the borrow position.
+Given a fixed size investment, Maglev aims to increase the size of trades that can be serviced relative to a conventional AMM such as Uniswap. It does this by borrowing the "out token" and collateralising this loan with the received "in token". Later on, when somebody wishes to swap in the reverse direction, they repay the loan and receive the excess collateral, unwinding the borrow position.
 
-Because the total size of the position can be many times larger than your initial investment (depending on how much LTV/leverage is allowed on the underlying lending pools), the swapping fees earned can be magnified.
+Because the total size of the position can be many times larger than the initial investment (depending on how much LTV/leverage is allowed on the underlying lending pools), the swap fees earned can be magnified.
 
-The down-side is that while the AMM holds this leveraged position, it is paying interest on the loan. Fortunately, this is partially compensated by the fact that the AMM is earning interest on the collateral. In addition, points and rewards may be earned on collateral/borrows.
+The down-side is that while the AMM holds this leveraged position, it is paying interest on the loan. Fortunately, this is partially compensated by the fact that the AMM is simultaneously earning interest on the collateral. In some cases, this interest rate spread can be reduced further by taking advantage of incentives such as points/rewards.
 
 ## Operation
 
-Since the level of acceptable borrowing risk may not be the same for every user, pooled deposits are not yet possible, and each Maglev instance manages funds for a single user (who of course may operate on behalf of pooled funds).
+Since the level of acceptable borrowing risk is not be the same for every user, pooled deposits are not supported. Each Maglev instance manages funds for a single entity (who of course may be jointly owned).
 
 Maglev is a contract designed to be used as an [EVC operator](https://evc.wtf/docs/whitepaper/#operators). This means that the user, known as the *holder*, does not give up control over their funds to a smart contract, but instead retains it in their wallet. The holder can be any compatible address, including standard multisig wallets or even an EOA.
+
+FIXME owner
 
 ### Usage
 
 The following are the high-level steps required to use Maglev:
 
-* Deposit funds into one or both of the vaults
-* Deploy the desired Maglev contract, choosing parameters such as the vaults and the desired `fee`
-* Calculate the desired [virtual reserves](#virtual-reserves) and set these values by invoking `setVirtualReserves()`
+* Deposit funds into one or both of the vaults in proportion of the initial price
+* Deploy the desired Maglev contract, choosing parameters such as the vaults, debt limits, and the desired `fee`
 * Install the Maglev contract as an operator for your account
 * Invoke the `configure()` function on the Maglev contract
 
 At this point, anyone can invoke `swap()` on the Maglev contract, and this will perform borrowing and transferring activity between the two vaults.
+
+### Reconfiguration
+
+All user-configurable parameters are stored in immutable variables, meaning they cannot be changed after the AMM is deployed. Instead, the AMM should be uninstalled as an EVC operator, and a new Maglev instance should be created and installed in its place.
+
+In order to temporarily disable a Maglev instance, `pause()` and `unpause()`
+
+### Fees
+
+FIXME
 
 ### Virtual Reserves
 
