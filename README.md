@@ -36,45 +36,45 @@ Since the level of acceptable borrowing risk is not be the same for every user, 
 
 Maglev is a contract designed to be used as an [EVC operator](https://evc.wtf/docs/whitepaper/#operators). This means that the user, known as the *holder*, does not give up control over their funds to a smart contract, but instead retains it in their wallet. The holder can be any compatible address, including standard multisig wallets or even an EOA.
 
-FIXME owner
-
 ### Usage
 
 The following are the high-level steps required to use Maglev:
 
 * Deposit funds into one or both of the vaults in proportion of the initial price
 * Deploy the desired Maglev contract, choosing parameters such as the vaults, debt limits, and the desired `fee`
+  * Note
 * Install the Maglev contract as an operator for your account
-* Invoke the `configure()` function on the Maglev contract
+* Invoke the `configure()` function on the Maglev contract. This function can be invoked by anyone, and it is harmless to re-invoke it.
 
 At this point, anyone can invoke `swap()` on the Maglev contract, and this will perform borrowing and transferring activity between the two vaults.
 
 ### Reconfiguration
 
-All user-configurable parameters are stored in immutable variables, meaning they cannot be changed after the AMM is deployed. Instead, the AMM should be uninstalled as an EVC operator, and a new Maglev instance should be created and installed in its place.
+All user-configurable parameters are stored in immutable variables, meaning they cannot be changed after the AMM is deployed. Instead, the holder should be uninstalled it from its EVC operator set, and a new Maglev instance should be created and installed in its place.
 
-In order to temporarily disable a Maglev instance, `pause()` and `unpause()`
+### Debt Limits
+
+The initial deposits in the two vaults represent the initial investment, and are swapped back and forth in response to swapping activity. In order to prevent loss to arbitrage, the initial investment should be made in proportion to the price of the assets.
+
+In a conventional AMM such as Uniswap, the balances held by the contract are called *reserves*, and these represent a hard upper-bound on the amounts that can be swapped: In other words, no matter how much you are willing to pay, you can never receive more than the current reserve.
+
+To increase the effective swappable amounts, not only will Maglev AMMs swap all their reserves, but they will internally borrow *more* of the desired token in order to service a swap. How much debt the AMM is willing to take depends on the configured debt limits.
+
+For example, if the initial investment has a NAV of $1000, and the debt limit is configured at $5000, then the maximum LTV loan that the AMM will support will be `5000/6000 = 0.8333`. In order to leave a safety buffer, it is recommended to choose a maximum LTV that is below the borrowing LTV of the vault.
+
+Each vault can have its own independent debt limit, which may be useful in case of vaults configured with asymmetric LTVs.
+
+Note that it depends on the [curve](#curves) if the maximum LTV can actually be achieved. A constant product curve will only approach these reserve levels asymptotically, since each unit will get more and more expensive. With a constant sum curve, the LTV can be achieved precisely.
+
+### Desynchronised Reserves
+
+The Maglev contract tracks what it believes the reserves (amount available plus borrowable) to be by caching in storage. These reserves are updated on each swap. However, since the balance is not actually held by the Maglev contract (it is simply an operator), the actual underlying balances may get out of sync. This can happen gradually as interest and fees are accrued, or suddenly if the holder moves funds or the position is liquidated.
+
+When this occurs, the `syncVirtualReserves()` should be invoked. This determines the actual balances (and debts) of the holder, and adjusts them by the configured virtual reserve levels.
 
 ### Fees
 
 FIXME
-
-### Virtual Reserves
-
-The initial deposits in the vaults represent the initial investment, and are swapped back and forth in response to swapping activity. In a conventional AMM such as Uniswap, these balance are called *reserves*. However, if swapping was constrained to these assets alone, then this would imply a hard limit on the size of swaps that can be serviced. To increase the effective funds, Maglev AMMs are configured with *virtual reserves*. These are typically larger than the size of the conventional reserves, which signifies that not only can all the assets be swapped from one vault to another, but even more assets can be borrowed on the Maglev's account.
-
-Virtual reserves control the maximum debt that the Maglev contract will attempt to acquire on each of its two vaults. Each vault can be configured independently.
-
-For example, if the initial investment has a NAV of $1000, and virtual reserves are configured at $5000 for each vault, then the maximum LTV loan that the AMM will support will be `5000/6000 = 0.8333`. In order to leave a safety buffer, it is recommended to select a maximum LTV that is below the borrowing LTV of the vault.
-
-Note that it depends on the [curve](#curves) if the maximum LTV can actually be achieved. A constant product will only approach these reserve levels asymptotically, since each unit will get more and more expensive. However, with constant sum, this LTV can be achieved directly.
-
-### Desynchronised Virtual Reserves
-
-The Maglev contract tracks what it believes the reserves to be by caching their values in storage. These reserves are updated on each swap. However, since the balance is not actually held by the Maglev contract (it is simply an operator), the actual underlying balances may get out of sync. This can happen gradually as interest is accrued, or suddenly if the holder moves funds or the position is liquidated.
-
-When this occurs, the `syncVirtualReserves()` should be invoked. This determines the actual balances (and debts) of the holder, and adjusts them by the configured virtual reserve levels.
-
 
 
 ## Curves
@@ -91,6 +91,11 @@ In this curve, the entire virtual reserves can be consumed, and since each margi
 
 This is the traditional Uniswap2 curve that preserves the product of the two reserves. The larger a swap, the higher the price impact and the more profitable it is to arbitrage a disbalanced pool back to its wider market price.
 
+
+
+## Todo
+
+* Can/should current reserves be calculated dynamically based on balances/debts/debt limits?
 
 
 ## License
