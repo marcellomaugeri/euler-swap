@@ -1,10 +1,10 @@
 # Euler Maglev
 
-![maglev logo](docs/maglev.png)
+![Maglev logo](docs/maglev.png)
 
-Maglev is an Automated Market Maker (AMM) that uses [Euler Vaults](https://docs.euler.finance/euler-vault-kit-white-paper/) to *mag*nify capital efficiency using *lev*erage. By borrowing assets as needed, maglev AMMs can extend the range of their reserves and earn fees on trades several times larger than their liquidity outlay.
+Maglev is an Automated Market Maker (AMM) that uses [Euler Vaults](https://docs.euler.finance/euler-vault-kit-white-paper/) to *mag*nify capital efficiency using *lev*erage. By borrowing assets as needed, Maglev AMMs can extend the range of their reserves and earn fees on trades several times larger than their liquidity outlay.
 
-To swappers, maglev presents a conventional Uniswap2-style interface but internally it supports custom pricing curves and other advanced functionality.
+To swappers, Maglev presents a conventional Uniswap2-style interface but internally it supports custom pricing curves and other advanced functionality. Although useable by anyone, the primary swapper user-base is intended to be aggregators, intents solvers, and MEV bots.
 
 <!-- TOC FOLLOWS -->
 <!-- START OF TOC -->
@@ -13,11 +13,15 @@ To swappers, maglev presents a conventional Uniswap2-style interface but interna
 * [Concept](#concept)
 * [Operation](#operation)
     * [Usage](#usage)
-    * [Virtual Reserves](#virtual-reserves)
-    * [Desynchronised Virtual Reserves](#desynchronised-virtual-reserves)
+    * [Reconfiguration](#reconfiguration)
+    * [Debt Limits](#debt-limits)
+    * [Desynchronised Reserves](#desynchronised-reserves)
+    * [Fees](#fees)
 * [Curves](#curves)
     * [Constant Sum](#constant-sum)
     * [Constant Product](#constant-product)
+    * [EulerSwap Curve](#eulerswap-curve)
+* [Todo](#todo)
 * [License](#license)
 
 <!-- END OF TOC -->

@@ -30,7 +30,8 @@ contract EulerSwapTest is MaglevTestBase {
     ) internal {
         vm.prank(creator);
         maglev = new Maglev(
-            getMaglevBaseParams(debtLimit0, debtLimit1, fee), Maglev.EulerSwapParams({priceX: px, priceY: py, concentrationX: cx, concentrationY: cy})
+            getMaglevBaseParams(debtLimit0, debtLimit1, fee),
+            Maglev.EulerSwapParams({priceX: px, priceY: py, concentrationX: cx, concentrationY: cy})
         );
 
         vm.prank(holder);
