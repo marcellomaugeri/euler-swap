@@ -5,8 +5,9 @@ import {EVCUtil} from "evc/utils/EVCUtil.sol";
 import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
 import {IEVault, IERC20, IBorrowing, IERC4626, IRiskManager} from "evk/EVault/IEVault.sol";
 import {IUniswapV2Callee} from "./interfaces/IUniswapV2Callee.sol";
+import {IMaglevBase} from "./interfaces/IMaglevBase.sol";
 
-abstract contract MaglevBase is EVCUtil {
+abstract contract MaglevBase is IMaglevBase, EVCUtil {
     address public immutable vault0;
     address public immutable vault1;
     address public immutable asset0;

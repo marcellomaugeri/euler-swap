@@ -3,8 +3,9 @@ pragma solidity ^0.8.27;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {MaglevBase} from "./MaglevBase.sol";
+import {IMaglevEulerSwap} from "./interfaces/IMaglevEulerSwap.sol";
 
-contract MaglevEulerSwap is MaglevBase {
+contract MaglevEulerSwap is IMaglevEulerSwap, MaglevBase {
     uint256 public immutable priceX;
     uint256 public immutable priceY;
     uint256 public immutable concentrationX;
