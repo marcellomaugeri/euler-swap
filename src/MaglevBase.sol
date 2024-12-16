@@ -86,7 +86,7 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
 
         // Invoke callback
 
-        if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
+        if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(_msgSender(), amount0Out, amount1Out, data);
 
         // Deposit all available funds, adjust received amounts downward to collect fees
 
