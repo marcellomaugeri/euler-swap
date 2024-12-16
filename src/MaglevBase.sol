@@ -52,6 +52,9 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
         vault1 = params.vault1;
         asset0 = IEVault(vault0).asset();
         asset1 = IEVault(vault1).asset();
+
+        require(asset0 != asset1, UnsupportedPair());
+
         myAccount = params.myAccount;
         reserve0 = offsetReserve(params.debtLimit0, vault0);
         reserve1 = offsetReserve(params.debtLimit1, vault1);
