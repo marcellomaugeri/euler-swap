@@ -5,8 +5,9 @@ import {EVCUtil} from "evc/utils/EVCUtil.sol";
 import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
 import {IEVault, IERC20, IBorrowing, IERC4626, IRiskManager} from "evk/EVault/IEVault.sol";
 import {IUniswapV2Callee} from "./interfaces/IUniswapV2Callee.sol";
+import {IMaglevBase} from "./interfaces/IMaglevBase.sol";
 
-abstract contract MaglevBase is EVCUtil {
+abstract contract MaglevBase is IMaglevBase, EVCUtil {
     address public immutable vault0;
     address public immutable vault1;
     address public immutable asset0;
@@ -51,6 +52,9 @@ abstract contract MaglevBase is EVCUtil {
         vault1 = params.vault1;
         asset0 = IEVault(vault0).asset();
         asset1 = IEVault(vault1).asset();
+
+        require(asset0 != asset1, UnsupportedPair());
+
         myAccount = params.myAccount;
         reserve0 = offsetReserve(params.debtLimit0, vault0);
         reserve1 = offsetReserve(params.debtLimit1, vault1);
@@ -82,7 +86,7 @@ abstract contract MaglevBase is EVCUtil {
 
         // Invoke callback
 
-        if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
+        if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(_msgSender(), amount0Out, amount1Out, data);
 
         // Deposit all available funds, adjust received amounts downward to collect fees
 
