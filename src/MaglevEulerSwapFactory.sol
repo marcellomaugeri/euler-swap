@@ -78,10 +78,10 @@ contract MaglevEulerSwapFactory is Ownable {
         return allPools.length;
     }
 
-    /// @notice Get a slice of the registered pools array.
+    /// @notice Get a slice of the deployed pools array.
     /// @param _start Start index of the slice.
     /// @param _end End index of the slice.
-    /// @return An array containing the slice of the registered pools.
+    /// @return An array containing the slice of the deployed pools.
     function getAllPoolsListSlice(uint256 _start, uint256 _end) external view returns (address[] memory) {
         uint256 length = allPools.length;
         if (_end == type(uint256).max) _end = length;
