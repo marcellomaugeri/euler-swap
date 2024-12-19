@@ -5,7 +5,7 @@ pragma solidity ^0.8.24;
 // import {TestERC20} from "evk-test/unit/evault/EVaultTestBase.t.sol";
 // import {IEVault} from "evk/EVault/IEVault.sol";
 import {MaglevTestBase} from "./MaglevTestBase.t.sol";
-import {MaglevEulerSwap as Maglev} from "../src/MaglevEulerSwap.sol";
+import {MaglevEulerSwap as Maglev, MaglevBase} from "../src/MaglevEulerSwap.sol";
 import {MaglevEulerSwapFactory} from "../src/MaglevEulerSwapFactory.sol";
 
 contract MaglevEulerSwapFactoryTest is MaglevTestBase {
@@ -54,5 +54,19 @@ contract MaglevEulerSwapFactoryTest is MaglevTestBase {
     function testInvalidGetAllPoolsListSliceQuery() public {
         vm.expectRevert(MaglevEulerSwapFactory.InvalidQuery.selector);
         eulerSwapFactory.getAllPoolsListSlice(1, 0);
+    }
+
+    function testDeployWithUnsupportedPair() public {
+        vm.prank(creator);
+        vm.expectRevert(MaglevBase.UnsupportedPair.selector);
+        eulerSwapFactory.deployPool(address(eTST), address(eTST), holder, 50e18, 50e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
+    }
+
+    function testDeployWithBadFee() public {
+        vm.prank(creator);
+        vm.expectRevert(MaglevBase.BadFee.selector);
+        eulerSwapFactory.deployPool(
+            address(eTST), address(eTST2), holder, 50e18, 50e18, 1e18, 1e18, 1e18, 0.4e18, 0.85e18
+        );
     }
 }
