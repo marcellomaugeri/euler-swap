@@ -2,9 +2,16 @@
   * reserve change on each swap
 ! Better revert messages when a swap cannot be satisifed due to debt-limit/utilisation/etc
   * currently it's an arithmetic underflow
+! Don't make quotes that would cause a swap to fail due to supply or borrow caps
+! Use `myDebt() == 0` condition for disabling controller: more accurate
+! In _computeQuote() use vault.cash() method instead of token.balanceOf() otherwise donations could cause quoted swaps to fail
+! In _computeQuote(), exactOut swaps should verify the *amount* (not quote) is withdrawable
 * ConstantSum: incorporate price multipliers in quote methods
 * natspec
 * permit2 instead of regular approval: measure gas savings
+* in constructor, check the two vaults have the correct EVC() return value
+  * maybe even that they were created by the EVK factory?
+? a really small swap could fail because deposit() results in 0 shares, which EVK fails on. call convertToShares() first? Seems like overkill
 ? pause guardian
 ? how should aggregators find instances
   ? factory/registry contract
