@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.27;
 
+import {IMaglevEulerSwapFactory} from "./interfaces/IMaglevEulerSwapFactory.sol";
 import {Ownable} from "openzeppelin-contracts/access/Ownable.sol";
 import {MaglevEulerSwap as Maglev, MaglevBase} from "./MaglevEulerSwap.sol";
 
 /// @title MaglevEulerSwapRegistry contract
 /// @custom:security-contact security@euler.xyz
 /// @author Euler Labs (https://www.eulerlabs.com/)
-contract MaglevEulerSwapFactory is Ownable {
+contract MaglevEulerSwapFactory is IMaglevEulerSwapFactory, Ownable {
     event PoolDeployed(address indexed asset0, address indexed asset1, uint256 indexed feeMultiplier, address pool);
 
     error InvalidQuery();
