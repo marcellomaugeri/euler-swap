@@ -19,7 +19,7 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
 
     uint112 internal reserve0;
     uint112 internal reserve1;
-    uint32 internal locked; // uses single storage slot, accessible via getReserves
+    uint32 internal locked; // uses single storage slot, accessible via getReserves()
 
     error Locked();
     error Overflow();
