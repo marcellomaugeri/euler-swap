@@ -58,8 +58,9 @@ contract ConstantSumTest is MaglevTestBase {
     }
 
     function test_reserveLimit() public monotonicHolderNAV {
-        assertEq(maglev.reserve0(), 60e18);
-        assertEq(maglev.reserve1(), 60e18);
+        (uint112 reserve0, uint112 reserve1,) = maglev.getReserves();
+        assertEq(reserve0, 60e18);
+        assertEq(reserve1, 60e18);
 
         assetTST.mint(address(this), 1000e18);
 
@@ -80,38 +81,48 @@ contract ConstantSumTest is MaglevTestBase {
             maglev.swap(0, amount, address(this), "");
         }
 
+        (reserve0, reserve1,) = maglev.getReserves();
+
         assertEq(eTST.balanceOf(holder), 70e18);
         assertEq(eTST2.debtOf(holder), 50e18);
-        assertEq(maglev.reserve0(), 120e18);
-        assertEq(maglev.reserve1(), 0e18);
+        assertEq(reserve0, 120e18);
+        assertEq(reserve1, 0e18);
 
         // Same debt limit means reserves not affected
 
         createMaglev(50e18, 50e18, 0, 1, 1);
 
-        assertEq(maglev.reserve0(), 120e18);
-        assertEq(maglev.reserve1(), 0e18);
+        (reserve0, reserve1,) = maglev.getReserves();
+
+        assertEq(reserve0, 120e18);
+        assertEq(reserve1, 0e18);
 
         // Increase debt limit on one side
 
         createMaglev(50e18, 55e18, 0, 1, 1);
 
-        assertEq(maglev.reserve0(), 120e18);
-        assertEq(maglev.reserve1(), 5e18);
+        (reserve0, reserve1,) = maglev.getReserves();
+
+        assertEq(reserve0, 120e18);
+        assertEq(reserve1, 5e18);
 
         // And the other
 
         createMaglev(55e18, 55e18, 0, 1, 1);
 
-        assertEq(maglev.reserve0(), 125e18);
-        assertEq(maglev.reserve1(), 5e18);
+        (reserve0, reserve1,) = maglev.getReserves();
+
+        assertEq(reserve0, 125e18);
+        assertEq(reserve1, 5e18);
 
         // Shrink debt limit
 
         createMaglev(40e18, 45e18, 0, 1, 1);
 
-        assertEq(maglev.reserve0(), 110e18);
-        assertEq(maglev.reserve1(), 0e18); // can't go below 0
+        (reserve0, reserve1,) = maglev.getReserves();
+
+        assertEq(reserve0, 110e18);
+        assertEq(reserve1, 0e18); // can't go below 0
     }
 
     function test_basicSwapFuzz(uint256 amount1, uint256 amount2) public monotonicHolderNAV {

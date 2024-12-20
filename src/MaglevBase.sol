@@ -17,9 +17,9 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
     uint112 public immutable debtLimit1;
     uint256 public immutable feeMultiplier;
 
-    uint112 public reserve0;
-    uint112 public reserve1;
-    uint32 public locked;
+    uint112 internal reserve0;
+    uint112 internal reserve1;
+    uint32 internal locked; // uses single storage slot, accessible via getReserves
 
     error Locked();
     error Overflow();
@@ -114,6 +114,10 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
             reserve0 = uint112(newReserve0);
             reserve1 = uint112(newReserve1);
         }
+    }
+
+    function getReserves() public view returns (uint112, uint112, uint32) {
+        return (reserve0, reserve1, locked);
     }
 
     function quoteExactInput(address tokenIn, address tokenOut, uint256 amountIn) external view returns (uint256) {
