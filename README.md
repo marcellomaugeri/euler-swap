@@ -57,7 +57,7 @@ At this point, anyone can invoke `swap()` on the Maglev contract, and this will 
 
 ### Reconfiguration
 
-All user-configurable parameters are stored in immutable variables, meaning they cannot be changed after the AMM is deployed. Instead, the holder should uninstalled it from its EVC operator set, and a new Maglev instance should be created and installed in its place.
+All user-configurable parameters are stored in immutable variables, meaning they cannot be changed after the AMM is deployed. Instead, the holder should uninstall it from its EVC operator set, and a new Maglev instance should be created and installed in its place.
 
 ### Debt Limits
 
