@@ -4,7 +4,6 @@
   * currently it's an arithmetic underflow
 ! Don't make quotes that would cause a swap to fail due to supply or borrow caps
 ! Use `myDebt() == 0` condition for disabling controller: more accurate
-! In _computeQuote() use vault.cash() method instead of token.balanceOf() otherwise donations could cause quoted swaps to fail
 ! In _computeQuote(), exactOut swaps should verify the *amount* (not quote) is withdrawable
 * ConstantSum: incorporate price multipliers in quote methods
 * natspec
