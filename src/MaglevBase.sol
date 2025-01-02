@@ -27,6 +27,7 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
     error BadFee();
     error InsufficientReserves();
     error InsufficientCash();
+    error DifferentEVC();
 
     modifier nonReentrant() {
         require(locked == 0, Locked());
@@ -47,6 +48,10 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
 
     constructor(BaseParams memory params) EVCUtil(params.evc) {
         require(params.fee < 1e18, BadFee());
+
+        address vault0Evc = IEVault(params.vault0).EVC();
+        require(vault0Evc == IEVault(params.vault1).EVC(), DifferentEVC());
+        require(vault0Evc == params.evc, DifferentEVC());
 
         vault0 = params.vault0;
         vault1 = params.vault1;
