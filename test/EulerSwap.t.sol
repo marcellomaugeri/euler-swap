@@ -8,7 +8,7 @@ import {TestERC20} from "evk-test/unit/evault/EVaultTestBase.t.sol";
 import {IEVault} from "evk/EVault/IEVault.sol";
 import {MaglevTestBase} from "./MaglevTestBase.t.sol";
 
-import {MaglevEulerSwap as Maglev} from "../src/MaglevEulerSwap.sol";
+import {MaglevEulerSwap as Maglev, MaglevBase} from "../src/MaglevEulerSwap.sol";
 
 contract EulerSwapTest is MaglevTestBase {
     Maglev public maglev;
@@ -39,6 +39,23 @@ contract EulerSwapTest is MaglevTestBase {
 
         vm.prank(anyone);
         maglev.configure();
+    }
+
+    function test_different_EVC() public {
+        vm.expectRevert(MaglevBase.DifferentEVC.selector);
+
+        new Maglev(
+            MaglevBase.BaseParams({
+                evc: address(makeAddr("RANDOM_EVC")),
+                vault0: address(eTST),
+                vault1: address(eTST2),
+                myAccount: holder,
+                debtLimit0: 50e18,
+                debtLimit1: 50e18,
+                fee: 0
+            }),
+            Maglev.EulerSwapParams({priceX: 1e18, priceY: 1e18, concentrationX: 4e18, concentrationY: 0.85e18})
+        );
     }
 
     function test_basicSwap_exactIn() public monotonicHolderNAV {
