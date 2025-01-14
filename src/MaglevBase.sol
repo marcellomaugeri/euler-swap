@@ -13,8 +13,6 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
     address public immutable asset0;
     address public immutable asset1;
     address public immutable myAccount;
-    uint112 public immutable debtLimit0;
-    uint112 public immutable debtLimit1;
     uint256 public immutable feeMultiplier;
 
     uint112 internal reserve0;
