@@ -46,6 +46,17 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
         uint256 fee;
     }
 
+    event Swap(
+        address indexed sender,
+        uint256 amount0In,
+        uint256 amount1In,
+        uint256 amount0Out,
+        uint256 amount1Out,
+        uint112 reserve0,
+        uint112 reserve1,
+        address indexed to
+    );
+
     constructor(BaseParams memory params) EVCUtil(params.evc) {
         require(params.fee < 1e18, BadFee());
 
@@ -118,6 +129,10 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
 
             reserve0 = uint112(newReserve0);
             reserve1 = uint112(newReserve1);
+
+            emit Swap(
+                msg.sender, amount0In, amount1In, amount0Out, amount1Out, uint112(newReserve0), uint112(newReserve1), to
+            );
         }
     }
 
