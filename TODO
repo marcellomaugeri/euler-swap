@@ -3,7 +3,6 @@
 ! Better revert messages when a swap cannot be satisifed due to debt-limit/utilisation/etc
   * currently it's an arithmetic underflow
 ! Don't make quotes that would cause a swap to fail due to supply or borrow caps
-! Use `myDebt() == 0` condition for disabling controller: more accurate
 * ConstantSum: incorporate price multipliers in quote methods
 * natspec
 * permit2 instead of regular approval: measure gas savings
