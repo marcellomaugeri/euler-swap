@@ -219,13 +219,17 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
 
         uint256 quote = computeQuote(amount, exactIn, asset0IsInput);
 
-        require(quote <= (asset0IsInput ? reserve1 : reserve0), InsufficientReserves());
-        require(
-            quote <= IERC20(asset0IsInput ? asset1 : asset0).balanceOf(asset0IsInput ? vault1 : vault0),
-            InsufficientCash()
-        );
+        if (exactIn) {
+            // if `exactIn`, `quote` is the amount of assets to buy from the AMM
+            require(quote <= (asset0IsInput ? reserve1 : reserve0), InsufficientReserves());
+            require(quote <= IEVault(asset0IsInput ? vault1 : vault0).cash(), InsufficientCash());
+        } else {
+            // if `!exactIn`, `amount` is the amount of assets to buy from the AMM
+            require(amount <= (asset0IsInput ? reserve1 : reserve0), InsufficientReserves());
+            require(amount <= IEVault(asset0IsInput ? vault1 : vault0).cash(), InsufficientCash());
+        }
 
-        // exactOut: increase required amountIn, rounding up
+        // exactOut: increase required quote(amountIn), rounding up
         if (!exactIn) quote = (quote * 1e18 + (feeMultiplier - 1)) / feeMultiplier;
 
         return quote;
