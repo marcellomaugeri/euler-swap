@@ -20,8 +20,8 @@ contract EulerSwapTest is MaglevTestBase {
     }
 
     function createMaglev(
-        uint112 debtLimit0,
-        uint112 debtLimit1,
+        uint112 debtLimitA,
+        uint112 debtLimitB,
         uint256 fee,
         uint256 px,
         uint256 py,
@@ -30,7 +30,7 @@ contract EulerSwapTest is MaglevTestBase {
     ) internal {
         vm.prank(creator);
         maglev = new Maglev(
-            getMaglevBaseParams(debtLimit0, debtLimit1, fee),
+            getMaglevBaseParams(debtLimitA, debtLimitB, fee),
             Maglev.EulerSwapParams({priceX: px, priceY: py, concentrationX: cx, concentrationY: cy})
         );
 
@@ -47,11 +47,11 @@ contract EulerSwapTest is MaglevTestBase {
         new Maglev(
             MaglevBase.BaseParams({
                 evc: address(makeAddr("RANDOM_EVC")),
-                vault0: address(eTST),
-                vault1: address(eTST2),
+                vaultA: address(eTST),
+                vaultB: address(eTST2),
                 myAccount: holder,
-                debtLimit0: 50e18,
-                debtLimit1: 50e18,
+                debtLimitA: 50e18,
+                debtLimitB: 50e18,
                 fee: 0
             }),
             Maglev.EulerSwapParams({priceX: 1e18, priceY: 1e18, concentrationX: 4e18, concentrationY: 0.85e18})

@@ -19,8 +19,8 @@ contract UniswapV2CallTest is MaglevTestBase {
     }
 
     function createMaglev(
-        uint112 debtLimit0,
-        uint112 debtLimit1,
+        uint112 debtLimitA,
+        uint112 debtLimitB,
         uint256 fee,
         uint256 px,
         uint256 py,
@@ -29,7 +29,7 @@ contract UniswapV2CallTest is MaglevTestBase {
     ) internal {
         vm.prank(creator);
         maglev = new Maglev(
-            getMaglevBaseParams(debtLimit0, debtLimit1, fee),
+            getMaglevBaseParams(debtLimitA, debtLimitB, fee),
             Maglev.EulerSwapParams({priceX: px, priceY: py, concentrationX: cx, concentrationY: cy})
         );
 
