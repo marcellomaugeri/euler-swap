@@ -42,15 +42,6 @@ contract MaglevEulerSwapFactoryTest is MaglevTestBase {
         assertEq(eulerSwapFactory.allPools(0), address(maglev));
     }
 
-    function testDeployPoolWhenAldreadyRegistered() public {
-        vm.prank(creator);
-        eulerSwapFactory.deployPool(address(eTST), address(eTST2), holder, 50e18, 50e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
-
-        vm.prank(creator);
-        vm.expectRevert(MaglevEulerSwapFactory.PoolAlreadyDeployed.selector);
-        eulerSwapFactory.deployPool(address(eTST), address(eTST2), holder, 50e18, 50e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
-    }
-
     function testInvalidGetAllPoolsListSliceQuery() public {
         vm.expectRevert(MaglevEulerSwapFactory.InvalidQuery.selector);
         eulerSwapFactory.getAllPoolsListSlice(1, 0);

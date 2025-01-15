@@ -12,7 +12,6 @@ contract MaglevEulerSwapFactory is IMaglevEulerSwapFactory, Ownable {
     event PoolDeployed(address indexed asset0, address indexed asset1, uint256 indexed feeMultiplier, address pool);
 
     error InvalidQuery();
-    error PoolAlreadyDeployed();
 
     /// @dev EVC address.
     address public immutable evc;
