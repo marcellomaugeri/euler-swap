@@ -60,8 +60,6 @@ contract MaglevEulerSwapFactory is IMaglevEulerSwapFactory, Ownable {
         address poolAsset1 = pool.asset1();
         uint256 feeMultiplier = pool.feeMultiplier();
 
-        require(getPool[poolAsset0][poolAsset1][feeMultiplier] == address(0), PoolAlreadyDeployed());
-
         getPool[poolAsset0][poolAsset1][feeMultiplier] = address(pool);
         // populate mapping in the reverse direction, deliberate choice to avoid the cost of comparing addresses
         getPool[poolAsset1][poolAsset0][feeMultiplier] = address(pool);
