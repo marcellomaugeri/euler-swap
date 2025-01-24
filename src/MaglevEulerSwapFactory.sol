@@ -18,7 +18,7 @@ contract MaglevEulerSwapFactory is IMaglevEulerSwapFactory, Ownable {
     /// @dev An array to store all pools addresses.
     address[] public allPools;
     /// @dev Mapping from asset0/asset1/fee => pool address.
-    mapping(address => mapping(address => mapping(uint256 => address))) public getPool;
+    mapping(bytes32 => address) public getPool;
 
     constructor(address evcAddr) Ownable(msg.sender) {
         evc = evcAddr;
@@ -29,13 +29,13 @@ contract MaglevEulerSwapFactory is IMaglevEulerSwapFactory, Ownable {
         address vault0,
         address vault1,
         address holder,
-        uint112 debtLimit0,
-        uint112 debtLimit1,
         uint256 fee,
         uint256 priceX,
         uint256 priceY,
         uint256 concentrationX,
-        uint256 concentrationY
+        uint256 concentrationY,
+        uint112 debtLimit0,
+        uint112 debtLimit1
     ) external onlyOwner returns (address) {
         Maglev pool = new Maglev(
             MaglevBase.BaseParams({
@@ -58,11 +58,18 @@ contract MaglevEulerSwapFactory is IMaglevEulerSwapFactory, Ownable {
         address poolAsset0 = pool.asset0();
         address poolAsset1 = pool.asset1();
         uint256 feeMultiplier = pool.feeMultiplier();
+        address myAccount = pool.myAccount();
+        uint256 priceX = pool.priceX();
+        uint256 priceY = pool.priceY();
+        uint256 concentrationX = pool.concentrationX();
+        uint256 concentrationY = pool.concentrationY();
 
-        getPool[poolAsset0][poolAsset1][feeMultiplier] = address(pool);
-        // populate mapping in the reverse direction, deliberate choice to avoid the cost of comparing addresses
-        getPool[poolAsset1][poolAsset0][feeMultiplier] = address(pool);
 
+        bytes32 poolKey = keccak256(
+            abi.encode(poolAsset0, poolAsset1, feeMultiplier, myAccount, priceX, priceY, concentrationX, concentrationY)
+        );
+
+        getPool[poolKey] = address(pool);
         allPools.push(address(pool));
 
         emit PoolDeployed(poolAsset0, poolAsset1, feeMultiplier, address(pool));

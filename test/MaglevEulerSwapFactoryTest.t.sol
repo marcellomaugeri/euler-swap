@@ -26,15 +26,27 @@ contract MaglevEulerSwapFactoryTest is MaglevTestBase {
         vm.prank(creator);
         Maglev maglev = Maglev(
             eulerSwapFactory.deployPool(
-                address(eTST), address(eTST2), holder, 50e18, 50e18, 0, 1e18, 1e18, 0.4e18, 0.85e18
+                address(eTST), address(eTST2), holder, 0, 1e18, 1e18, 0.4e18, 0.85e18, 50e18, 50e18
             )
         );
 
         uint256 allPoolsLengthAfter = eulerSwapFactory.allPoolsLength();
+        bytes32 poolKey = keccak256(
+            abi.encode(
+                maglev.asset0(),
+                maglev.asset1(),
+                maglev.feeMultiplier(),
+                maglev.myAccount(),
+                maglev.priceX(),
+                maglev.priceY(),
+                maglev.concentrationX(),
+                maglev.concentrationY()
+            )
+        );
 
         assertEq(allPoolsLengthAfter - allPoolsLengthBefore, 1);
-        assertEq(eulerSwapFactory.getPool(maglev.asset0(), maglev.asset1(), maglev.feeMultiplier()), address(maglev));
-        assertEq(eulerSwapFactory.getPool(maglev.asset1(), maglev.asset0(), maglev.feeMultiplier()), address(maglev));
+        assertEq(eulerSwapFactory.getPool(poolKey), address(maglev));
+        assertEq(eulerSwapFactory.getPool(poolKey), address(maglev));
 
         address[] memory poolsList = eulerSwapFactory.getAllPoolsListSlice(0, type(uint256).max);
         assertEq(poolsList.length, 1);
@@ -50,14 +62,14 @@ contract MaglevEulerSwapFactoryTest is MaglevTestBase {
     function testDeployWithUnsupportedPair() public {
         vm.prank(creator);
         vm.expectRevert(MaglevBase.UnsupportedPair.selector);
-        eulerSwapFactory.deployPool(address(eTST), address(eTST), holder, 50e18, 50e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
+        eulerSwapFactory.deployPool(address(eTST), address(eTST), holder, 0, 1e18, 1e18, 0.4e18, 0.85e18, 50e18, 50e18);
     }
 
     function testDeployWithBadFee() public {
         vm.prank(creator);
         vm.expectRevert(MaglevBase.BadFee.selector);
         eulerSwapFactory.deployPool(
-            address(eTST), address(eTST2), holder, 50e18, 50e18, 1e18, 1e18, 1e18, 0.4e18, 0.85e18
+            address(eTST), address(eTST2), holder, 1e18, 1e18, 1e18, 0.4e18, 0.85e18, 50e18, 50e18
         );
     }
 }
