@@ -64,7 +64,6 @@ contract MaglevEulerSwapFactory is IMaglevEulerSwapFactory, Ownable {
         uint256 concentrationX = pool.concentrationX();
         uint256 concentrationY = pool.concentrationY();
 
-
         bytes32 poolKey = keccak256(
             abi.encode(poolAsset0, poolAsset1, feeMultiplier, myAccount, priceX, priceY, concentrationX, concentrationY)
         );
