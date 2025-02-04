@@ -43,18 +43,18 @@ contract MaglevTestBase is EVaultTestBase {
         _mintAndDeposit(holder, eTST2, 10e18);
     }
 
-    function getMaglevBaseParams(uint112 debtLimit0, uint112 debtLimit1, uint256 fee)
+    function getMaglevBaseParams(uint112 debtLimitA, uint112 debtLimitB, uint256 fee)
         internal
         view
         returns (MaglevBase.BaseParams memory)
     {
         return MaglevBase.BaseParams({
             evc: address(evc),
-            vault0: address(eTST),
-            vault1: address(eTST2),
+            vaultA: address(eTST),
+            vaultB: address(eTST2),
             myAccount: holder,
-            debtLimit0: debtLimit0,
-            debtLimit1: debtLimit1,
+            debtLimitA: debtLimitA,
+            debtLimitB: debtLimitB,
             fee: fee
         });
     }

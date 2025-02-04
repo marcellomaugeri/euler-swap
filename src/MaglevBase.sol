@@ -13,8 +13,6 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
     address public immutable asset0;
     address public immutable asset1;
     address public immutable myAccount;
-    uint112 public immutable debtLimit0;
-    uint112 public immutable debtLimit1;
     uint256 public immutable feeMultiplier;
 
     uint112 internal reserve0;
@@ -38,11 +36,11 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
 
     struct BaseParams {
         address evc;
-        address vault0;
-        address vault1;
+        address vaultA;
+        address vaultB;
         address myAccount;
-        uint112 debtLimit0;
-        uint112 debtLimit1;
+        uint112 debtLimitA;
+        uint112 debtLimitB;
         uint256 fee;
     }
 
@@ -60,20 +58,32 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
     constructor(BaseParams memory params) EVCUtil(params.evc) {
         require(params.fee < 1e18, BadFee());
 
-        address vault0Evc = IEVault(params.vault0).EVC();
-        require(vault0Evc == IEVault(params.vault1).EVC(), DifferentEVC());
-        require(vault0Evc == params.evc, DifferentEVC());
+        address vaultAEvc = IEVault(params.vaultA).EVC();
+        require(vaultAEvc == IEVault(params.vaultB).EVC(), DifferentEVC());
+        require(vaultAEvc == params.evc, DifferentEVC());
 
-        vault0 = params.vault0;
-        vault1 = params.vault1;
-        asset0 = IEVault(vault0).asset();
-        asset1 = IEVault(vault1).asset();
-
-        require(asset0 != asset1, UnsupportedPair());
+        address assetA = IEVault(params.vaultA).asset();
+        address assetB = IEVault(params.vaultB).asset();
+        require(assetA != assetB, UnsupportedPair());
 
         myAccount = params.myAccount;
-        reserve0 = offsetReserve(params.debtLimit0, vault0);
-        reserve1 = offsetReserve(params.debtLimit1, vault1);
+        (vault0, asset0, reserve0, vault1, asset1, reserve1) = assetA < assetB
+            ? (
+                params.vaultA,
+                assetA,
+                offsetReserve(params.debtLimitA, params.vaultA),
+                params.vaultB,
+                assetB,
+                offsetReserve(params.debtLimitB, params.vaultB)
+            )
+            : (
+                params.vaultB,
+                assetB,
+                offsetReserve(params.debtLimitB, params.vaultB),
+                params.vaultA,
+                assetA,
+                offsetReserve(params.debtLimitA, params.vaultA)
+            );
         feeMultiplier = 1e18 - params.fee;
     }
 

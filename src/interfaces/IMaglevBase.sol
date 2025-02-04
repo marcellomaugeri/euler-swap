@@ -12,8 +12,6 @@ interface IMaglevBase {
     function asset0() external view returns (address);
     function asset1() external view returns (address);
     function myAccount() external view returns (address);
-    function debtLimit0() external view returns (uint112);
-    function debtLimit1() external view returns (uint112);
     function feeMultiplier() external view returns (uint256);
     function getReserves() external view returns (uint112, uint112, uint32);
 }
