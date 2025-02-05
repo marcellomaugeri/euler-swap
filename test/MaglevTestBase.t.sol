@@ -50,11 +50,11 @@ contract MaglevTestBase is EVaultTestBase {
     {
         return MaglevBase.BaseParams({
             evc: address(evc),
-            vaultA: address(eTST),
-            vaultB: address(eTST2),
+            vault0: address(eTST),
+            vault1: address(eTST2),
             myAccount: holder,
-            debtLimitA: debtLimitA,
-            debtLimitB: debtLimitB,
+            debtLimit0: debtLimitA,
+            debtLimit1: debtLimitB,
             fee: fee
         });
     }
