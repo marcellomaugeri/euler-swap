@@ -47,11 +47,11 @@ contract EulerSwapTest is MaglevTestBase {
         new Maglev(
             MaglevBase.BaseParams({
                 evc: address(makeAddr("RANDOM_EVC")),
-                vaultA: address(eTST),
-                vaultB: address(eTST2),
+                vault0: address(eTST),
+                vault1: address(eTST2),
                 myAccount: holder,
-                debtLimitA: 50e18,
-                debtLimitB: 50e18,
+                debtLimit0: 50e18,
+                debtLimit1: 50e18,
                 fee: 0
             }),
             Maglev.EulerSwapParams({priceX: 1e18, priceY: 1e18, concentrationX: 4e18, concentrationY: 0.85e18})
