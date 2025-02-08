@@ -173,7 +173,7 @@ contract EulerSwapTest is MaglevTestBase {
         assertGe(getHolderNAV(), origNAV);
     }
 
-    // To reproduce, change roundingCompensation to 1e18
+    // To reproduce, change quotePadding to 1e18
     function test_roundingFailure() public {
         uint256 amountIn = 1.4e18;
         uint256 amountOut = maglev.quoteExactInput(address(assetTST), address(assetTST2), amountIn);
@@ -210,7 +210,7 @@ contract EulerSwapTest is MaglevTestBase {
             t1.transfer(address(maglev), amount);
 
             {
-                uint256 qPlus = q * 1.0000000000002e18 / 1e18;
+                uint256 qPlus = q * 1.00000000002e18 / 1e18;
                 vm.expectRevert();
                 if (dir) maglev.swap(0, qPlus, address(this), "");
                 else maglev.swap(qPlus, 0, address(this), "");

@@ -34,11 +34,6 @@ contract MaglevEulerSwap is IMaglevEulerSwap, MaglevBase {
         initialReserve1 = reserve1;
     }
 
-    // Due to rounding, computeQuote() may underestimate the amount required to
-    // pass the verify() function. In order to prevent swaps from failing, quotes
-    // are inflated by this compensation factor. FIXME: solve the rounding.
-    uint256 private constant roundingCompensation = 1.0000000000001e18;
-
     function verify(uint256 newReserve0, uint256 newReserve1) internal view virtual override {
         int256 delta = 0;
 
@@ -53,6 +48,11 @@ contract MaglevEulerSwap is IMaglevEulerSwap, MaglevBase {
         // if delta is >= zero, then point is on or above the curve
         require(delta >= 0, KNotSatisfied());
     }
+
+    // Due to rounding, computeQuote() may underestimate the amount required to
+    // pass the verify() function. In order to prevent swaps from failing, quotes
+    // are inflated by this padding factor.
+    uint256 private constant quotePadding = 1.00000000001e18;
 
     function computeQuote(uint256 amount, bool exactIn, bool asset0IsInput)
         internal
@@ -112,11 +112,11 @@ contract MaglevEulerSwap is IMaglevEulerSwap, MaglevBase {
         if (exactIn) {
             if (asset0IsInput) output = uint256(-dy);
             else output = uint256(-dx);
-            output = output * 1e18 / roundingCompensation;
+            output = output * 1e18 / quotePadding;
         } else {
             if (asset0IsInput) output = uint256(dx);
             else output = uint256(dy);
-            output = output * roundingCompensation / 1e18;
+            output = output * quotePadding / 1e18;
         }
     }
 

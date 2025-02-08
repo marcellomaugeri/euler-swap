@@ -118,7 +118,7 @@ With careful parameter selection, the EulerSwap curve supports optimal tradeoffs
 
 * The EulerSwap curve has some numerical instability that we believe is caused by rounding
   * We think the biggest effect is that it may cause some swaps to fail even if the exact quoted amount is sent. Also, it may result in users slightly overpaying for swaps.
-  * The code currently has a roundingCompensation adjustment that seems to prevent this, but since we don't know a hard upper-bound it's hard to say if this solves it in all cases
+  * The code currently has a quotePadding adjustment that seems to prevent this, but since we don't know a hard upper-bound it's hard to say if this solves it in all cases. In particular, this will only work well for 18-decimal tokens of reasonable prices
 * Currently we have only been supporting stable-stable pairs
   * What extra considerations would there be for floating pairs?
 * Automatically re-invest fees. There are a few options:
