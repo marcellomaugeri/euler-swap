@@ -27,6 +27,7 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
     error InsufficientCash();
     error DifferentEVC();
     error AssetsOutOfOrderOrEqual();
+    error CurveViolation();
 
     modifier nonReentrant() {
         require(locked == 0, Locked());
@@ -125,7 +126,7 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
             uint256 newReserve1 = reserve1 + amount1In - amount1Out;
 
             require(newReserve0 <= type(uint112).max && newReserve1 <= type(uint112).max, Overflow());
-            verify(newReserve0, newReserve1);
+            require(verify(newReserve0, newReserve1), CurveViolation());
 
             reserve0 = uint112(newReserve0);
             reserve1 = uint112(newReserve1);
@@ -235,9 +236,55 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
         return quote;
     }
 
-    // To be implemented by sub-class
+    /// @dev May be overridden by subclass if there is a more efficient method
+    /// of computing quotes than binary search.
+    function computeQuote(uint256 amount, bool exactIn, bool asset0IsInput)
+        internal
+        view
+        virtual
+        returns (uint256 output)
+    {
+        int256 dx;
+        int256 dy;
 
-    function verify(uint256 newReserve0, uint256 newReserve1) internal view virtual;
+        if (exactIn) {
+            if (asset0IsInput) dx = int256(amount);
+            else dy = int256(amount);
+        } else {
+            if (asset0IsInput) dy = -int256(amount);
+            else dx = -int256(amount);
+        }
 
-    function computeQuote(uint256 amount, bool exactIn, bool asset0IsInput) internal view virtual returns (uint256);
+        unchecked {
+            int256 reserve0New = int256(uint256(reserve0)) + dx;
+            int256 reserve1New = int256(uint256(reserve1)) + dy;
+
+            uint256 low;
+            uint256 mid;
+            uint256 high = type(uint112).max;
+
+            for (uint256 i; i < 256; ++i) {
+                mid = (low + high) / 2;
+                bool valid = dx != 0 ? verify(uint256(reserve0New), mid) : verify(mid, uint256(reserve1New));
+                if (valid) high = mid;
+                else low = mid + 1;
+
+                if (low >= high) break;
+            }
+
+            if (dx != 0) dy = int256(low) - reserve1New;
+            else dx = int256(low) - reserve0New;
+        }
+
+        if (exactIn) {
+            if (asset0IsInput) output = uint256(-dy);
+            else output = uint256(-dx);
+        } else {
+            if (asset0IsInput) output = uint256(dx);
+            else output = uint256(dy);
+        }
+    }
+
+    /// @dev Must be implemented by sub-class
+    function verify(uint256 newReserve0, uint256 newReserve1) internal view virtual returns (bool);
 }

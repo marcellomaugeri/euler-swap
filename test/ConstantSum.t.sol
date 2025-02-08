@@ -8,7 +8,7 @@ import {TestERC20} from "evk-test/unit/evault/EVaultTestBase.t.sol";
 import {IEVault} from "evk/EVault/IEVault.sol";
 import {MaglevTestBase} from "./MaglevTestBase.t.sol";
 
-import {MaglevConstantSum as Maglev} from "../src/MaglevConstantSum.sol";
+import {MaglevConstantSum as Maglev, MaglevBase} from "../src/MaglevConstantSum.sol";
 
 contract ConstantSumTest is MaglevTestBase {
     Maglev public maglev;
@@ -199,7 +199,7 @@ contract ConstantSumTest is MaglevTestBase {
 
         tt.transfer(address(maglev), needed - 1);
 
-        vm.expectRevert(Maglev.KNotSatisfied.selector);
+        vm.expectRevert(MaglevBase.CurveViolation.selector);
         maglev.swap(a1, a2, recipient, "");
 
         tt.transfer(address(maglev), 1);

@@ -125,12 +125,11 @@ contract EulerSwapTest is MaglevTestBase {
         assertEq(t2.balanceOf(address(this)), q);
 
         t2.transfer(address(maglev), q);
-        if (dir) maglev.swap(amount - 2, 0, address(this), ""); // - 2 due to rounding
-
-        else maglev.swap(0, amount - 2, address(this), "");
+        if (dir) maglev.swap(amount, 0, address(this), "");
+        else maglev.swap(0, amount, address(this), "");
 
         uint256 q2 = maglev.quoteExactInput(address(t1), address(t2), amount);
-        assertApproxEqAbs(q, q2, 0.00000001e18);
+        assertEq(q, q2);
     }
 
     function test_fuzzParams(uint256 amount, uint256 amount2, uint256 price, uint256 cx, uint256 cy, bool dir) public {
@@ -173,17 +172,6 @@ contract EulerSwapTest is MaglevTestBase {
         assertGe(getHolderNAV(), origNAV);
     }
 
-    // To reproduce, change quotePadding to 1e18
-    function test_roundingFailure() public {
-        uint256 amountIn = 1.4e18;
-        uint256 amountOut = maglev.quoteExactInput(address(assetTST), address(assetTST2), amountIn);
-
-        assetTST.mint(address(this), amountIn);
-        assetTST.transfer(address(maglev), amountIn);
-        maglev.swap(0, amountOut, address(this), "");
-        assertEq(assetTST2.balanceOf(address(this)), amountOut);
-    }
-
     function test_fuzzAll(uint256 cx, uint256 cy, uint256 fee, uint256[8] calldata amounts, bool[8] calldata dirs)
         public
     {
@@ -207,14 +195,18 @@ contract EulerSwapTest is MaglevTestBase {
             t1.mint(address(this), amount);
             uint256 q = maglev.quoteExactInput(address(t1), address(t2), amount);
 
+            // Try to swap out 1 extra
+
             t1.transfer(address(maglev), amount);
 
             {
-                uint256 qPlus = q * 1.00000000002e18 / 1e18;
+                uint256 qPlus = q + 1;
                 vm.expectRevert();
                 if (dir) maglev.swap(0, qPlus, address(this), "");
                 else maglev.swap(qPlus, 0, address(this), "");
             }
+
+            // Confirm actual quote works
 
             uint256 prevBal = t2.balanceOf(address(this));
             if (dir) maglev.swap(0, q, address(this), "");

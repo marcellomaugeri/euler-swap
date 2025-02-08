@@ -46,10 +46,8 @@ contract PreserveNav is MaglevTestBase {
         bool preSkimDir,
         bool dir1,
         uint256 amount1,
-        bool skimOrder1,
         bool dir2,
-        uint256 amount2,
-        bool skimOrder2
+        uint256 amount2
     ) public {
         cx = bound(cx, 0.1e18, 0.99e18);
         cy = bound(cy, 0.1e18, 0.99e18);
@@ -76,10 +74,16 @@ contract PreserveNav is MaglevTestBase {
 
             t1.mint(address(this), amount1);
             t1.transfer(address(maglev), amount1);
+
+            {
+                uint256 qPlus = q + 1;
+                vm.expectRevert();
+                if (dir1) maglev.swap(0, qPlus, address(this), "");
+                else maglev.swap(qPlus, 0, address(this), "");
+            }
+
             if (dir1) maglev.swap(0, q, address(this), "");
             else maglev.swap(q, 0, address(this), "");
-
-            skimAll(skimOrder1);
         }
 
         assertGe(getHolderNAV(), nav1);
@@ -94,10 +98,16 @@ contract PreserveNav is MaglevTestBase {
 
             t1.mint(address(this), amount2);
             t1.transfer(address(maglev), amount2);
+
+            {
+                uint256 qPlus = q + 1;
+                vm.expectRevert();
+                if (dir2) maglev.swap(0, qPlus, address(this), "");
+                else maglev.swap(qPlus, 0, address(this), "");
+            }
+
             if (dir2) maglev.swap(0, q, address(this), "");
             else maglev.swap(q, 0, address(this), "");
-
-            skimAll(skimOrder2);
         }
 
         assertGe(getHolderNAV(), nav1);

@@ -46,7 +46,7 @@ Maglev is a contract designed to be used as an [EVC operator](https://evc.wtf/do
 
 The following are the high-level steps required to use Maglev:
 
-* Deposit funds into one or both of the vaults in proportion of the initial price
+* Deposit funds into one or both of the vaults in proportion to the initial price
 * Deploy the desired Maglev contract, choosing parameters such as the vaults, debt limits, and the desired `fee`
   * Note that the Maglev contract must be created after the funds are deposited, because its constructor will read the current debts and balances to setup its reserves cache
 * Install the Maglev contract as an operator for your account
@@ -114,11 +114,8 @@ With careful parameter selection, the EulerSwap curve supports optimal tradeoffs
 
 
 
-## Todo
+## Future directions
 
-* The EulerSwap curve has some numerical instability that we believe is caused by rounding
-  * We think the biggest effect is that it may cause some swaps to fail even if the exact quoted amount is sent. Also, it may result in users slightly overpaying for swaps.
-  * The code currently has a quotePadding adjustment that seems to prevent this, but since we don't know a hard upper-bound it's hard to say if this solves it in all cases. In particular, this will only work well for 18-decimal tokens of reasonable prices
 * Currently we have only been supporting stable-stable pairs
   * What extra considerations would there be for floating pairs?
 * Automatically re-invest fees. There are a few options:
@@ -145,6 +142,6 @@ With careful parameter selection, the EulerSwap curve supports optimal tradeoffs
 
 ## License
 
-(c) 2024 Euler Labs Ltd.
+(c) 2024-2025 Euler Labs Ltd.
 
 All rights reserved.

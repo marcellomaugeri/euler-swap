@@ -8,7 +8,7 @@ import {TestERC20} from "evk-test/unit/evault/EVaultTestBase.t.sol";
 import {IEVault} from "evk/EVault/IEVault.sol";
 import {MaglevTestBase} from "./MaglevTestBase.t.sol";
 
-import {MaglevConstantProduct as Maglev} from "../src/MaglevConstantProduct.sol";
+import {MaglevConstantProduct as Maglev, MaglevBase} from "../src/MaglevConstantProduct.sol";
 
 contract ConstantProductTest is MaglevTestBase {
     Maglev public maglev;
@@ -39,7 +39,7 @@ contract ConstantProductTest is MaglevTestBase {
 
         assetTST.transfer(address(maglev), amount);
 
-        vm.expectRevert(Maglev.KNotSatisfied.selector);
+        vm.expectRevert(MaglevBase.CurveViolation.selector);
         maglev.swap(0, q + 1, address(this), "");
 
         maglev.swap(0, q, address(this), "");
@@ -66,7 +66,7 @@ contract ConstantProductTest is MaglevTestBase {
 
         t1.transfer(address(maglev), amount);
 
-        vm.expectRevert(Maglev.KNotSatisfied.selector);
+        vm.expectRevert(MaglevBase.CurveViolation.selector);
         if (dir) maglev.swap(0, q + 1, address(this), "");
         else maglev.swap(q + 1, 0, address(this), "");
 
