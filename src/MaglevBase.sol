@@ -260,16 +260,12 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
             int256 reserve1New = int256(uint256(reserve1)) + dy;
 
             uint256 low;
-            uint256 mid;
             uint256 high = type(uint112).max;
 
-            for (uint256 i; i < 256; ++i) {
-                mid = (low + high) / 2;
-                bool valid = dx != 0 ? verify(uint256(reserve0New), mid) : verify(mid, uint256(reserve1New));
-                if (valid) high = mid;
+            while (low < high) {
+                uint256 mid = (low + high) / 2;
+                if (dy == 0 ? verify(uint256(reserve0New), mid) : verify(mid, uint256(reserve1New))) high = mid;
                 else low = mid + 1;
-
-                if (low >= high) break;
             }
 
             if (dx != 0) dy = int256(low) - reserve1New;
