@@ -15,8 +15,8 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
     address public immutable myAccount;
     uint256 public immutable feeMultiplier;
 
-    uint112 internal reserve0;
-    uint112 internal reserve1;
+    uint112 public reserve0;
+    uint112 public reserve1;
     uint32 internal locked; // uses single storage slot, accessible via getReserves()
 
     error Locked();
@@ -80,8 +80,10 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
 
     // Owner functions
 
-    /// @dev Call *after* installing as operator
-    function configure() external {
+    /// @notice Approve the vaults to access the Maglev instance's tokens,
+    /// and enables vaults as collateral. Must call *after* installing
+    /// the Maglev instance as an operator.
+    function activate() external {
         IERC20(asset0).approve(vault0, type(uint256).max);
         IERC20(asset1).approve(vault1, type(uint256).max);
 
@@ -91,6 +93,10 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
 
     // Swapper interface
 
+    /// @notice Optimistically sends the requested amounts of tokens to the `to`
+    /// address, invokes `uniswapV2Call` callback on `to` (if `data` provided), and
+    /// then verifies that a sufficient amount of tokens were transferred to
+    /// satisfy the swapping curve invariant.
     function swap(uint256 amount0Out, uint256 amount1Out, address to, bytes calldata data)
         external
         callThroughEVC
@@ -137,16 +143,19 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
         }
     }
 
+    /// @notice Convenience function for when both reserve values are needed.
     function getReserves() public view returns (uint112, uint112, uint32) {
         return (reserve0, reserve1, locked);
     }
 
+    /// @notice How much `tokenOut` can I get for `amountIn` of `tokenIn`?
     function quoteExactInput(address tokenIn, address tokenOut, uint256 amountIn) external view returns (uint256) {
-        return _computeQuote(tokenIn, tokenOut, amountIn, true);
+        return computeFullQuote(tokenIn, tokenOut, amountIn, true);
     }
 
+    /// @notice How much `tokenIn` do I need to get `amountOut` of `tokenOut`?
     function quoteExactOutput(address tokenIn, address tokenOut, uint256 amountOut) external view returns (uint256) {
-        return _computeQuote(tokenIn, tokenOut, amountOut, false);
+        return computeFullQuote(tokenIn, tokenOut, amountOut, false);
     }
 
     // Internal utilities
@@ -205,7 +214,9 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
         }
     }
 
-    function _computeQuote(address tokenIn, address tokenOut, uint256 amount, bool exactIn)
+    /// @dev This function handles quoting, including swap fees. Curve-specific
+    /// quote calculations are delegated to computeQuote().
+    function computeFullQuote(address tokenIn, address tokenOut, uint256 amount, bool exactIn)
         internal
         view
         returns (uint256)
@@ -236,8 +247,10 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
         return quote;
     }
 
-    /// @dev May be overridden by subclass if there is a more efficient method
-    /// of computing quotes than binary search.
+    /// @dev This function generates quotes given the specific installed curve
+    /// instance. The base-class implementation is a binary search, however this
+    /// may be overridden by a subclass if there is a more efficient method
+    /// of computing quotes, or if a curve is non-convex.
     function computeQuote(uint256 amount, bool exactIn, bool asset0IsInput)
         internal
         view
@@ -281,6 +294,9 @@ abstract contract MaglevBase is IMaglevBase, EVCUtil {
         }
     }
 
-    /// @dev Must be implemented by sub-class
+    /// @dev Function that defines the shape of the swapping curve. Returns true iff
+    /// the provided reserve amounts are acceptable to the pool. Geometrically, this
+    /// can be visualised as checking if a point is on or above/to the right of
+    /// the swapping curve. This function must be implemented by a sub-class.
     function verify(uint256 newReserve0, uint256 newReserve1) internal view virtual returns (bool);
 }

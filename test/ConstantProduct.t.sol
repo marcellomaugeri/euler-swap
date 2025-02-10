@@ -27,7 +27,7 @@ contract ConstantProductTest is MaglevTestBase {
         evc.setAccountOperator(holder, address(maglev), true);
 
         vm.prank(anyone);
-        maglev.configure();
+        maglev.activate();
     }
 
     function test_basicExactIn() public monotonicHolderNAV {

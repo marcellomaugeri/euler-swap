@@ -32,7 +32,7 @@ contract MaglevEulerSwap is IMaglevEulerSwap, MaglevBase {
         initialReserve1 = reserve1;
     }
 
-    function fx(uint256 xt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c)
+    function f(uint256 xt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c)
         internal
         pure
         returns (uint256)
@@ -43,10 +43,10 @@ contract MaglevEulerSwap is IMaglevEulerSwap, MaglevBase {
     function verify(uint256 newReserve0, uint256 newReserve1) internal view virtual override returns (bool) {
         if (newReserve0 >= initialReserve0) {
             if (newReserve1 >= initialReserve1) return true;
-            return newReserve0 >= fx(newReserve1, priceY, priceX, initialReserve1, initialReserve0, concentrationY);
+            return newReserve0 >= f(newReserve1, priceY, priceX, initialReserve1, initialReserve0, concentrationY);
         } else {
             if (newReserve1 < initialReserve1) return false;
-            return newReserve1 >= fx(newReserve0, priceX, priceY, initialReserve0, initialReserve1, concentrationX);
+            return newReserve1 >= f(newReserve0, priceX, priceY, initialReserve0, initialReserve1, concentrationX);
         }
     }
 }

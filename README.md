@@ -50,7 +50,7 @@ The following are the high-level steps required to use Maglev:
 * Deploy the desired Maglev contract, choosing parameters such as the vaults, debt limits, and the desired `fee`
   * Note that the Maglev contract must be created after the funds are deposited, because its constructor will read the current debts and balances to setup its reserves cache
 * Install the Maglev contract as an operator for your account
-* Invoke the `configure()` function on the Maglev contract
+* Invoke the `activate()` function on the Maglev contract
   * This function can be invoked by anyone, and it is harmless to re-invoke it
 
 At this point, anyone can invoke `swap()` on the Maglev contract, and this will perform borrowing and transferring activity between the two vaults.
