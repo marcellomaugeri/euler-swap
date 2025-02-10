@@ -32,11 +32,7 @@ contract MaglevEulerSwap is IMaglevEulerSwap, MaglevBase {
         initialReserve1 = reserve1;
     }
 
-    function f(uint256 xt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c)
-        internal
-        pure
-        returns (uint256)
-    {
+    function f(uint256 xt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c) internal pure returns (uint256) {
         return y0 + px * 1e18 / py * (c * (2 * x0 - xt) / 1e18 + (1e18 - c) * x0 / 1e18 * x0 / xt - x0) / 1e18;
     }
 
