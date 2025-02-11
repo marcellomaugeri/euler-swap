@@ -7,7 +7,8 @@ import {Test, console} from "forge-std/Test.sol";
 import {EVaultTestBase, TestERC20} from "evk-test/unit/evault/EVaultTestBase.t.sol";
 import {IEVault} from "evk/EVault/IEVault.sol";
 
-import {MaglevBase} from "../src/MaglevBase.sol";
+import {Maglev} from "../src/Maglev.sol";
+import {MaglevPeriphery} from "../src/MaglevPeriphery.sol";
 
 contract MaglevTestBase is EVaultTestBase {
     address public depositor = makeAddr("depositor");
@@ -16,8 +17,12 @@ contract MaglevTestBase is EVaultTestBase {
     address public recipient = makeAddr("recipient");
     address public anyone = makeAddr("anyone");
 
+    MaglevPeriphery public periphery;
+
     function setUp() public virtual override {
         super.setUp();
+
+        periphery = new MaglevPeriphery(address(evc));
 
         // Vault config
 
@@ -43,12 +48,12 @@ contract MaglevTestBase is EVaultTestBase {
         _mintAndDeposit(holder, eTST2, 10e18);
     }
 
-    function getMaglevBaseParams(uint112 debtLimitA, uint112 debtLimitB, uint256 fee)
+    function getMaglevParams(uint112 debtLimitA, uint112 debtLimitB, uint256 fee)
         internal
         view
-        returns (MaglevBase.BaseParams memory)
+        returns (Maglev.Params memory)
     {
-        return MaglevBase.BaseParams({
+        return Maglev.Params({
             evc: address(evc),
             vault0: address(eTST),
             vault1: address(eTST2),
@@ -91,7 +96,7 @@ contract MaglevTestBase is EVaultTestBase {
     }
 
     function logState(address ml) internal view {
-        (uint112 reserve0, uint112 reserve1,) = MaglevBase(ml).getReserves();
+        (uint112 reserve0, uint112 reserve1,) = Maglev(ml).getReserves();
 
         console.log("--------------------");
         console.log("Account States:");
@@ -102,5 +107,49 @@ contract MaglevTestBase is EVaultTestBase {
         console.log("  eTST2 Vault debt:   ", eTST2.debtOf(holder));
         console.log("  reserve0:           ", reserve0);
         console.log("  reserve1:           ", reserve1);
+    }
+
+    function _skimAll(Maglev ml, bool dir) internal returns (uint256) {
+        uint256 skimmed = 0;
+        uint256 val = 1;
+
+        // Phase 1: Keep doubling skim amount until it fails
+
+        while (true) {
+            (uint256 amount0, uint256 amount1) = dir ? (val, uint256(0)) : (uint256(0), val);
+
+            try ml.swap(amount0, amount1, address(0xDEAD), "") {
+                skimmed += val;
+                val *= 2;
+            } catch {
+                break;
+            }
+        }
+
+        // Phase 2: Keep halving skim amount until 1 wei skim fails
+
+        while (true) {
+            if (val > 1) val /= 2;
+
+            (uint256 amount0, uint256 amount1) = dir ? (val, uint256(0)) : (uint256(0), val);
+
+            try ml.swap(amount0, amount1, address(0xDEAD), "") {
+                skimmed += val;
+            } catch {
+                if (val == 1) break;
+            }
+        }
+
+        return skimmed;
+    }
+
+    function skimAll(Maglev ml, bool order) public {
+        if (order) {
+            _skimAll(ml, true);
+            _skimAll(ml, false);
+        } else {
+            _skimAll(ml, false);
+            _skimAll(ml, true);
+        }
     }
 }

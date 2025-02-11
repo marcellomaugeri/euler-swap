@@ -8,7 +8,7 @@ import {TestERC20} from "evk-test/unit/evault/EVaultTestBase.t.sol";
 import {IEVault} from "evk/EVault/IEVault.sol";
 import {MaglevTestBase} from "./MaglevTestBase.t.sol";
 
-import {MaglevEulerSwap as Maglev, MaglevBase} from "../src/MaglevEulerSwap.sol";
+import {Maglev} from "../src/Maglev.sol";
 
 contract PreserveNav is MaglevTestBase {
     Maglev public maglev;
@@ -28,15 +28,12 @@ contract PreserveNav is MaglevTestBase {
     ) internal {
         vm.prank(creator);
         maglev = new Maglev(
-            getMaglevBaseParams(debtLimitA, debtLimitB, fee),
-            Maglev.EulerSwapParams({priceX: px, priceY: py, concentrationX: cx, concentrationY: cy})
+            getMaglevParams(debtLimitA, debtLimitB, fee),
+            Maglev.CurveParams({priceX: px, priceY: py, concentrationX: cx, concentrationY: cy})
         );
 
         vm.prank(holder);
         evc.setAccountOperator(holder, address(maglev), true);
-
-        vm.prank(anyone);
-        maglev.activate();
     }
 
     function test_preserve_nav(
@@ -61,7 +58,7 @@ contract PreserveNav is MaglevTestBase {
 
         createMaglev(50e18, 50e18, fee, 1e18, 1e18, cx, cy);
 
-        skimAll(preSkimDir);
+        skimAll(maglev, preSkimDir);
         int256 nav1 = getHolderNAV();
 
         {
@@ -70,7 +67,7 @@ contract PreserveNav is MaglevTestBase {
             if (dir1) (t1, t2) = (assetTST, assetTST2);
             else (t1, t2) = (assetTST2, assetTST);
 
-            uint256 q = maglev.quoteExactInput(address(t1), address(t2), amount1);
+            uint256 q = periphery.quoteExactInput(address(maglev), address(t1), address(t2), amount1);
 
             t1.mint(address(this), amount1);
             t1.transfer(address(maglev), amount1);
@@ -94,7 +91,7 @@ contract PreserveNav is MaglevTestBase {
             if (dir2) (t1, t2) = (assetTST, assetTST2);
             else (t1, t2) = (assetTST2, assetTST);
 
-            uint256 q = maglev.quoteExactInput(address(t1), address(t2), amount2);
+            uint256 q = periphery.quoteExactInput(address(maglev), address(t1), address(t2), amount2);
 
             t1.mint(address(this), amount2);
             t1.transfer(address(maglev), amount2);
@@ -111,49 +108,5 @@ contract PreserveNav is MaglevTestBase {
         }
 
         assertGe(getHolderNAV(), nav1);
-    }
-
-    function _skimAll(bool dir) public returns (uint256) {
-        uint256 skimmed = 0;
-        uint256 val = 1;
-
-        // Phase 1: Keep doubling skim amount until it fails
-
-        while (true) {
-            (uint256 amount0, uint256 amount1) = dir ? (val, uint256(0)) : (uint256(0), val);
-
-            try maglev.swap(amount0, amount1, address(0xDEAD), "") {
-                skimmed += val;
-                val *= 2;
-            } catch {
-                break;
-            }
-        }
-
-        // Phase 2: Keep halving skim amount until 1 wei skim fails
-
-        while (true) {
-            if (val > 1) val /= 2;
-
-            (uint256 amount0, uint256 amount1) = dir ? (val, uint256(0)) : (uint256(0), val);
-
-            try maglev.swap(amount0, amount1, address(0xDEAD), "") {
-                skimmed += val;
-            } catch {
-                if (val == 1) break;
-            }
-        }
-
-        return skimmed;
-    }
-
-    function skimAll(bool order) public {
-        if (order) {
-            _skimAll(true);
-            _skimAll(false);
-        } else {
-            _skimAll(false);
-            _skimAll(true);
-        }
     }
 }
