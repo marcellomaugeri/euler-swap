@@ -39,13 +39,15 @@
 
 \maketitle
 
-\begin{abstract}
-    Maglev is an Automated Market Maker (AMM) that uses unique features of Euler lending vaults to \textbf{mag}nify capital efficiency using \textbf{lev}erage. By borrowing assets as needed, Maglev AMMs can extend the range of their reserves and earn fees on trades several times larger than their actual liquidity. Under optimal conditions, Maglev can achieve up to 40x the liquidity depth of traditional AMMs. Using the Ethereum Vault Connector (EVC), Maglev enables market makers to efficiently borrow the `out token' of a swap using the `in token' as collateral. This significantly improves liquidity for swappers. A novel and highly customisable AMM curve governs swap exchange rates, ensuring deep just-in-time liquidity in the short term while incentivising balance over longer periods.
+\begin{abstract}    
+    Maglev is an Automated Market Maker (AMM) that uses unique features of Euler lending vaults to dramatically \textbf{mag}nify capital efficiency using \textbf{lev}erage. Unlike traditional AMMs that require fragmented liquidity pools, Maglev enables a single, cross-collateralized vault to provide liquidity across multiple asset pairs simultaneously, maximizing capital efficiency and scaling liquidity across DeFi. Using the Ethereum Vault Connector (EVC), Maglev allows market makers to borrow the out token of a swap using the in token as collateral, unlocking deep liquidity without requiring large static deposits. This liquidity-sharing model allows Maglev to achieve up to 40x the liquidity depth of traditional AMMs, efficiently repurposing idle assets for optimal capital utilization. At the core of Maglev is a highly customizable AMM curve that governs swap exchange rates, ensuring deep, just-in-time liquidity while dynamically incentivizing market balance. By combining on-demand borrowing, shared liquidity, and flexible AMM mechanics, Maglev eliminates inefficiencies in existing liquidity provisioning, offering superior depth, reduced costs, and greater control for liquidity providers.
 \end{abstract}
 
 \section{Introduction}
 
 Maglev enhances trade execution by increasing the size of swaps that can be serviced compared to traditional AMMs. This is made possible by combining a novel AMM curve with the advanced \href{https://docs.euler.finance/developers/evc/keyConcepts?_highlight=operator#batch-operations}{check deferrals} and \href{https://docs.euler.finance/developers/evc/keyConcepts?_highlight=operator#operators}{operator} features of the Ethereum Vault Connector (EVC). Market makers supply an initial amount of liquidity to a `swap account' which can then be amplified through borrowing. Specifically, when a user swaps an `in token,' Maglev borrows the corresponding `out token,' using the `in token' as collateral. Later, when a swap occurs in the reverse direction, the incoming `in token' repays the outstanding loan, and any excess collateral is returned as the `out token,' effectively closing the position. This leveraged approach significantly increases the available liquidity provided by Maglev and multiplies swap fees. It is somewhat analogous to MEV bots that provide just-in-time single-tick liquidity to Uniswap v3 in order to capture fees on large trades.
+
+Beyond individual swap accounts, Maglev takes capital efficiency further by taking advantage of Euler's modular design to allow multiple swap accounts to be built on top of the same lending vaults. This means that the same idle liquidity inside a single vault can provide depth for swaps across multiple asset pairs simultaneously. Much like Curve’s 3pool, but generalized to any number of asset pairings, a USDC vault could provide deep liquidity for 10+ correlated assets without requiring separate liquidity pools for each.
 
 Maglev’s exchange rates are governed by a highly customisable AMM curve (illustrated in Figure \ref{fig:fig1}) which incentivises swappers to maintain market maker positions in balance over time. The Maglev AMM curve is a novel construction blending constant-sum and constant-product models, allowing swap account creators to tailor their AMM parameters. Like \href{https://berkeley-defi.github.io/assets/material/StableSwap.pdf}{Stableswap}, it supports concentrated liquidity for correlated assets, as well as \href{https://app.uniswap.org/whitepaper.pdf}{Uniswap v2}-style distributed liquidity for uncorrelated pairs. However, unlike those more traditional AMMs, Maglev allows asymmetric liquidity deposits, where different amounts of liquidity can be added to each side of the pool, and single-sided liquidity concentration, enabling deeper concentration of liquidity on one side of the pool relative to the other. This enables it to simulate the behaviour of atypical AMM protocols, like the MakerDAO \href{https://mips.makerdao.com/mips/details/MIP29}{Peg Stability Module} (PSM).
 
@@ -327,7 +329,16 @@ For values where \( x > x_0 \), we could derive a similar condition for $y$ from
 
 These conditions together define the valid liquidity states in Maglev, ensuring that the AMM remains balanced while allowing for greater flexibility in liquidity provisioning.
 
+\section{Disclaimer}
 
+This paper is for general information purposes only. It does not constitute investment
+advice or a recommendation or solicitation to buy or sell any investment and should not
+be used in the evaluation of the merits of making any investment decision. It should not
+be relied upon for accounting, legal or tax advice or investment recommendations. This
+paper reflects current opinions of the authors and is not made on behalf of Euler Labs or its
+affiliates and does not necessarily reflect the opinions of Euler Labs, its affiliates or individuals
+associated with Euler Labs. The opinions reflected herein are subject to change without being
+updated.
 
 \end{document}
 
@@ -498,13 +509,5 @@ When $x > x_0$ we could also define an invariant test for $y$ from equation \eqr
     x_{0}+\frac{p_{y}}{p_{x}}\left(y_{0}-y\right)\left(c_{y}+\left(1-c_{y}\right)\left(\frac{y_{0}}{y}\right)\right).
 \end{equation}
 
-\section{Disclaimer}
 
-This paper is for general information purposes only. It does not constitute investment
-advice or a recommendation or solicitation to buy or sell any investment and should not
-be used in the evaluation of the merits of making any investment decision. It should not
-be relied upon for accounting, legal or tax advice or investment recommendations. This
-paper reflects current opinions of the authors and is not made on behalf of Euler Labs or its
-affiliates and does not necessarily reflect the opinions of Euler Labs, its affiliates or individuals
-associated with Euler Labs. The opinions reflected herein are subject to change without being
-updated.
+   Maglev is an Automated Market Maker (AMM) that uses unique features of Euler lending vaults to \textbf{mag}nify capital efficiency using \textbf{lev}erage. By borrowing assets as needed, Maglev AMMs can extend the range of their reserves and earn fees on trades several times larger than their actual liquidity. Under optimal conditions, Maglev can achieve up to 40x the liquidity depth of traditional AMMs. Using the Ethereum Vault Connector (EVC), Maglev enables market makers to efficiently borrow the `out token' of a swap using the `in token' as collateral. This significantly improves liquidity for swappers. A novel and highly customisable AMM curve governs swap exchange rates, ensuring deep just-in-time liquidity in the short term while incentivising balance over longer periods. All of this is built on Euler lending vaults, where a single cross-collateralised vault can provide liquidity across multiple asset pairs, dramatically scaling liquidity and capital efficiency across DeFi.
