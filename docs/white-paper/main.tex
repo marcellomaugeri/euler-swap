@@ -216,12 +216,12 @@ These results confirm that at equilibrium $(x_0, y_0)$, the slope of both functi
 \frac{dy}{dx} \Big|_{(x_0, y_0)} = -\frac{p_x}{p_y}.
 \]
 
-Whilst these curves sufficiently generalise the constant-sum and constant-product curves to an arbitrary price at equilibrium, in practice equation \eqref{eq:exponential-form} has limited practical application as a trading function because it involves an exponential form that is computationally intensive and impractical for on-chain calculations. To resolve this, we introduce the concept of virtual reserves, which simplify price calculations while preserving trading behaviour.
+Whilst these curves sufficiently generalise the constant-sum and constant-product curves to an arbitrary price at equilibrium, in practice equation \eqref{eq:exponential-form} has limited practical application as a trading function because it involves an exponential form that is computationally intensive and impractical for on-chain calculations. To resolve this, we introduce the concept of artificial reserves, which simplify price calculations while preserving trading behaviour.
 
 
-\subsubsection{Introducing virtual reserves for simplicity}
+\subsubsection{Introducing artificial reserves for simplicity}
 
-Note that in the interval $0 < x < x_0$ swaps should only increase liquidity beyond $y_0$ and deplete $x_0$ liquidity. That is, our trading function in this interval need not depend on the initial amount of $y_0$ liquidity. This suggests that we can split the domain of the AMM curves into two, and replace the real reserve $y_0$ in the interval $0 < x < x_0$ with an idealised virtual reserve $y_v$. The virtual reserve is chosen such that the value of the reserves, as weighted by their price parameters, are equal at the equilibrium point $(x_0, y_0)$. That is, we have
+Note that in the interval $0 < x < x_0$ swaps should only increase liquidity beyond $y_0$ and deplete $x_0$ liquidity. That is, our trading function in this interval need not depend on the initial amount of $y_0$ liquidity. This suggests that we can split the domain of the AMM curves into two, and replace the real reserve $y_0$ in the interval $0 < x < x_0$ with an idealised artificial reserve $y_v$. The artificial reserve is chosen such that the value of the reserves, as weighted by their price parameters, are equal at the equilibrium point $(x_0, y_0)$. That is, we have
 
 \[
 p_x x_0 = p_y y_v,
