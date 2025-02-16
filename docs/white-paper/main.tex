@@ -57,6 +57,10 @@ EulerSwap’s exchange rates are governed by a highly customisable AMM curve (il
 
 For end-users, EulerSwap functions like a typical Uniswap-style interface. However, behind the scenes, it incorporates advanced mechanisms such as dynamic borrowing and repaying, customisable pricing curves, and shared liquidity provisioning. The primary target audience for liquidity providers includes professional market makers, token issuers, and DAOs, while swappers include leverage traders on Euler, aggregators, intent solvers, and MEV bots. 
 
+\section{Swap accounts}
+
+EulerSwap differs from traditional AMMs in that it does not use shared liquidity pools. Instead, each EulerSwap instance -- known as a `swap account' -- manages liquidity on behalf of a single user or entity. This design provides customisable risk parameters and full control over leveraged positions, making it ideal for professional market makers, DAOs, and algorithmic traders. While future iterations may explore shared liquidity models, the current system prioritises capital efficiency and risk isolation per account.
+
 \section{Example}
 
 Suppose that Euler allows borrowing of USDT with USDC as collateral at a loan-to-value (LTV) ratio of 0.95, and vice versa. This means that for every \$1 of USDC or USDT collateral, a user can borrow up to \$0.95 of the other asset. 
@@ -98,6 +102,26 @@ Later, when a swap occurs in the reverse direction, the incoming `in token' repa
     \caption{\textbf{Swap flow in EulerSwap AMM}. EulerSwap’s just-in-time liquidity borrowing. The swap account dynamically increases liquidity by borrowing the ``out token" against the ``in token."}
     \label{fig:EulerSwap_liquidity}
 \end{figure}
+
+\section{Virtual reserves and debt limits}
+
+EulerSwap AMMs utilise virtual reserves to simulate larger liquidity pools, effectively increasing the depth of trades that can be serviced. Virtual reserves allow swaps beyond the actual reserves --- the initial collateral deposited by the swap account holder --- by permitting borrowed liquidity, where EulerSwap dynamically loans the out token using the in token as collateral.
+
+Each swap account can configure independent virtual reserve levels. These reserves define the maximum debt exposure an AMM will take on. For instance, if a user deposits \$1,000 in collateral and sets virtual reserves at \$5,000 per vault, the AMM effectively supports up to \$10,000 in combined swap depth, with a loan-to-value (LTV) ratio of 83.3\%. 
+
+Note that the effective LTV must always remain below the borrowing LTV of the lending vault to prevent liquidation. Additionally, different AMM curves influence whether the maximum virtual reserves are achievable.
+
+\subsection{Reserve desynchronisation}
+
+Unlike traditional AMMs, EulerSwap does not hold user funds directly. Instead, it operates as an EVC operator, meaning that all liquidity remains in the wallet of the account holder. This design provides enhanced security and flexibility but introduces the possibility of reserve desynchronisation. Causes of reserve desynchronisation:
+
+\begin{itemize}
+    \item \textbf{Interest Accrual:} Over time, collateral deposits earn interest while borrowed tokens accumulate interest costs.
+    \item \textbf{External Fund Movements:} A user may manually withdraw funds from a vault, causing EulerSwap’s internal calculations to diverge from actual reserves.
+    \item \textbf{Liquidation Events:} If an AMM’s loan-to-value (LTV) ratio exceeds the vault’s risk threshold, automatic liquidation may adjust balances unexpectedly.
+\end{itemize}
+
+Users must periodically invoke \texttt{syncVirtualReserves()} to update EulerSwap’s internal state. This function recalculates actual balances and debts relative to the vault and adjusts the virtual reserves accordingly.
 
 \section{Curve}
 
