@@ -1,35 +1,120 @@
-# Architecture
+# EulerSwap architecture
 
-## Operation
+# EulerSwap Architecture
 
-Since the level of acceptable borrowing risk may not be the same for every user, pooled deposits are not yet possible, and each EulerSwap instance manages funds for a single user (who of course may operate on behalf of pooled funds).
+## Overview
 
-EulerSwap is a contract designed to be used as an [EVC operator](https://evc.wtf/docs/whitepaper/#operators). This means that the user, known as the _holder_, does not give up control over their funds to a smart contract, but instead retains it in their wallet. The holder can be any compatible address, including standard multisig wallets or even an EOA.
+EulerSwap is an automated market maker (AMM) that integrates with Euler lending vaults to provide deeper liquidity for swaps.
 
-### Usage
+Unlike traditional AMMs that use shared liquidity pools, EulerSwap operates with independent swap accounts, where each account manages liquidity for a single user or entity.
 
-The following are the high-level steps required to use EulerSwap:
+Each EulerSwap instance is a lightweight smart contract that functions as an [EVC operator](https://evc.wtf/docs/whitepaper/#operators) while implementing a highly customizable AMM curve to determine swap output amounts.
 
-- Deposit funds into one or both of the vaults
-- Deploy the desired EulerSwap contract, choosing parameters such as the vaults and the desired `fee`
-- Calculate the desired [virtual reserves](#virtual-reserves) and set these values by invoking `setVirtualReserves()`
-- Install the EulerSwap contract as an operator for your account
-- Invoke the `configure()` function on the EulerSwap contract
+When a user initiates a swap, the swap account borrows the required output token using the input token as collateral. The swap account’s AMM curve governs the exchange rate, ensuring deep liquidity over short timeframes while maintaining a balance between collateral and debt over the long term.
 
-At this point, anyone can invoke `swap()` on the EulerSwap contract, and this will perform borrowing and transferring activity between the two vaults.
+## Code Structure
 
-### Debt Limits
+EulerSwap’s code is split into two main smart contracts:
 
-The initial deposits in the vaults represent the initial investment, and are swapped back and forth in response to swapping activity. In a conventional AMM such as Uniswap, these balance are called _reserves_. However, if swapping was constrained to these assets alone, then this would imply a hard limit on the size of swaps that can be serviced. To increase the effective funds, EulerSwap AMMs are configured with _virtual reserves_. These are typically larger than the size of the conventional reserves, which signifies that not only can all the assets be swapped from one vault to another, but even more assets can be borrowed on the EulerSwap's account.
+### EulerSwap core (`EulerSwap.sol`)
 
-Virtual reserves control the maximum debt that the EulerSwap contract will attempt to acquire on each of its two vaults. Each vault can be configured independently.
+- Handles collateralization via EVC and Euler lending vaults.
+- Implements AMM curve invariant checks through the `verify()` function.
 
-For example, if the initial investment has a NAV of $1000, and virtual reserves are configured at $5000 for each vault, then the maximum LTV loan that the AMM will support will be `5000/6000 = 0.8333`. In order to leave a safety buffer, it is recommended to select a maximum LTV that is below the borrowing LTV of the vault.
+### EulerSwap periphery (`EulerSwapPeriphery.sol`)
 
-Note that it depends on the [curve](#curves) if the maximum LTV can actually be achieved. A constant product will only approach these reserve levels asymptotically, since each unit will get more and more expensive. However, with constant sum, this LTV can be achieved directly.
+- Provides simplified functions for retrieving swap quotes from the AMM curve.
+- Acts as a convenience layer for external integrations.
 
-### Desynchronised Reserves
+## Operational flow
 
-The EulerSwap contract tracks what it believes the reserves to be by caching their values in storage. These reserves are updated on each swap. However, since the balance is not actually held by the EulerSwap contract (it is simply an operator), the actual underlying balances may get out of sync. This can happen gradually as interest is accrued, or suddenly if the holder moves funds or the position is liquidated.
+The following steps outline how a swap account is created and configured:
 
-When this occurs, the `syncVirtualReserves()` should be invoked. This determines the actual balances (and debts) of the holder, and adjusts them by the configured virtual reserve levels.
+1. Deposit initial liquidity into one or both of the vaults to enable swaps.
+2. Deploy the EulerSwap contract, specifying AMM curve parameters and the `fee`.
+3. Set the [virtual reserves](#virtual-reserves) by invoking `setVirtualReserves()`.
+4. Install the EulerSwap contract as an operator for the user's account.
+5. Invoke the `configure()` function on the EulerSwap contract.
+
+Once configured, the EulerSwap contract can process swaps. When a user invokes `swap()`, the contract facilitates borrowing and transfers between the underlying vaults as dictated by the AMM curve.
+
+### Virtual reserves
+
+The initial deposits in the vaults provide starting liquidity and facilitate swaps. In traditional AMMs like Uniswap, these balances are known as _reserves_.
+However, relying solely on these assets would impose a hard limit on swap size. To overcome this, EulerSwap introduces _virtual reserves_, allowing the AMM to extend its effective liquidity by borrowing against its real reserves.
+
+Virtual reserves control the maximum debt that the EulerSwap contract will attempt to acquire on each of its two vaults. Each vault can be configured independently. For example, if the initial investment has a NAV of \$1000, and virtual reserves are configured at \$5000 for each vault, then the maximum LTV loan that the AMM will support will be `5000/6000 = 0.8333`. In order to leave a safety buffer, it is recommended to select a maximum LTV that is below the borrowing LTV of the vault. Note that it depends on the [curve](#curves) if the maximum LTV can actually be achieved. A constant product curve will only approach these reserve levels asymptotically, since each unit will get more and more expensive. However, with a constant sum curve, the maximum LTV can be achieved directly.
+
+### Reserve synchronisation
+
+The EulerSwap contract tracks what it believes the reserves to be by caching their values in storage. These reserves are updated on each swap. However, since the balance is not actually held by the EulerSwap contract (it is simply an operator), the actual underlying balances may get out of sync. This can happen gradually as interest is accrued, or suddenly if the holder moves funds or the position is liquidated. When this occurs, the `syncVirtualReserves()` should be invoked. This determines the actual balances (and debts) of the holder and adjusts them by the configured virtual reserve levels.
+
+## Components
+
+### **1. Core contracts**
+
+#### **Maglev contract**
+
+The `Maglev` contract is the core of EulerSwap and is responsible for:
+
+- Managing liquidity reserves.
+- Executing token swaps based on the EulerSwap curve.
+- Enforcing collateralization through EVC.
+- Maintaining vault and asset associations.
+
+##### **Key features**
+
+- Implements a unique **swapping curve** that ensures efficient liquidity provision.
+- Handles **collateralized borrowing** via vaults.
+- Enforces a **fee multiplier** to apply swap fees.
+- Implements a **non-reentrant mechanism** to prevent recursive calls.
+
+##### **Key functions**
+
+- `activate()`: Initializes vault approvals and enables collateral.
+- `swap(uint256 amount0Out, uint256 amount1Out, address to, bytes calldata data)`: Performs asset swaps and enforces curve constraints.
+- `verify(uint256 newReserve0, uint256 newReserve1)`: Ensures reserves conform to the defined curve.
+- `f(uint256 xt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c)`: Defines the EulerSwap curve formula for swaps.
+
+### **2. Periphery contracts**
+
+#### **MaglevPeriphery contract**
+
+The `MaglevPeriphery` contract extends the functionality of the core Maglev contract by providing:
+
+- **Swap price quotations** before execution.
+- **Liquidity checks** to ensure solvency before transactions.
+- **Binary search mechanisms** for dynamic price calculation.
+
+##### **Key functions**
+
+- `quoteExactInput(address maglev, address tokenIn, address tokenOut, uint256 amountIn)`: Estimates the output amount for a given input.
+- `quoteExactOutput(address maglev, address tokenIn, address tokenOut, uint256 amountOut)`: Estimates the required input amount to receive a specified output.
+- `computeQuote(IMaglev maglev, address tokenIn, address tokenOut, uint256 amount, bool exactIn)`: A high-level function to compute swaps while enforcing fee multipliers.
+- `binarySearch(IMaglev maglev, uint112 reserve0, uint112 reserve1, uint256 amount, bool exactIn, bool asset0IsInput)`: Uses binary search to determine an optimal swap amount along the curve.
+
+### **3. Vault integration**
+
+EulerSwap integrates with **Ethereum Vault Connector (EVC)** to enable collateralized trading. Each liquidity vault manages asset balances, borrowing, and repayment, ensuring:
+
+- **Controlled debt exposure**
+- **Dynamic liquidity reserves**
+- **Secure vault interactions**
+
+### **4. Security mechanisms**
+
+- **Non-reentrant protection**: Ensures swaps do not trigger recursive calls.
+- **Collateral verification**: Uses EVC to verify and adjust collateral balances.
+- **Curve constraints enforcement**: Prevents swap execution that violates the defined curve invariant.
+- **Precision safeguards**: Fixed-point arithmetic (`1e18` scaling) ensures precision in calculations.
+
+## Summary
+
+EulerSwap’s architecture is designed for **efficient, secure, and collateral-backed trading** with a custom **swapping curve**. The system leverages:
+
+- **Maglev** as the core AMM contract.
+- **MaglevPeriphery** for auxiliary quoting and validations.
+- **Ethereum Vault Connector (EVC)** for collateralized vault management.
+- **Security-focused design** to prevent vulnerabilities in asset handling.
+
+This modular and scalable architecture ensures that EulerSwap provides robust DeFi trading functionality while maintaining security and efficiency.
