@@ -147,7 +147,6 @@ contract EulerSwapTestBase is EVaultTestBase {
         returns (EulerSwap.Params memory)
     {
         return EulerSwap.Params({
-            evc: address(evc),
             vault0: address(eTST),
             vault1: address(eTST2),
             myAccount: holder,

@@ -10,7 +10,6 @@ import {EVCUtil} from "evc/utils/EVCUtil.sol";
 
 contract EulerSwap is IEulerSwap, EVCUtil {
     struct Params {
-        address evc;
         address vault0;
         address vault1;
         address myAccount;
@@ -75,14 +74,11 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         status = 1;
     }
 
-    constructor(Params memory params, CurveParams memory curveParams) EVCUtil(params.evc) {
+    constructor(Params memory params, CurveParams memory curveParams) EVCUtil(IEVault(params.vault0).EVC()) {
         // EulerSwap params
 
         require(params.fee < 1e18, BadFee());
-
-        address vault0Evc = IEVault(params.vault0).EVC();
-        require(vault0Evc == IEVault(params.vault1).EVC(), DifferentEVC());
-        require(vault0Evc == params.evc, DifferentEVC());
+        require(IEVault(params.vault0).EVC() == IEVault(params.vault1).EVC(), DifferentEVC());
 
         address asset0Addr = IEVault(params.vault0).asset();
         address asset1Addr = IEVault(params.vault1).asset();
