@@ -16,6 +16,12 @@ contract EulerSwapTestBase is EVaultTestBase {
 
     EulerSwapPeriphery public periphery;
 
+    modifier monotonicHolderNAV() {
+        int256 orig = getHolderNAV();
+        _;
+        assertGe(getHolderNAV(), orig);
+    }
+
     function setUp() public virtual override {
         super.setUp();
 
@@ -38,11 +44,35 @@ contract EulerSwapTestBase is EVaultTestBase {
 
         // Funding
 
-        _mintAndDeposit(depositor, eTST, 100e18);
-        _mintAndDeposit(depositor, eTST2, 100e18);
+        mintAndDeposit(depositor, eTST, 100e18);
+        mintAndDeposit(depositor, eTST2, 100e18);
 
-        _mintAndDeposit(holder, eTST, 10e18);
-        _mintAndDeposit(holder, eTST2, 10e18);
+        mintAndDeposit(holder, eTST, 10e18);
+        mintAndDeposit(holder, eTST2, 10e18);
+    }
+
+    function skimAll(EulerSwap ml, bool order) public {
+        if (order) {
+            runSkimAll(ml, true);
+            runSkimAll(ml, false);
+        } else {
+            runSkimAll(ml, false);
+            runSkimAll(ml, true);
+        }
+    }
+
+    function getHolderNAV() internal view returns (int256) {
+        uint256 balance0 = eTST.convertToAssets(eTST.balanceOf(holder));
+        uint256 debt0 = eTST.debtOf(holder);
+        uint256 balance1 = eTST2.convertToAssets(eTST2.balanceOf(holder));
+        uint256 debt1 = eTST2.debtOf(holder);
+
+        uint256 balValue = oracle.getQuote(balance0, address(assetTST), unitOfAccount)
+            + oracle.getQuote(balance1, address(assetTST2), unitOfAccount);
+        uint256 debtValue = oracle.getQuote(debt0, address(assetTST), unitOfAccount)
+            + oracle.getQuote(debt1, address(assetTST2), unitOfAccount);
+
+        return int256(balValue) - int256(debtValue);
     }
 
     function createEulerSwap(
@@ -66,23 +96,7 @@ contract EulerSwapTestBase is EVaultTestBase {
         return eulerSwap;
     }
 
-    function getEulerSwapParams(uint112 debtLimitA, uint112 debtLimitB, uint256 fee)
-        internal
-        view
-        returns (EulerSwap.Params memory)
-    {
-        return EulerSwap.Params({
-            evc: address(evc),
-            vault0: address(eTST),
-            vault1: address(eTST2),
-            myAccount: holder,
-            debtLimit0: debtLimitA,
-            debtLimit1: debtLimitB,
-            fee: fee
-        });
-    }
-
-    function _mintAndDeposit(address who, IEVault vault, uint256 amount) internal {
+    function mintAndDeposit(address who, IEVault vault, uint256 amount) internal {
         TestERC20 tok = TestERC20(vault.asset());
         tok.mint(who, amount);
 
@@ -93,41 +107,7 @@ contract EulerSwapTestBase is EVaultTestBase {
         vault.deposit(amount, who);
     }
 
-    function getHolderNAV() public view returns (int256) {
-        uint256 balance0 = eTST.convertToAssets(eTST.balanceOf(holder));
-        uint256 debt0 = eTST.debtOf(holder);
-        uint256 balance1 = eTST2.convertToAssets(eTST2.balanceOf(holder));
-        uint256 debt1 = eTST2.debtOf(holder);
-
-        uint256 balValue = oracle.getQuote(balance0, address(assetTST), unitOfAccount)
-            + oracle.getQuote(balance1, address(assetTST2), unitOfAccount);
-        uint256 debtValue = oracle.getQuote(debt0, address(assetTST), unitOfAccount)
-            + oracle.getQuote(debt1, address(assetTST2), unitOfAccount);
-
-        return int256(balValue) - int256(debtValue);
-    }
-
-    modifier monotonicHolderNAV() {
-        int256 orig = getHolderNAV();
-        _;
-        assertGe(getHolderNAV(), orig);
-    }
-
-    function logState(address ml) internal view {
-        (uint112 reserve0, uint112 reserve1,) = EulerSwap(ml).getReserves();
-
-        console.log("--------------------");
-        console.log("Account States:");
-        console.log("HOLDER");
-        console.log("  eTST Vault assets:  ", eTST.convertToAssets(eTST.balanceOf(holder)));
-        console.log("  eTST Vault debt:    ", eTST.debtOf(holder));
-        console.log("  eTST2 Vault assets: ", eTST2.convertToAssets(eTST2.balanceOf(holder)));
-        console.log("  eTST2 Vault debt:   ", eTST2.debtOf(holder));
-        console.log("  reserve0:           ", reserve0);
-        console.log("  reserve1:           ", reserve1);
-    }
-
-    function _skimAll(EulerSwap ml, bool dir) internal returns (uint256) {
+    function runSkimAll(EulerSwap ml, bool dir) internal returns (uint256) {
         uint256 skimmed = 0;
         uint256 val = 1;
 
@@ -161,13 +141,33 @@ contract EulerSwapTestBase is EVaultTestBase {
         return skimmed;
     }
 
-    function skimAll(EulerSwap ml, bool order) public {
-        if (order) {
-            _skimAll(ml, true);
-            _skimAll(ml, false);
-        } else {
-            _skimAll(ml, false);
-            _skimAll(ml, true);
-        }
+    function getEulerSwapParams(uint112 debtLimitA, uint112 debtLimitB, uint256 fee)
+        internal
+        view
+        returns (EulerSwap.Params memory)
+    {
+        return EulerSwap.Params({
+            evc: address(evc),
+            vault0: address(eTST),
+            vault1: address(eTST2),
+            myAccount: holder,
+            debtLimit0: debtLimitA,
+            debtLimit1: debtLimitB,
+            fee: fee
+        });
+    }
+
+    function logState(address ml) internal view {
+        (uint112 reserve0, uint112 reserve1,) = EulerSwap(ml).getReserves();
+
+        console.log("--------------------");
+        console.log("Account States:");
+        console.log("HOLDER");
+        console.log("  eTST Vault assets:  ", eTST.convertToAssets(eTST.balanceOf(holder)));
+        console.log("  eTST Vault debt:    ", eTST.debtOf(holder));
+        console.log("  eTST2 Vault assets: ", eTST2.convertToAssets(eTST2.balanceOf(holder)));
+        console.log("  eTST2 Vault debt:   ", eTST2.debtOf(holder));
+        console.log("  reserve0:           ", reserve0);
+        console.log("  reserve1:           ", reserve1);
     }
 }
