@@ -1,7 +1,5 @@
 # EulerSwap architecture
 
-# EulerSwap Architecture
-
 ## Overview
 
 EulerSwap is an automated market maker (AMM) that integrates with Euler lending vaults to provide deeper liquidity for swaps.
@@ -12,7 +10,7 @@ Each EulerSwap instance is a lightweight smart contract that functions as an [EV
 
 When a user initiates a swap, the swap account borrows the required output token using the input token as collateral. The swap account’s AMM curve governs the exchange rate, ensuring deep liquidity over short timeframes while maintaining a balance between collateral and debt over the long term.
 
-## Code Structure
+## Code structure
 
 EulerSwap’s code is split into two main smart contracts:
 
