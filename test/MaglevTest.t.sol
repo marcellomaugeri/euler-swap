@@ -10,7 +10,7 @@ import {MaglevTestBase} from "./MaglevTestBase.t.sol";
 
 import {Maglev} from "../src/Maglev.sol";
 
-contract EulerSwapTest is MaglevTestBase {
+contract MaglevTest is MaglevTestBase {
     Maglev public maglev;
 
     function setUp() public virtual override {
