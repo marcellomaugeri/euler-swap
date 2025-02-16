@@ -5,6 +5,7 @@ import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
 import {IEVault, IERC20, IBorrowing, IERC4626, IRiskManager} from "evk/EVault/IEVault.sol";
 import {IUniswapV2Callee} from "./interfaces/IUniswapV2Callee.sol";
 import {IEulerSwap} from "./interfaces/IEulerSwap.sol";
+import {IAllowanceTransfer} from "permit2/src/interfaces/IAllowanceTransfer.sol";
 import {EVCUtil} from "evc/utils/EVCUtil.sol";
 
 contract EulerSwap is IEulerSwap, EVCUtil {
@@ -164,8 +165,21 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         require(status != 2, Locked());
         status = 1;
 
-        IERC20(asset0).approve(vault0, type(uint256).max);
-        IERC20(asset1).approve(vault1, type(uint256).max);
+        address permit2 = IEVault(vault0).permit2Address();
+        if (permit2 == address(0)) {
+            IERC20(asset0).approve(vault0, type(uint256).max);
+        } else {
+            IERC20(asset0).approve(permit2, type(uint256).max);
+            IAllowanceTransfer(permit2).approve(asset0, vault0, type(uint160).max, type(uint48).max);
+        }
+
+        permit2 = IEVault(vault1).permit2Address();
+        if (permit2 == address(0)) {
+            IERC20(asset1).approve(vault1, type(uint256).max);
+        } else {
+            IERC20(asset1).approve(permit2, type(uint256).max);
+            IAllowanceTransfer(permit2).approve(asset1, vault1, type(uint160).max, type(uint48).max);
+        }
 
         IEVC(evc).enableCollateral(myAccount, vault0);
         IEVC(evc).enableCollateral(myAccount, vault1);
