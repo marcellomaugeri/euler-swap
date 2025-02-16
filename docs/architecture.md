@@ -51,9 +51,9 @@ The EulerSwap contract tracks what it believes the reserves to be by caching the
 
 ### **1. Core contracts**
 
-#### **Maglev contract**
+#### **EulerSwap contract**
 
-The `Maglev` contract is the core of EulerSwap and is responsible for:
+The `EulerSwap` contract is the core of EulerSwap and is responsible for:
 
 - Managing liquidity reserves.
 - Executing token swaps based on the EulerSwap curve.
@@ -76,9 +76,9 @@ The `Maglev` contract is the core of EulerSwap and is responsible for:
 
 ### **2. Periphery contracts**
 
-#### **MaglevPeriphery contract**
+#### **EulerSwapPeriphery contract**
 
-The `MaglevPeriphery` contract extends the functionality of the core Maglev contract by providing:
+The `EulerSwapPeriphery` contract extends the functionality of the core EulerSwap contract by providing:
 
 - **Swap price quotations** before execution.
 - **Liquidity checks** to ensure solvency before transactions.
@@ -86,10 +86,10 @@ The `MaglevPeriphery` contract extends the functionality of the core Maglev cont
 
 ##### **Key functions**
 
-- `quoteExactInput(address maglev, address tokenIn, address tokenOut, uint256 amountIn)`: Estimates the output amount for a given input.
-- `quoteExactOutput(address maglev, address tokenIn, address tokenOut, uint256 amountOut)`: Estimates the required input amount to receive a specified output.
-- `computeQuote(IMaglev maglev, address tokenIn, address tokenOut, uint256 amount, bool exactIn)`: A high-level function to compute swaps while enforcing fee multipliers.
-- `binarySearch(IMaglev maglev, uint112 reserve0, uint112 reserve1, uint256 amount, bool exactIn, bool asset0IsInput)`: Uses binary search to determine an optimal swap amount along the curve.
+- `quoteExactInput(address eulerSwap, address tokenIn, address tokenOut, uint256 amountIn)`: Estimates the output amount for a given input.
+- `quoteExactOutput(address eulerSwap, address tokenIn, address tokenOut, uint256 amountOut)`: Estimates the required input amount to receive a specified output.
+- `computeQuote(IEulerSwap eulerSwap, address tokenIn, address tokenOut, uint256 amount, bool exactIn)`: A high-level function to compute swaps while enforcing fee multipliers.
+- `binarySearch(IEulerSwap eulerSwap, uint112 reserve0, uint112 reserve1, uint256 amount, bool exactIn, bool asset0IsInput)`: Uses binary search to determine an optimal swap amount along the curve.
 
 ### **3. Vault integration**
 
@@ -110,8 +110,8 @@ EulerSwap integrates with **Ethereum Vault Connector (EVC)** to enable collatera
 
 EulerSwap’s architecture is designed for **efficient, secure, and collateral-backed trading** with a custom **swapping curve**. The system leverages:
 
-- **Maglev** as the core AMM contract.
-- **MaglevPeriphery** for auxiliary quoting and validations.
+- **EulerSwap** as the core AMM contract.
+- **EulerSwapPeriphery** for auxiliary quoting and validations.
 - **Ethereum Vault Connector (EVC)** for collateralized vault management.
 - **Security-focused design** to prevent vulnerabilities in asset handling.
 

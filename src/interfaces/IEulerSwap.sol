@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.0;
 
-interface IMaglev {
+interface IEulerSwap {
     /// @notice Optimistically sends the requested amounts of tokens to the `to`
     /// address, invokes `uniswapV2Call` callback on `to` (if `data` was provided),
     /// and then verifies that a sufficient amount of tokens were transferred to
     /// satisfy the swapping curve invariant.
     function swap(uint256 amount0Out, uint256 amount1Out, address to, bytes calldata data) external;
 
-    /// @notice Approves the vaults to access the Maglev instance's tokens, and enables
+    /// @notice Approves the vaults to access the EulerSwap instance's tokens, and enables
     /// vaults as collateral. Can be invoked by anybody, and is harmless if invoked again.
-    /// Calling this function is optional: Maglev can be activated on the first swap.
+    /// Calling this function is optional: EulerSwap can be activated on the first swap.
     function activate() external;
 
     /// @notice Function that defines the shape of the swapping curve. Returns true iff
@@ -18,7 +18,7 @@ interface IMaglev {
     /// of the swapping curve).
     function verify(uint256 newReserve0, uint256 newReserve1) external view returns (bool);
 
-    // Maglev Accessors
+    // EulerSwap Accessors
 
     function curve() external view returns (bytes32);
     function vault0() external view returns (address);
