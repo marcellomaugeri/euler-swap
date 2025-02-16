@@ -215,7 +215,7 @@ contract EulerSwap is IEulerSwap, EVCUtil {
                 vault, myAccount, 0, abi.encodeCall(IBorrowing.repayWithShares, (type(uint256).max, myAccount))
             );
 
-            if (IEVault(vault).debtOf(myAccount) == 0) {
+            if (myDebt(vault) == 0) {
                 IEVC(evc).call(vault, myAccount, 0, abi.encodeCall(IRiskManager.disableController, ()));
             }
         }
