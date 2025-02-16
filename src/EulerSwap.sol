@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.27;
 
-import {EVCUtil} from "evc/utils/EVCUtil.sol";
 import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
 import {IEVault, IERC20, IBorrowing, IERC4626, IRiskManager} from "evk/EVault/IEVault.sol";
 import {IUniswapV2Callee} from "./interfaces/IUniswapV2Callee.sol";
-import {IMaglev} from "./interfaces/IMaglev.sol";
+import {IEulerSwap} from "./interfaces/IEulerSwap.sol";
+import {EVCUtil} from "evc/utils/EVCUtil.sol";
 
-contract Maglev is IMaglev, EVCUtil {
+contract EulerSwap is IEulerSwap, EVCUtil {
     bytes32 public constant curve = keccak256("EulerSwap v1");
 
     address public immutable vault0;
@@ -37,7 +37,7 @@ contract Maglev is IMaglev, EVCUtil {
     error AssetsOutOfOrderOrEqual();
     error CurveViolation();
 
-    event MaglevCreated(address indexed maglev, address indexed asset0, address indexed asset1);
+    event EulerSwapCreated(address indexed eulerSwap, address indexed asset0, address indexed asset1);
 
     event Swap(
         address indexed sender,
@@ -76,7 +76,7 @@ contract Maglev is IMaglev, EVCUtil {
     }
 
     constructor(Params memory params, CurveParams memory curveParams) EVCUtil(params.evc) {
-        // Maglev params
+        // EulerSwap params
 
         require(params.fee < 1e18, BadFee());
 
@@ -106,10 +106,10 @@ contract Maglev is IMaglev, EVCUtil {
         concentrationX = curveParams.concentrationX;
         concentrationY = curveParams.concentrationY;
 
-        emit MaglevCreated(address(this), asset0Addr, asset1Addr);
+        emit EulerSwapCreated(address(this), asset0Addr, asset1Addr);
     }
 
-    /// @inheritdoc IMaglev
+    /// @inheritdoc IEulerSwap
     function activate() public {
         require(status != 2, Locked());
         status = 1;
@@ -126,7 +126,7 @@ contract Maglev is IMaglev, EVCUtil {
         return y0 + px * 1e18 / py * (c * (2 * x0 - xt) / 1e18 + (1e18 - c) * x0 / 1e18 * x0 / xt - x0) / 1e18;
     }
 
-    /// @inheritdoc IMaglev
+    /// @inheritdoc IEulerSwap
     function verify(uint256 newReserve0, uint256 newReserve1) public view returns (bool) {
         if (newReserve0 >= initialReserve0) {
             if (newReserve1 >= initialReserve1) return true;
@@ -137,7 +137,7 @@ contract Maglev is IMaglev, EVCUtil {
         }
     }
 
-    /// @inheritdoc IMaglev
+    /// @inheritdoc IEulerSwap
     function swap(uint256 amount0Out, uint256 amount1Out, address to, bytes calldata data)
         external
         callThroughEVC

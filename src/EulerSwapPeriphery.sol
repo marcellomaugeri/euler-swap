@@ -3,10 +3,10 @@ pragma solidity ^0.8.27;
 
 import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
 import {IEVault} from "evk/EVault/IEVault.sol";
-import {IMaglev} from "./interfaces/IMaglev.sol";
-import {IMaglevPeriphery} from "./interfaces/IMaglevPeriphery.sol";
+import {IEulerSwap} from "./interfaces/IEulerSwap.sol";
+import {IEulerSwapPeriphery} from "./interfaces/IEulerSwapPeriphery.sol";
 
-contract MaglevPeriphery is IMaglevPeriphery {
+contract EulerSwapPeriphery is IEulerSwapPeriphery {
     address private immutable evc;
 
     constructor(address evc_) {
@@ -18,52 +18,54 @@ contract MaglevPeriphery is IMaglevPeriphery {
     error InsufficientReserves();
     error InsufficientCash();
 
-    /// @inheritdoc IMaglevPeriphery
-    function quoteExactInput(address maglev, address tokenIn, address tokenOut, uint256 amountIn)
+    /// @inheritdoc IEulerSwapPeriphery
+    function quoteExactInput(address eulerSwap, address tokenIn, address tokenOut, uint256 amountIn)
         external
         view
         returns (uint256)
     {
-        return computeQuote(IMaglev(maglev), tokenIn, tokenOut, amountIn, true);
+        return computeQuote(IEulerSwap(eulerSwap), tokenIn, tokenOut, amountIn, true);
     }
 
-    /// @inheritdoc IMaglevPeriphery
-    function quoteExactOutput(address maglev, address tokenIn, address tokenOut, uint256 amountOut)
+    /// @inheritdoc IEulerSwapPeriphery
+    function quoteExactOutput(address eulerSwap, address tokenIn, address tokenOut, uint256 amountOut)
         external
         view
         returns (uint256)
     {
-        return computeQuote(IMaglev(maglev), tokenIn, tokenOut, amountOut, false);
+        return computeQuote(IEulerSwap(eulerSwap), tokenIn, tokenOut, amountOut, false);
     }
 
     /// @dev High-level quoting function. It handles fees and performs
     /// state validation, for example that there is sufficient cash available.
-    function computeQuote(IMaglev maglev, address tokenIn, address tokenOut, uint256 amount, bool exactIn)
+    function computeQuote(IEulerSwap eulerSwap, address tokenIn, address tokenOut, uint256 amount, bool exactIn)
         internal
         view
         returns (uint256)
     {
-        require(IEVC(evc).isAccountOperatorAuthorized(maglev.myAccount(), address(maglev)), OperatorNotInstalled());
+        require(
+            IEVC(evc).isAccountOperatorAuthorized(eulerSwap.myAccount(), address(eulerSwap)), OperatorNotInstalled()
+        );
 
-        uint256 feeMultiplier = maglev.feeMultiplier();
-        address vault0 = maglev.vault0();
-        address vault1 = maglev.vault1();
-        (uint112 reserve0, uint112 reserve1,) = maglev.getReserves();
+        uint256 feeMultiplier = eulerSwap.feeMultiplier();
+        address vault0 = eulerSwap.vault0();
+        address vault1 = eulerSwap.vault1();
+        (uint112 reserve0, uint112 reserve1,) = eulerSwap.getReserves();
 
         // exactIn: decrease received amountIn, rounding down
         if (exactIn) amount = amount * feeMultiplier / 1e18;
 
         bool asset0IsInput;
         {
-            address asset0 = maglev.asset0();
-            address asset1 = maglev.asset1();
+            address asset0 = eulerSwap.asset0();
+            address asset1 = eulerSwap.asset1();
 
             if (tokenIn == asset0 && tokenOut == asset1) asset0IsInput = true;
             else if (tokenIn == asset1 && tokenOut == asset0) asset0IsInput = false;
             else revert UnsupportedPair();
         }
 
-        uint256 quote = binarySearch(maglev, reserve0, reserve1, amount, exactIn, asset0IsInput);
+        uint256 quote = binarySearch(eulerSwap, reserve0, reserve1, amount, exactIn, asset0IsInput);
 
         if (exactIn) {
             // if `exactIn`, `quote` is the amount of assets to buy from the AMM
@@ -85,7 +87,7 @@ contract MaglevPeriphery is IMaglevPeriphery {
     /// Although some curves may have more efficient closed-form solutions,
     /// this works with any monotonic curve.
     function binarySearch(
-        IMaglev maglev,
+        IEulerSwap eulerSwap,
         uint112 reserve0,
         uint112 reserve1,
         uint256 amount,
@@ -112,7 +114,8 @@ contract MaglevPeriphery is IMaglevPeriphery {
 
             while (low < high) {
                 uint256 mid = (low + high) / 2;
-                if (dy == 0 ? maglev.verify(uint256(reserve0New), mid) : maglev.verify(mid, uint256(reserve1New))) {
+                if (dy == 0 ? eulerSwap.verify(uint256(reserve0New), mid) : eulerSwap.verify(mid, uint256(reserve1New)))
+                {
                     high = mid;
                 } else {
                     low = mid + 1;

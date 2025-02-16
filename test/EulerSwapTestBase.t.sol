@@ -1,28 +1,25 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-
 pragma solidity ^0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
-
 import {EVaultTestBase, TestERC20} from "evk-test/unit/evault/EVaultTestBase.t.sol";
 import {IEVault} from "evk/EVault/IEVault.sol";
+import {EulerSwap} from "../src/EulerSwap.sol";
+import {EulerSwapPeriphery} from "../src/EulerSwapPeriphery.sol";
 
-import {Maglev} from "../src/Maglev.sol";
-import {MaglevPeriphery} from "../src/MaglevPeriphery.sol";
-
-contract MaglevTestBase is EVaultTestBase {
+contract EulerSwapTestBase is EVaultTestBase {
     address public depositor = makeAddr("depositor");
     address public creator = makeAddr("creator");
     address public holder = makeAddr("holder");
     address public recipient = makeAddr("recipient");
     address public anyone = makeAddr("anyone");
 
-    MaglevPeriphery public periphery;
+    EulerSwapPeriphery public periphery;
 
     function setUp() public virtual override {
         super.setUp();
 
-        periphery = new MaglevPeriphery(address(evc));
+        periphery = new EulerSwapPeriphery(address(evc));
 
         // Vault config
 
@@ -48,12 +45,33 @@ contract MaglevTestBase is EVaultTestBase {
         _mintAndDeposit(holder, eTST2, 10e18);
     }
 
-    function getMaglevParams(uint112 debtLimitA, uint112 debtLimitB, uint256 fee)
+    function createEulerSwap(
+        uint112 debtLimitA,
+        uint112 debtLimitB,
+        uint256 fee,
+        uint256 px,
+        uint256 py,
+        uint256 cx,
+        uint256 cy
+    ) internal returns (EulerSwap) {
+        vm.prank(creator);
+        EulerSwap eulerSwap = new EulerSwap(
+            getEulerSwapParams(debtLimitA, debtLimitB, fee),
+            EulerSwap.CurveParams({priceX: px, priceY: py, concentrationX: cx, concentrationY: cy})
+        );
+
+        vm.prank(holder);
+        evc.setAccountOperator(holder, address(eulerSwap), true);
+
+        return eulerSwap;
+    }
+
+    function getEulerSwapParams(uint112 debtLimitA, uint112 debtLimitB, uint256 fee)
         internal
         view
-        returns (Maglev.Params memory)
+        returns (EulerSwap.Params memory)
     {
-        return Maglev.Params({
+        return EulerSwap.Params({
             evc: address(evc),
             vault0: address(eTST),
             vault1: address(eTST2),
@@ -96,7 +114,7 @@ contract MaglevTestBase is EVaultTestBase {
     }
 
     function logState(address ml) internal view {
-        (uint112 reserve0, uint112 reserve1,) = Maglev(ml).getReserves();
+        (uint112 reserve0, uint112 reserve1,) = EulerSwap(ml).getReserves();
 
         console.log("--------------------");
         console.log("Account States:");
@@ -109,7 +127,7 @@ contract MaglevTestBase is EVaultTestBase {
         console.log("  reserve1:           ", reserve1);
     }
 
-    function _skimAll(Maglev ml, bool dir) internal returns (uint256) {
+    function _skimAll(EulerSwap ml, bool dir) internal returns (uint256) {
         uint256 skimmed = 0;
         uint256 val = 1;
 
@@ -143,7 +161,7 @@ contract MaglevTestBase is EVaultTestBase {
         return skimmed;
     }
 
-    function skimAll(Maglev ml, bool order) public {
+    function skimAll(EulerSwap ml, bool order) public {
         if (order) {
             _skimAll(ml, true);
             _skimAll(ml, false);

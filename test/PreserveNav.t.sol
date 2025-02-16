@@ -1,39 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-
 pragma solidity ^0.8.24;
 
-import {Test, console} from "forge-std/Test.sol";
+import {EulerSwapTestBase, EulerSwap, TestERC20} from "./EulerSwapTestBase.t.sol";
 
-import {TestERC20} from "evk-test/unit/evault/EVaultTestBase.t.sol";
-import {IEVault} from "evk/EVault/IEVault.sol";
-import {MaglevTestBase} from "./MaglevTestBase.t.sol";
-
-import {Maglev} from "../src/Maglev.sol";
-
-contract PreserveNav is MaglevTestBase {
-    Maglev public maglev;
+contract PreserveNav is EulerSwapTestBase {
+    EulerSwap public eulerSwap;
 
     function setUp() public virtual override {
         super.setUp();
-    }
-
-    function createMaglev(
-        uint112 debtLimitA,
-        uint112 debtLimitB,
-        uint256 fee,
-        uint256 px,
-        uint256 py,
-        uint256 cx,
-        uint256 cy
-    ) internal {
-        vm.prank(creator);
-        maglev = new Maglev(
-            getMaglevParams(debtLimitA, debtLimitB, fee),
-            Maglev.CurveParams({priceX: px, priceY: py, concentrationX: cx, concentrationY: cy})
-        );
-
-        vm.prank(holder);
-        evc.setAccountOperator(holder, address(maglev), true);
     }
 
     function test_preserve_nav(
@@ -56,9 +30,9 @@ contract PreserveNav is MaglevTestBase {
 
         else fee -= 0.1e18;
 
-        createMaglev(50e18, 50e18, fee, 1e18, 1e18, cx, cy);
+        eulerSwap = createEulerSwap(50e18, 50e18, fee, 1e18, 1e18, cx, cy);
 
-        skimAll(maglev, preSkimDir);
+        skimAll(eulerSwap, preSkimDir);
         int256 nav1 = getHolderNAV();
 
         {
@@ -67,20 +41,20 @@ contract PreserveNav is MaglevTestBase {
             if (dir1) (t1, t2) = (assetTST, assetTST2);
             else (t1, t2) = (assetTST2, assetTST);
 
-            uint256 q = periphery.quoteExactInput(address(maglev), address(t1), address(t2), amount1);
+            uint256 q = periphery.quoteExactInput(address(eulerSwap), address(t1), address(t2), amount1);
 
             t1.mint(address(this), amount1);
-            t1.transfer(address(maglev), amount1);
+            t1.transfer(address(eulerSwap), amount1);
 
             {
                 uint256 qPlus = q + 1;
                 vm.expectRevert();
-                if (dir1) maglev.swap(0, qPlus, address(this), "");
-                else maglev.swap(qPlus, 0, address(this), "");
+                if (dir1) eulerSwap.swap(0, qPlus, address(this), "");
+                else eulerSwap.swap(qPlus, 0, address(this), "");
             }
 
-            if (dir1) maglev.swap(0, q, address(this), "");
-            else maglev.swap(q, 0, address(this), "");
+            if (dir1) eulerSwap.swap(0, q, address(this), "");
+            else eulerSwap.swap(q, 0, address(this), "");
         }
 
         assertGe(getHolderNAV(), nav1);
@@ -91,20 +65,20 @@ contract PreserveNav is MaglevTestBase {
             if (dir2) (t1, t2) = (assetTST, assetTST2);
             else (t1, t2) = (assetTST2, assetTST);
 
-            uint256 q = periphery.quoteExactInput(address(maglev), address(t1), address(t2), amount2);
+            uint256 q = periphery.quoteExactInput(address(eulerSwap), address(t1), address(t2), amount2);
 
             t1.mint(address(this), amount2);
-            t1.transfer(address(maglev), amount2);
+            t1.transfer(address(eulerSwap), amount2);
 
             {
                 uint256 qPlus = q + 1;
                 vm.expectRevert();
-                if (dir2) maglev.swap(0, qPlus, address(this), "");
-                else maglev.swap(qPlus, 0, address(this), "");
+                if (dir2) eulerSwap.swap(0, qPlus, address(this), "");
+                else eulerSwap.swap(qPlus, 0, address(this), "");
             }
 
-            if (dir2) maglev.swap(0, q, address(this), "");
-            else maglev.swap(q, 0, address(this), "");
+            if (dir2) eulerSwap.swap(0, q, address(this), "");
+            else eulerSwap.swap(q, 0, address(this), "");
         }
 
         assertGe(getHolderNAV(), nav1);
