@@ -200,14 +200,12 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     function depositAssets(address vault, uint256 amount) internal {
         IEVault(vault).deposit(amount, myAccount);
 
-        uint256 debt = myDebt(vault);
-
-        if (debt > 0) {
+        if (IEVC(evc).isControllerEnabled(myAccount, vault)) {
             IEVC(evc).call(
                 vault, myAccount, 0, abi.encodeCall(IBorrowing.repayWithShares, (type(uint256).max, myAccount))
             );
 
-            if (myDebt(vault) == 0) {
+            if (IEVault(vault).debtOf(myAccount) == 0) {
                 IEVC(evc).call(vault, myAccount, 0, abi.encodeCall(IRiskManager.disableController, ()));
             }
         }
