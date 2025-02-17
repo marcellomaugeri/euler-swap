@@ -12,23 +12,6 @@ contract EulerSwapTest is EulerSwapTestBase {
         eulerSwap = createEulerSwap(50e18, 50e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
     }
 
-    function test_different_EVC() public {
-        vm.expectRevert(EulerSwap.DifferentEVC.selector);
-
-        new EulerSwap(
-            IEulerSwap.Params({
-                evc: address(makeAddr("RANDOM_EVC")),
-                vault0: address(eTST),
-                vault1: address(eTST2),
-                myAccount: holder,
-                debtLimit0: 50e18,
-                debtLimit1: 50e18,
-                fee: 0
-            }),
-            IEulerSwap.CurveParams({priceX: 1e18, priceY: 1e18, concentrationX: 4e18, concentrationY: 0.85e18})
-        );
-    }
-
     function test_basicSwap_exactIn() public monotonicHolderNAV {
         uint256 amountIn = 1e18;
         uint256 amountOut =

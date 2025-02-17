@@ -5,6 +5,7 @@ import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
 import {IEVault, IERC20, IBorrowing, IERC4626, IRiskManager} from "evk/EVault/IEVault.sol";
 import {IUniswapV2Callee} from "./interfaces/IUniswapV2Callee.sol";
 import {IEulerSwap} from "./interfaces/IEulerSwap.sol";
+import {IAllowanceTransfer} from "permit2/src/interfaces/IAllowanceTransfer.sol";
 import {EVCUtil} from "evc/utils/EVCUtil.sol";
 
 contract EulerSwap is IEulerSwap, EVCUtil {
@@ -57,14 +58,11 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         status = 1;
     }
 
-    constructor(Params memory params, CurveParams memory curveParams) EVCUtil(params.evc) {
+    constructor(Params memory params, CurveParams memory curveParams) EVCUtil(IEVault(params.vault0).EVC()) {
         // EulerSwap params
 
         require(params.fee < 1e18, BadFee());
-
-        address vault0Evc = IEVault(params.vault0).EVC();
-        require(vault0Evc == IEVault(params.vault1).EVC(), DifferentEVC());
-        require(vault0Evc == params.evc, DifferentEVC());
+        require(IEVault(params.vault0).EVC() == IEVault(params.vault1).EVC(), DifferentEVC());
 
         address asset0Addr = IEVault(params.vault0).asset();
         address asset1Addr = IEVault(params.vault1).asset();
@@ -147,8 +145,21 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         require(status != 2, Locked());
         status = 1;
 
-        IERC20(asset0).approve(vault0, type(uint256).max);
-        IERC20(asset1).approve(vault1, type(uint256).max);
+        address permit2 = IEVault(vault0).permit2Address();
+        if (permit2 == address(0)) {
+            IERC20(asset0).approve(vault0, type(uint256).max);
+        } else {
+            IERC20(asset0).approve(permit2, type(uint256).max);
+            IAllowanceTransfer(permit2).approve(asset0, vault0, type(uint160).max, type(uint48).max);
+        }
+
+        permit2 = IEVault(vault1).permit2Address();
+        if (permit2 == address(0)) {
+            IERC20(asset1).approve(vault1, type(uint256).max);
+        } else {
+            IERC20(asset1).approve(permit2, type(uint256).max);
+            IAllowanceTransfer(permit2).approve(asset1, vault1, type(uint160).max, type(uint48).max);
+        }
 
         IEVC(evc).enableCollateral(myAccount, vault0);
         IEVC(evc).enableCollateral(myAccount, vault1);
@@ -183,9 +194,7 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     function depositAssets(address vault, uint256 amount) internal {
         IEVault(vault).deposit(amount, myAccount);
 
-        uint256 debt = myDebt(vault);
-
-        if (debt > 0) {
+        if (IEVC(evc).isControllerEnabled(myAccount, vault)) {
             IEVC(evc).call(
                 vault, myAccount, 0, abi.encodeCall(IBorrowing.repayWithShares, (type(uint256).max, myAccount))
             );
