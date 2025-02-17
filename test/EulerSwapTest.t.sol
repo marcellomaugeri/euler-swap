@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.24;
 
-import {IEVault, EulerSwapTestBase, EulerSwap, TestERC20} from "./EulerSwapTestBase.t.sol";
+import {IEVault, IEulerSwap, EulerSwapTestBase, EulerSwap, TestERC20} from "./EulerSwapTestBase.t.sol";
 
 contract EulerSwapTest is EulerSwapTestBase {
     EulerSwap public eulerSwap;
@@ -16,7 +16,7 @@ contract EulerSwapTest is EulerSwapTestBase {
         vm.expectRevert(EulerSwap.DifferentEVC.selector);
 
         new EulerSwap(
-            EulerSwap.Params({
+            IEulerSwap.Params({
                 evc: address(makeAddr("RANDOM_EVC")),
                 vault0: address(eTST),
                 vault1: address(eTST2),
@@ -25,7 +25,7 @@ contract EulerSwapTest is EulerSwapTestBase {
                 debtLimit1: 50e18,
                 fee: 0
             }),
-            EulerSwap.CurveParams({priceX: 1e18, priceY: 1e18, concentrationX: 4e18, concentrationY: 0.85e18})
+            IEulerSwap.CurveParams({priceX: 1e18, priceY: 1e18, concentrationX: 4e18, concentrationY: 0.85e18})
         );
     }
 

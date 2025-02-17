@@ -8,23 +8,6 @@ import {IEulerSwap} from "./interfaces/IEulerSwap.sol";
 import {EVCUtil} from "evc/utils/EVCUtil.sol";
 
 contract EulerSwap is IEulerSwap, EVCUtil {
-    struct Params {
-        address evc;
-        address vault0;
-        address vault1;
-        address myAccount;
-        uint112 debtLimit0;
-        uint112 debtLimit1;
-        uint256 fee;
-    }
-
-    struct CurveParams {
-        uint256 priceX;
-        uint256 priceY;
-        uint256 concentrationX;
-        uint256 concentrationY;
-    }
-
     bytes32 public constant curve = keccak256("EulerSwap v1");
 
     address public immutable vault0;

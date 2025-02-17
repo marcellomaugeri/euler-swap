@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import {Test, console} from "forge-std/Test.sol";
 import {EVaultTestBase, TestERC20} from "evk-test/unit/evault/EVaultTestBase.t.sol";
 import {IEVault} from "evk/EVault/IEVault.sol";
-import {EulerSwap} from "../src/EulerSwap.sol";
+import {IEulerSwap, EulerSwap} from "../src/EulerSwap.sol";
 import {EulerSwapPeriphery} from "../src/EulerSwapPeriphery.sol";
 
 contract EulerSwapTestBase is EVaultTestBase {
@@ -87,7 +87,7 @@ contract EulerSwapTestBase is EVaultTestBase {
         vm.prank(creator);
         EulerSwap eulerSwap = new EulerSwap(
             getEulerSwapParams(debtLimitA, debtLimitB, fee),
-            EulerSwap.CurveParams({priceX: px, priceY: py, concentrationX: cx, concentrationY: cy})
+            IEulerSwap.CurveParams({priceX: px, priceY: py, concentrationX: cx, concentrationY: cy})
         );
 
         vm.prank(holder);
@@ -146,7 +146,7 @@ contract EulerSwapTestBase is EVaultTestBase {
         view
         returns (EulerSwap.Params memory)
     {
-        return EulerSwap.Params({
+        return IEulerSwap.Params({
             evc: address(evc),
             vault0: address(eTST),
             vault1: address(eTST2),

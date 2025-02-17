@@ -2,6 +2,23 @@
 pragma solidity >=0.8.0;
 
 interface IEulerSwap {
+    struct Params {
+        address evc;
+        address vault0;
+        address vault1;
+        address myAccount;
+        uint112 debtLimit0;
+        uint112 debtLimit1;
+        uint256 fee;
+    }
+
+    struct CurveParams {
+        uint256 priceX;
+        uint256 priceY;
+        uint256 concentrationX;
+        uint256 concentrationY;
+    }
+
     /// @notice Optimistically sends the requested amounts of tokens to the `to`
     /// address, invokes `uniswapV2Call` callback on `to` (if `data` was provided),
     /// and then verifies that a sufficient amount of tokens were transferred to
