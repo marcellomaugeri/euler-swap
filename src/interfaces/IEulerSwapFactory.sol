@@ -17,7 +17,6 @@ interface IEulerSwapFactory {
 
     function deployPool(DeployParams memory params) external returns (address);
 
-    function evc() external view returns (address);
     function allPools(uint256 index) external view returns (address);
     function getPool(bytes32 poolKey) external view returns (address);
     function allPoolsLength() external view returns (uint256);

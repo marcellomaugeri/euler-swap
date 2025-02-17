@@ -9,8 +9,6 @@ import {Ownable} from "openzeppelin-contracts/access/Ownable.sol";
 /// @custom:security-contact security@euler.xyz
 /// @author Euler Labs (https://www.eulerlabs.com/)
 contract EulerSwapFactory is IEulerSwapFactory, Ownable {
-    /// @dev EVC address.
-    address public immutable evc;
     /// @dev An array to store all pools addresses.
     address[] public allPools;
     /// @dev Mapping to store pool addresses
@@ -30,9 +28,7 @@ contract EulerSwapFactory is IEulerSwapFactory, Ownable {
 
     error InvalidQuery();
 
-    constructor(address evcAddr) Ownable(msg.sender) {
-        evc = evcAddr;
-    }
+    constructor() Ownable(msg.sender) {}
 
     /// @notice Deploy EulerSwap pool.
     function deployPool(DeployParams memory params) external returns (address) {

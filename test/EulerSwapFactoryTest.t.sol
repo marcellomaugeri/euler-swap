@@ -13,7 +13,7 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
         super.setUp();
 
         vm.prank(creator);
-        eulerSwapFactory = new EulerSwapFactory(address(evc));
+        eulerSwapFactory = new EulerSwapFactory();
     }
 
     function testDeployPool() public {
