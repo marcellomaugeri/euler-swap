@@ -3,7 +3,6 @@ pragma solidity >=0.8.0;
 
 interface IEulerSwap {
     struct Params {
-        address evc;
         address vault0;
         address vault1;
         address myAccount;

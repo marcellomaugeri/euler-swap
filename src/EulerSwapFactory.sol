@@ -38,7 +38,6 @@ contract EulerSwapFactory is IEulerSwapFactory, Ownable {
     function deployPool(DeployParams memory params) external returns (address) {
         EulerSwap pool = new EulerSwap(
             IEulerSwap.Params({
-                evc: address(evc),
                 vault0: params.vault0,
                 vault1: params.vault1,
                 myAccount: params.holder,
