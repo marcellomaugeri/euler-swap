@@ -3,12 +3,11 @@ pragma solidity ^0.8.27;
 
 import {IEulerSwapFactory} from "./interfaces/IEulerSwapFactory.sol";
 import {IEulerSwap, EulerSwap} from "./EulerSwap.sol";
-import {Ownable} from "openzeppelin-contracts/access/Ownable.sol";
 
 /// @title EulerSwapFactory contract
 /// @custom:security-contact security@euler.xyz
 /// @author Euler Labs (https://www.eulerlabs.com/)
-contract EulerSwapFactory is IEulerSwapFactory, Ownable {
+contract EulerSwapFactory is IEulerSwapFactory {
     /// @dev An array to store all pools addresses.
     address[] public allPools;
     /// @dev Mapping to store pool addresses
@@ -27,8 +26,7 @@ contract EulerSwapFactory is IEulerSwapFactory, Ownable {
     );
 
     error InvalidQuery();
-
-    constructor() Ownable(msg.sender) {}
+    error AlreadyDeployed();
 
     /// @notice Deploy EulerSwap pool.
     function deployPool(DeployParams memory params) external returns (address) {
@@ -36,7 +34,7 @@ contract EulerSwapFactory is IEulerSwapFactory, Ownable {
             IEulerSwap.Params({
                 vault0: params.vault0,
                 vault1: params.vault1,
-                myAccount: params.holder,
+                myAccount: params.swapAccount,
                 debtLimit0: params.debtLimit0,
                 debtLimit1: params.debtLimit1,
                 fee: params.fee
@@ -58,13 +56,15 @@ contract EulerSwapFactory is IEulerSwapFactory, Ownable {
                 poolAsset0,
                 poolAsset1,
                 feeMultiplier,
-                params.holder,
+                params.swapAccount,
                 params.priceX,
                 params.priceY,
                 params.concentrationX,
                 params.concentrationY
             )
         );
+
+        require(getPool[poolKey] == address(0), AlreadyDeployed());
 
         getPool[poolKey] = address(pool);
         allPools.push(address(pool));
@@ -73,7 +73,7 @@ contract EulerSwapFactory is IEulerSwapFactory, Ownable {
             poolAsset0,
             poolAsset1,
             feeMultiplier,
-            params.holder,
+            params.swapAccount,
             params.priceX,
             params.priceY,
             params.concentrationX,
