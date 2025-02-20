@@ -52,6 +52,14 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
         assertEq(poolsList.length, 1);
         assertEq(poolsList[0], address(eulerSwap));
         assertEq(eulerSwapFactory.allPools(0), address(eulerSwap));
+
+        vm.prank(creator);
+        vm.expectRevert(EulerSwapFactory.AlreadyDeployed.selector);
+        eulerSwapFactory.deployPool(
+            IEulerSwapFactory.DeployParams(
+                address(eTST), address(eTST2), holder, 0, 1e18, 1e18, 0.4e18, 0.85e18, 50e18, 50e18
+            )
+        );
     }
 
     function testInvalidGetAllPoolsListSliceQuery() public {
