@@ -33,8 +33,10 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
             abi.encode(
                 eulerSwap.asset0(),
                 eulerSwap.asset1(),
-                eulerSwap.feeMultiplier(),
+                eulerSwap.vault0(),
+                eulerSwap.vault1(),
                 eulerSwap.myAccount(),
+                eulerSwap.feeMultiplier(),
                 eulerSwap.priceX(),
                 eulerSwap.priceY(),
                 eulerSwap.concentrationX(),

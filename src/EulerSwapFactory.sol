@@ -16,6 +16,8 @@ contract EulerSwapFactory is IEulerSwapFactory {
     event PoolDeployed(
         address indexed asset0,
         address indexed asset1,
+        address vault0,
+        address vault1,
         uint256 indexed feeMultiplier,
         address swapAccount,
         uint256 priceX,
@@ -51,27 +53,33 @@ contract EulerSwapFactory is IEulerSwapFactory {
         address poolAsset1 = pool.asset1();
         uint256 feeMultiplier = pool.feeMultiplier();
 
-        bytes32 poolKey = keccak256(
-            abi.encode(
-                poolAsset0,
-                poolAsset1,
-                feeMultiplier,
-                params.swapAccount,
-                params.priceX,
-                params.priceY,
-                params.concentrationX,
-                params.concentrationY
-            )
-        );
+        {
+            bytes32 poolKey = keccak256(
+                abi.encode(
+                    poolAsset0,
+                    poolAsset1,
+                    params.vault0,
+                    params.vault1,
+                    params.swapAccount,
+                    feeMultiplier,
+                    params.priceX,
+                    params.priceY,
+                    params.concentrationX,
+                    params.concentrationY
+                )
+            );
 
-        require(getPool[poolKey] == address(0), AlreadyDeployed());
+            require(getPool[poolKey] == address(0), AlreadyDeployed());
 
-        getPool[poolKey] = address(pool);
-        allPools.push(address(pool));
+            getPool[poolKey] = address(pool);
+            allPools.push(address(pool));
+        }
 
         emit PoolDeployed(
             poolAsset0,
             poolAsset1,
+            params.vault0,
+            params.vault1,
             feeMultiplier,
             params.swapAccount,
             params.priceX,
