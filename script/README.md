@@ -11,3 +11,8 @@ After filling the `.env` file, make sure to run: `source .env` in your terminal.
 - Fill the `DeployProtocol_input.json` file with the needed inputs.
 - Run `forge script ./script/DeployProtocol.s.sol --rpc-url network_name --broadcast --slow`
 
+## Deploy new pool
+
+- Fill the `DeployPool_input.json` file with the needed inputs.
+- Run `forge script ./script/DeployPool.s.sol --rpc-url network_name --broadcast --slow`
+
