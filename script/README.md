@@ -1,0 +1,13 @@
+# Forge scripts
+
+Every script takes inputs via a `ScriptName_input.json` file inside the json directory.
+
+Before running the scripts, please make sure to fill the `.env` file following the `.env.example`. The main env variables for the script to succefully run, are `WALLET_PRIVATE_KEY` and the `NETWORK_RPC_URL`.
+
+After filling the `.env` file, make sure to run: `source .env` in your terminal.
+
+## Deploy protocol
+
+- Fill the `DeployProtocol_input.json` file with the needed inputs.
+- Run `forge script ./script/DeployProtocol.s.sol --rpc-url network_name --broadcast --slow`
+

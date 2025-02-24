@@ -44,6 +44,11 @@ forge test
 forge coverage
 ```
 
+## Private Deployment
+
+- EulerSwapFactory: 0xB6cFe9b23d18A034cE925Ee84b97D20a52Db1940
+- EulerSwapPeriphery: 0x7fc1edF54d86DfAA90F1069E81D4B520A2A44d2B
+
 ## Safety
 
 This software is experimental and is provided "as is" and "as available".
