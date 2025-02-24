@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {ScriptUtil} from "./ScriptUtil.s.sol";
 import {IEulerSwapFactory, EulerSwapFactory} from "../src/EulerSwapFactory.sol";
 
-/// @title Script to deploy EulerSwapFactory & EulerSwapPeriphery.
+/// @title Script to deploy new pool.
 contract DeployPool is ScriptUtil {
     function run() public {
         // load wallet
@@ -38,7 +38,7 @@ contract DeployPool is ScriptUtil {
         string memory object;
         object = vm.serializeAddress("factory", "deployedPool", pool);
 
-        vm.writeJson(object, string.concat(vm.projectRoot(), "/script/", outputScriptFileName));
+        vm.writeJson(object, string.concat(vm.projectRoot(), "/script/json/", outputScriptFileName));
 
         vm.stopBroadcast();
     }
