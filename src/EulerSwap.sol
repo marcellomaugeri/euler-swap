@@ -7,6 +7,7 @@ import {IUniswapV2Callee} from "./interfaces/IUniswapV2Callee.sol";
 import {IEulerSwap} from "./interfaces/IEulerSwap.sol";
 import {IAllowanceTransfer} from "permit2/src/interfaces/IAllowanceTransfer.sol";
 import {EVCUtil} from "evc/utils/EVCUtil.sol";
+import {Math} from "openzeppelin-contracts/utils/math/Math.sol";
 
 contract EulerSwap is IEulerSwap, EVCUtil {
     bytes32 public constant curve = keccak256("EulerSwap v1");
@@ -236,7 +237,8 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     }
 
     /// @dev EulerSwap curve definition
-    function f(uint256 xt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c) internal pure returns (uint256) {
-        return y0 + px * 1e18 / py * (c * (2 * x0 - xt) / 1e18 + (1e18 - c) * x0 / 1e18 * x0 / xt - x0) / 1e18;
+    /// Pre-conditions: x <= x0, 1 <= {px,py} <= 1e36, {x0,y0} <= type(uint112).max, c <= 1e18
+    function f(uint256 x, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c) public pure returns (uint256) {
+        return y0 + (Math.mulDiv(px * (x0 - x), c * x + (1e18 - c) * x0, x * 1e18, Math.Rounding.Ceil) + (py - 1)) / py;
     }
 }
