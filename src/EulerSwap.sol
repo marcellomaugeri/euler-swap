@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
 import {IEVault, IERC20, IBorrowing, IERC4626, IRiskManager} from "evk/EVault/IEVault.sol";
+import {Errors as EVKErrors} from "evk/EVault/shared/Errors.sol";
 import {IUniswapV2Callee} from "./interfaces/IUniswapV2Callee.sol";
 import {IEulerSwap} from "./interfaces/IEulerSwap.sol";
 import {IAllowanceTransfer} from "permit2/src/interfaces/IAllowanceTransfer.sol";
@@ -50,6 +51,7 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     error DifferentEVC();
     error AssetsOutOfOrderOrEqual();
     error CurveViolation();
+    error DepositFailure(bytes reason);
 
     modifier nonReentrant() {
         if (status == 0) activate();
@@ -108,16 +110,10 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         // Deposit all available funds, adjust received amounts downward to collect fees
 
         uint256 amount0In = IERC20(asset0).balanceOf(address(this));
-        if (amount0In > 0) {
-            depositAssets(vault0, amount0In);
-            amount0In = amount0In * feeMultiplier / 1e18;
-        }
+        if (amount0In > 0) amount0In = depositAssets(vault0, amount0In) * feeMultiplier / 1e18;
 
         uint256 amount1In = IERC20(asset1).balanceOf(address(this));
-        if (amount1In > 0) {
-            depositAssets(vault1, amount1In);
-            amount1In = amount1In * feeMultiplier / 1e18;
-        }
+        if (amount1In > 0) amount1In = depositAssets(vault1, amount1In) * feeMultiplier / 1e18;
 
         // Verify curve invariant is satisified
 
@@ -199,8 +195,12 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         }
     }
 
-    function depositAssets(address vault, uint256 amount) internal {
-        IEVault(vault).deposit(amount, myAccount);
+    function depositAssets(address vault, uint256 amount) internal returns (uint256) {
+        try IEVault(vault).deposit(amount, myAccount) {}
+        catch (bytes memory reason) {
+            require(bytes4(reason) == EVKErrors.E_ZeroShares.selector, DepositFailure(reason));
+            return 0;
+        }
 
         if (IEVC(evc).isControllerEnabled(myAccount, vault)) {
             IEVC(evc).call(
@@ -211,6 +211,8 @@ contract EulerSwap is IEulerSwap, EVCUtil {
                 IEVC(evc).call(vault, myAccount, 0, abi.encodeCall(IRiskManager.disableController, ()));
             }
         }
+
+        return amount;
     }
 
     function myDebt(address vault) internal view returns (uint256) {
