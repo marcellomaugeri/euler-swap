@@ -2,12 +2,12 @@
     "factory": "0xB6cFe9b23d18A034cE925Ee84b97D20a52Db1940",
     "vault0": "0xa66957e58b60d6b92b850c8773a9ff9b0ba96a65",
     "vault1": "0x4212e01c7c8e1c21dea6030c74ae2084f5337bd1",
-    "swapAccount": "0x0C9a3dd6b8F28529d72d7f9cE918D493519EE383",
+    "swapAccount": "0x603765f9e9B8E3CBACbdf7A6e963B7EAD77AE86f",
     "fee": 0,
     "priceX": 1e18,
     "priceY": 1e18,
-    "concentrationX": 0.4e18,
-    "concentrationY": 0.85e18,
-    "debtLimit0": "1000000000",
-    "debtLimit1": "1000000000"
+    "concentrationX": 0.97e18,
+    "concentrationY": 0.97e18,
+    "debtLimit0": 2000e6,
+    "debtLimit1": 2000e6
 }

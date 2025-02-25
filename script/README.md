@@ -16,3 +16,13 @@ After filling the `.env` file, make sure to run: `source .env` in your terminal.
 - Fill the `DeployPool_input.json` file with the needed inputs.
 - Run `forge script ./script/DeployPool.s.sol --rpc-url network_name --broadcast --slow`
 
+## Activate new pool
+
+- Fill the `SetOperatorAndActivatePool_input.json` file with the needed inputs.
+- Run `forge script ./script/SetOperatorAndActivatePool.s.sol --rpc-url network_name --broadcast --slow`
+
+## Exact in swap
+
+- Fill the `SwapExactIn_input.json` file with the needed inputs.
+- Run `forge script ./script/SwapExactIn.s.sol --rpc-url network_name --broadcast --slow`
+
