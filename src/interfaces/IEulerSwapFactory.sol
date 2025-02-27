@@ -15,10 +15,9 @@ interface IEulerSwapFactory {
         uint112 debtLimit1;
     }
 
-    function deployPool(DeployParams memory params) external returns (address);
+    function deployPool(DeployParams memory params, bytes32 salt) external returns (address);
 
     function allPools(uint256 index) external view returns (address);
-    function getPool(bytes32 poolKey) external view returns (address);
     function allPoolsLength() external view returns (uint256);
     function getAllPoolsListSlice(uint256 start, uint256 end) external view returns (address[] memory);
 }
