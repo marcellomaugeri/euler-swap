@@ -46,8 +46,8 @@ forge coverage
 
 ## Private Deployment
 
-- EulerSwapFactory: 0xB6cFe9b23d18A034cE925Ee84b97D20a52Db1940
-- EulerSwapPeriphery: 0x7fc1edF54d86DfAA90F1069E81D4B520A2A44d2B
+- EulerSwapFactory: 0x04C54FF83e4BC428FD1eDA2f41cdBd583A2e9cF8
+- EulerSwapPeriphery: 0x64A8410D7D2ecF3Aaf32b6C3932e4586f3C42ecE
 
 ## Safety
 

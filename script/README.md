@@ -23,6 +23,7 @@ After filling the `.env` file, make sure to run: `source .env` in your terminal.
 
 ## Exact in swap
 
-- Fill the `SwapExactIn_input.json` file with the needed inputs.
+- Fill the `SwapExactIn_input.json` file with the needed inputs. For the `swapUtil` field, use the address of the `SwapUtil` contract deployed in the network you are using:
+  - For mainnet, use `0xcdd2d349eeD309a0016C9A17f01bF1670913708b`
 - Run `forge script ./script/SwapExactIn.s.sol --rpc-url network_name --broadcast --slow`
 

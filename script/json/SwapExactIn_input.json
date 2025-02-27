@@ -1,7 +1,7 @@
 {
-    "pool": "0xdFFC67B59708a1c108E4121cabB9AF5A4DB28C17",
-    "periphery": "0x7fc1edF54d86DfAA90F1069E81D4B520A2A44d2B",
+    "pool": "0x67C30405250e395f31d661274352dA404e624682",
+    "swapUtil": "0xcdd2d349eeD309a0016C9A17f01bF1670913708b",
     "tokenIn": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     "tokenOut": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-    "amountIn": 20e6
+    "amountIn": 9e6
 }
