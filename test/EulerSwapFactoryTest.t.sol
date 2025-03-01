@@ -19,12 +19,11 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
     function testDeployPool() public {
         uint256 allPoolsLengthBefore = eulerSwapFactory.allPoolsLength();
 
-        IEulerSwapFactory.DeployParams memory deployParams = IEulerSwapFactory.DeployParams(
-            address(eTST), address(eTST2), holder, 0, 1e18, 1e18, 0.4e18, 0.85e18, 50e18, 50e18
-        );
         bytes32 salt = bytes32(uint256(1234));
+        IEulerSwap.Params memory poolParams = IEulerSwap.Params(address(eTST), address(eTST2), holder, 1e18, 1e18, 0);
+        IEulerSwap.CurveParams memory curveParams = IEulerSwap.CurveParams(0.4e18, 0.85e18, 50e18, 50e18);
 
-        address predictedAddress = predictPoolAddress(address(eulerSwapFactory), deployParams, salt);
+        address predictedAddress = predictPoolAddress(address(eulerSwapFactory), poolParams, curveParams, salt);
 
         IEVC.BatchItem[] memory items = new IEVC.BatchItem[](2);
 
@@ -38,7 +37,7 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
             onBehalfOfAccount: holder,
             targetContract: address(eulerSwapFactory),
             value: 0,
-            data: abi.encodeCall(EulerSwapFactory.deployPool, (deployParams, salt))
+            data: abi.encodeCall(EulerSwapFactory.deployPool, (poolParams, curveParams, salt))
         });
 
         vm.prank(holder);
@@ -59,12 +58,12 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
             onBehalfOfAccount: holder,
             targetContract: address(eulerSwapFactory),
             value: 0,
-            data: abi.encodeCall(EulerSwapFactory.deployPool, (deployParams, bytes32(uint256(12345))))
+            data: abi.encodeCall(EulerSwapFactory.deployPool, (poolParams, curveParams, bytes32(uint256(12345))))
         });
 
         vm.prank(holder);
         vm.expectRevert(EulerSwapFactory.OldOperatorStillInstalled.selector);
-        evc.batch(items);   
+        evc.batch(items);
     }
 
     function testInvalidGetAllPoolsListSliceQuery() public {
@@ -74,35 +73,30 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
 
     function testDeployWithAssetsOutOfOrderOrEqual() public {
         bytes32 salt = bytes32(uint256(1234));
+        IEulerSwap.Params memory poolParams = IEulerSwap.Params(address(eTST), address(eTST), holder, 1e18, 1e18, 0);
+        IEulerSwap.CurveParams memory curveParams = IEulerSwap.CurveParams(0.4e18, 0.85e18, 50e18, 50e18);
 
         vm.prank(holder);
         vm.expectRevert(EulerSwap.AssetsOutOfOrderOrEqual.selector);
-        eulerSwapFactory.deployPool(
-            IEulerSwapFactory.DeployParams(
-                address(eTST), address(eTST), holder, 0, 1e18, 1e18, 0.4e18, 0.85e18, 50e18, 50e18
-            ),
-            salt
-        );
+        eulerSwapFactory.deployPool(poolParams, curveParams, salt);
     }
 
     function testDeployWithBadFee() public {
         bytes32 salt = bytes32(uint256(1234));
+        IEulerSwap.Params memory poolParams = IEulerSwap.Params(address(eTST), address(eTST2), holder, 1e18, 1e18, 1e18);
+        IEulerSwap.CurveParams memory curveParams = IEulerSwap.CurveParams(0.4e18, 0.85e18, 50e18, 50e18);
 
         vm.prank(holder);
         vm.expectRevert(EulerSwap.BadFee.selector);
-        eulerSwapFactory.deployPool(
-            IEulerSwapFactory.DeployParams(
-                address(eTST), address(eTST2), holder, 1e18, 1e18, 1e18, 0.4e18, 0.85e18, 50e18, 50e18
-            ),
-            salt
-        );
+        eulerSwapFactory.deployPool(poolParams, curveParams, salt);
     }
 
-    function predictPoolAddress(address factoryAddress, IEulerSwapFactory.DeployParams memory params, bytes32 salt)
-        internal
-        pure
-        returns (address)
-    {
+    function predictPoolAddress(
+        address factoryAddress,
+        IEulerSwap.Params memory poolParams,
+        IEulerSwap.CurveParams memory curveParams,
+        bytes32 salt
+    ) internal pure returns (address) {
         return address(
             uint160(
                 uint256(
@@ -110,27 +104,9 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
                         abi.encodePacked(
                             bytes1(0xff),
                             factoryAddress,
-                            keccak256(abi.encode(address(params.swapAccount), salt)),
+                            keccak256(abi.encode(address(poolParams.myAccount), salt)),
                             keccak256(
-                                abi.encodePacked(
-                                    type(EulerSwap).creationCode,
-                                    abi.encode(
-                                        IEulerSwap.Params({
-                                            vault0: params.vault0,
-                                            vault1: params.vault1,
-                                            myAccount: params.swapAccount,
-                                            debtLimit0: params.debtLimit0,
-                                            debtLimit1: params.debtLimit1,
-                                            fee: params.fee
-                                        }),
-                                        IEulerSwap.CurveParams({
-                                            priceX: params.priceX,
-                                            priceY: params.priceY,
-                                            concentrationX: params.concentrationX,
-                                            concentrationY: params.concentrationY
-                                        })
-                                    )
-                                )
+                                abi.encodePacked(type(EulerSwap).creationCode, abi.encode(poolParams, curveParams))
                             )
                         )
                     )
