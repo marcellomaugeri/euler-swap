@@ -3,20 +3,40 @@ pragma solidity ^0.8.27;
 
 import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
 import {IEVault} from "evk/EVault/IEVault.sol";
-import {IEulerSwap} from "./interfaces/IEulerSwap.sol";
 import {IEulerSwapPeriphery} from "./interfaces/IEulerSwapPeriphery.sol";
+import {IERC20, IEulerSwap, SafeERC20} from "./EulerSwap.sol";
 
 contract EulerSwapPeriphery is IEulerSwapPeriphery {
-    address private immutable evc;
-
-    constructor(address evc_) {
-        evc = evc_;
-    }
+    using SafeERC20 for IERC20;
 
     error UnsupportedPair();
     error OperatorNotInstalled();
     error InsufficientReserves();
     error InsufficientCash();
+    error AmountOutLessThanMin();
+    error AmountInMoreThanMax();
+
+    /// @inheritdoc IEulerSwapPeriphery
+    function swapExactIn(address eulerSwap, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOutMin)
+        external
+    {
+        uint256 amountOut = computeQuote(IEulerSwap(eulerSwap), tokenIn, tokenOut, amountIn, true);
+
+        require(amountOut >= amountOutMin, AmountOutLessThanMin());
+
+        _swap(eulerSwap, tokenIn, tokenOut, amountIn, amountOut);
+    }
+
+    /// @inheritdoc IEulerSwapPeriphery
+    function swapExactOut(address eulerSwap, address tokenIn, address tokenOut, uint256 amountOut, uint256 amountInMax)
+        external
+    {
+        uint256 amountIn = computeQuote(IEulerSwap(eulerSwap), tokenIn, tokenOut, amountOut, false);
+
+        require(amountIn <= amountInMax, AmountInMoreThanMax());
+
+        _swap(eulerSwap, tokenIn, tokenOut, amountIn, amountOut);
+    }
 
     /// @inheritdoc IEulerSwapPeriphery
     function quoteExactInput(address eulerSwap, address tokenIn, address tokenOut, uint256 amountIn)
@@ -36,6 +56,17 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         return computeQuote(IEulerSwap(eulerSwap), tokenIn, tokenOut, amountOut, false);
     }
 
+    function _swap(address eulerSwap, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut)
+        internal
+    {
+        IERC20(tokenIn).safeTransferFrom(msg.sender, eulerSwap, amountIn);
+
+        bool isAsset0In = tokenIn < tokenOut;
+        (isAsset0In)
+            ? IEulerSwap(eulerSwap).swap(0, amountOut, msg.sender, "")
+            : IEulerSwap(eulerSwap).swap(amountOut, 0, msg.sender, "");
+    }
+
     /// @dev High-level quoting function. It handles fees and performs
     /// state validation, for example that there is sufficient cash available.
     function computeQuote(IEulerSwap eulerSwap, address tokenIn, address tokenOut, uint256 amount, bool exactIn)
@@ -44,7 +75,8 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         returns (uint256)
     {
         require(
-            IEVC(evc).isAccountOperatorAuthorized(eulerSwap.myAccount(), address(eulerSwap)), OperatorNotInstalled()
+            IEVC(eulerSwap.EVC()).isAccountOperatorAuthorized(eulerSwap.myAccount(), address(eulerSwap)),
+            OperatorNotInstalled()
         );
 
         uint256 feeMultiplier = eulerSwap.feeMultiplier();
