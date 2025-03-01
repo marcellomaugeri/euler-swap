@@ -24,7 +24,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
 
         require(amountOut >= amountOutMin, AmountOutLessThanMin());
 
-        _swap(eulerSwap, tokenIn, tokenOut, amountIn, amountOut);
+        swap(eulerSwap, tokenIn, tokenOut, amountIn, amountOut);
     }
 
     /// @inheritdoc IEulerSwapPeriphery
@@ -35,7 +35,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
 
         require(amountIn <= amountInMax, AmountInMoreThanMax());
 
-        _swap(eulerSwap, tokenIn, tokenOut, amountIn, amountOut);
+        swap(eulerSwap, tokenIn, tokenOut, amountIn, amountOut);
     }
 
     /// @inheritdoc IEulerSwapPeriphery
@@ -56,9 +56,13 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         return computeQuote(IEulerSwap(eulerSwap), tokenIn, tokenOut, amountOut, false);
     }
 
-    function _swap(address eulerSwap, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut)
-        internal
-    {
+    /// @dev Internal function to execute a token swap through EulerSwap
+    /// @param eulerSwap The EulerSwap contract address to execute the swap through
+    /// @param tokenIn The address of the input token being swapped
+    /// @param tokenOut The address of the output token being received
+    /// @param amountIn The amount of input tokens to swap
+    /// @param amountOut The amount of output tokens to receive
+    function swap(address eulerSwap, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut) internal {
         IERC20(tokenIn).safeTransferFrom(msg.sender, eulerSwap, amountIn);
 
         bool isAsset0In = tokenIn < tokenOut;
@@ -67,8 +71,18 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
             : IEulerSwap(eulerSwap).swap(amountOut, 0, msg.sender, "");
     }
 
-    /// @dev High-level quoting function. It handles fees and performs
-    /// state validation, for example that there is sufficient cash available.
+    /// @dev Computes the quote for a swap by applying fees and validating state conditions
+    /// @param eulerSwap The EulerSwap contract to quote from
+    /// @param tokenIn The input token address
+    /// @param tokenOut The output token address
+    /// @param amount The amount to quote (input amount if exactIn=true, output amount if exactIn=false)
+    /// @param exactIn True if quoting for exact input amount, false if quoting for exact output amount
+    /// @return The quoted amount (output amount if exactIn=true, input amount if exactIn=false)
+    /// @dev Validates:
+    ///      - EulerSwap operator is installed
+    ///      - Token pair is supported
+    ///      - Sufficient reserves exist
+    ///      - Sufficient cash is available
     function computeQuote(IEulerSwap eulerSwap, address tokenIn, address tokenOut, uint256 amount, bool exactIn)
         internal
         view
@@ -115,9 +129,17 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         return quote;
     }
 
+    /// @notice Binary searches for the output amount along a swap curve given input parameters
     /// @dev General-purpose routine for binary searching swapping curves.
     /// Although some curves may have more efficient closed-form solutions,
     /// this works with any monotonic curve.
+    /// @param eulerSwap The EulerSwap contract to search the curve for
+    /// @param reserve0 Current reserve of asset0 in the pool
+    /// @param reserve1 Current reserve of asset1 in the pool
+    /// @param amount The input or output amount depending on exactIn
+    /// @param exactIn True if amount is input amount, false if amount is output amount
+    /// @param asset0IsInput True if asset0 is being input, false if asset1 is being input
+    /// @return output The calculated output amount from the binary search
     function binarySearch(
         IEulerSwap eulerSwap,
         uint112 reserve0,
