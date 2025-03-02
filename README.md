@@ -1,10 +1,8 @@
 # EulerSwap
 
-EulerSwap is an Automated Market Maker (AMM) that uses [Euler lending vaults](https://docs.euler.finance/euler-vault-kit-white-paper/) as leveraged lending products in order to extend the range of its reserves and thereby improve the capital efficiency of liquidity provisioning.
+EulerSwap is an automated market maker (AMM) that integrates with Euler [credit vaults](https://docs.euler.finance/euler-vault-kit-white-paper/) to provide deeper liquidity for swaps. When a user initiates a swap, a smart contract called an EulerSwap operator borrows the required output token using the input token as collateral. This model enables up to 40x the liquidity depth of traditional AMMs by making idle assets in Euler more efficient. Unlike traditional AMMs, which often fragment liquidity across multiple pools, EulerSwap further increases capital efficiency by allowing a single, cross-collateralised credit vault to support multiple asset pairs at once. At its core, EulerSwap uses a flexible AMM curve to optimise swap pricing, ensuring deep liquidity while maintaining market balance. By combining just-in-time liquidity, shared liquidity across pools, and customisable AMM mechanics, EulerSwap reduces inefficiencies in liquidity provision, offering deeper markets, lower costs, and greater control for liquidity providers.
 
-To swappers, EulerSwap presents a hopefully familiar Uniswap2-style interface but internally it supports borrow and repaying, custom pricing curves, and other advanced functionality. Although useable by anyone, it is primarily intended to be invoked by sophisticated actors such as swap aggregators, intents solvers, and MEV bots. Similar to Uniswap, there is a careful separation between the critical core functionality for servicing swaps and the surrounding periphery functions for quoting, etc.
-
-For more information, refer to the [white paper](./docs/white-paper/EulerSwap_White_Paper.pdf).
+For more information, refer to the [white paper](./docs/whitepaper/EulerSwap_White_Paper.pdf).
 
 ## Usage
 
@@ -54,7 +52,7 @@ Always include thorough tests when using EulerSwap to ensure it interacts correc
 
 ## Known limitations
 
-Refer to the [white paper](./docs/white-paper/EulerSwap_White_Paper.pdf) for a list of known limitations and security considerations.
+Refer to the [white paper](./docs/whitepaper/EulerSwap_White_Paper.pdf) for a list of known limitations and security considerations.
 
 ## Contributing
 
