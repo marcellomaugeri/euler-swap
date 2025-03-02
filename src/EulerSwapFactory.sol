@@ -11,8 +11,8 @@ import {EVCUtil} from "ethereum-vault-connector/utils/EVCUtil.sol";
 contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     /// @dev An array to store all pools addresses.
     address[] public allPools;
-    /// @dev Mapping between a swap account and deployed pool that is currently set as operator
-    mapping(address swapAccount => address operator) public swapAccountToPool;
+    /// @dev Mapping between a euler account and deployed pool that is currently set as operator
+    mapping(address eulerAccount => address operator) public eulerAccountToPool;
 
     event PoolDeployed(
         address indexed asset0,
@@ -20,7 +20,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
         address vault0,
         address vault1,
         uint256 indexed feeMultiplier,
-        address swapAccount,
+        address eulerAccount,
         uint256 priceX,
         uint256 priceY,
         uint256 concentrationX,
@@ -37,7 +37,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
 
     /// @notice Deploy a new EulerSwap pool with the given parameters
     /// @dev The pool address is deterministically generated using CREATE2 with a salt derived from
-    ///      the swap account address and provided salt parameter. This allows the pool address to be
+    ///      the euler account address and provided salt parameter. This allows the pool address to be
     ///      predicted before deployment.
     /// @param params Core pool parameters including vaults, account, and fee settings
     /// @param curveParams Parameters defining the curve shape including prices and concentrations
@@ -51,7 +51,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
 
         EulerSwap pool = new EulerSwap{salt: keccak256(abi.encode(params.eulerAccount, salt))}(params, curveParams);
 
-        checkSwapAccountOperators(params.eulerAccount, address(pool));
+        checkEulerAccountOperators(params.eulerAccount, address(pool));
 
         allPools.push(address(pool));
 
@@ -97,20 +97,20 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
         return allPoolsList;
     }
 
-    /// @notice Validates operator authorization for a swap account. First checks if the account has an existing operator
+    /// @notice Validates operator authorization for a euler account. First checks if the account has an existing operator
     /// and ensures it is deauthorized. Then verifies the new pool is authorized as an operator. Finally, updates the
     /// mapping to track the new pool as the account's operator.
-    /// @param swapAccount The address of the swap account.
+    /// @param eulerAccount The address of the euler account.
     /// @param newPool The address of the new pool.
-    function checkSwapAccountOperators(address swapAccount, address newPool) internal {
-        address operator = swapAccountToPool[swapAccount];
+    function checkEulerAccountOperators(address eulerAccount, address newPool) internal {
+        address operator = eulerAccountToPool[eulerAccount];
 
         if (operator != address(0)) {
-            require(!evc.isAccountOperatorAuthorized(swapAccount, operator), OldOperatorStillInstalled());
+            require(!evc.isAccountOperatorAuthorized(eulerAccount, operator), OldOperatorStillInstalled());
         }
 
-        require(evc.isAccountOperatorAuthorized(swapAccount, newPool), OperatorNotInstalled());
+        require(evc.isAccountOperatorAuthorized(eulerAccount, newPool), OperatorNotInstalled());
 
-        swapAccountToPool[swapAccount] = newPool;
+        eulerAccountToPool[eulerAccount] = newPool;
     }
 }

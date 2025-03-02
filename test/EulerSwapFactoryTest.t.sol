@@ -43,7 +43,7 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
         vm.prank(holder);
         evc.batch(items);
 
-        EulerSwap eulerSwap = EulerSwap(eulerSwapFactory.swapAccountToPool(holder));
+        EulerSwap eulerSwap = EulerSwap(eulerSwapFactory.eulerAccountToPool(holder));
 
         uint256 allPoolsLengthAfter = eulerSwapFactory.allPoolsLength();
         assertEq(allPoolsLengthAfter - allPoolsLengthBefore, 1);
