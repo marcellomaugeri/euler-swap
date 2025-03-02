@@ -25,7 +25,7 @@ contract EulerSwapTestBase is EVaultTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        periphery = new EulerSwapPeriphery(address(evc));
+        periphery = new EulerSwapPeriphery();
 
         // Vault config
 

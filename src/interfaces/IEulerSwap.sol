@@ -34,6 +34,10 @@ interface IEulerSwap {
     /// of the swapping curve).
     function verify(uint256 newReserve0, uint256 newReserve1) external view returns (bool);
 
+    /// @notice Returns the address of the Ethereum Vault Connector (EVC) used by this contract.
+    /// @return The address of the EVC contract.
+    function EVC() external view returns (address);
+
     // EulerSwap Accessors
 
     function curve() external view returns (bytes32);

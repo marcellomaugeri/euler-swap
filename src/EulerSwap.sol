@@ -151,6 +151,12 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         return (reserve0, reserve1, status);
     }
 
+    /// @notice Returns the address of the Ethereum Vault Connector (EVC) used by this contract.
+    /// @return The address of the EVC contract.
+    function EVC() external view override(EVCUtil, IEulerSwap) returns (address) {
+        return address(evc);
+    }
+
     /// @inheritdoc IEulerSwap
     function activate() public {
         require(status != 2, Locked());
