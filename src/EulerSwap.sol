@@ -36,7 +36,7 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     uint112 public reserve1;
     uint32 public status; // 0 = unactivated, 1 = unlocked, 2 = locked
 
-    event EulerSwapCreated(address indexed eulerSwap, address indexed asset0, address indexed asset1);
+    event EulerSwapCreated(address indexed asset0, address indexed asset1);
     event Swap(
         address indexed sender,
         uint256 amount0In,
@@ -96,7 +96,7 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         concentrationX = curveParams.concentrationX;
         concentrationY = curveParams.concentrationY;
 
-        emit EulerSwapCreated(address(this), asset0Addr, asset1Addr);
+        emit EulerSwapCreated(asset0Addr, asset1Addr);
     }
 
     /// @inheritdoc IEulerSwap
