@@ -11,7 +11,7 @@ import {EVCUtil} from "ethereum-vault-connector/utils/EVCUtil.sol";
 contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     /// @dev An array to store all pools addresses.
     address[] public allPools;
-    /// @dev Mapping between a euler account and deployed pool that is currently set as operator
+    /// @dev Mapping between euler account and deployed pool that is currently set as operator
     mapping(address eulerAccount => address operator) public eulerAccountToPool;
 
     event PoolDeployed(
@@ -97,7 +97,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
         return allPoolsList;
     }
 
-    /// @notice Validates operator authorization for a euler account. First checks if the account has an existing operator
+    /// @notice Validates operator authorization for euler account. First checks if the account has an existing operator
     /// and ensures it is deauthorized. Then verifies the new pool is authorized as an operator. Finally, updates the
     /// mapping to track the new pool as the account's operator.
     /// @param eulerAccount The address of the euler account.
