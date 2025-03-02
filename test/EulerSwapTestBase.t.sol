@@ -149,7 +149,7 @@ contract EulerSwapTestBase is EVaultTestBase {
         return IEulerSwap.Params({
             vault0: address(eTST),
             vault1: address(eTST2),
-            myAccount: holder,
+            eulerAccount: holder,
             debtLimit0: debtLimitA,
             debtLimit1: debtLimitB,
             fee: fee

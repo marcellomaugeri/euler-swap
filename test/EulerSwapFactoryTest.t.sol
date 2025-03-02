@@ -43,7 +43,7 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
         vm.prank(holder);
         evc.batch(items);
 
-        EulerSwap eulerSwap = EulerSwap(eulerSwapFactory.swapAccountToPool(holder));
+        EulerSwap eulerSwap = EulerSwap(eulerSwapFactory.eulerAccountToPool(holder));
 
         uint256 allPoolsLengthAfter = eulerSwapFactory.allPoolsLength();
         assertEq(allPoolsLengthAfter - allPoolsLengthBefore, 1);
@@ -104,7 +104,7 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
                         abi.encodePacked(
                             bytes1(0xff),
                             factoryAddress,
-                            keccak256(abi.encode(address(poolParams.myAccount), salt)),
+                            keccak256(abi.encode(address(poolParams.eulerAccount), salt)),
                             keccak256(
                                 abi.encodePacked(type(EulerSwap).creationCode, abi.encode(poolParams, curveParams))
                             )
