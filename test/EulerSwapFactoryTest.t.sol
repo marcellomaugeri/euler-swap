@@ -21,7 +21,7 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
 
         bytes32 salt = bytes32(uint256(1234));
         IEulerSwap.Params memory poolParams = IEulerSwap.Params(address(eTST), address(eTST2), holder, 1e18, 1e18, 0);
-        IEulerSwap.CurveParams memory curveParams = IEulerSwap.CurveParams(0.4e18, 0.85e18, 50e18, 50e18);
+        IEulerSwap.CurveParams memory curveParams = IEulerSwap.CurveParams(0.4e18, 0.85e18, 1e18, 1e18);
 
         address predictedAddress = predictPoolAddress(address(eulerSwapFactory), poolParams, curveParams, salt);
 
@@ -74,7 +74,7 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
     function testDeployWithAssetsOutOfOrderOrEqual() public {
         bytes32 salt = bytes32(uint256(1234));
         IEulerSwap.Params memory poolParams = IEulerSwap.Params(address(eTST), address(eTST), holder, 1e18, 1e18, 0);
-        IEulerSwap.CurveParams memory curveParams = IEulerSwap.CurveParams(0.4e18, 0.85e18, 50e18, 50e18);
+        IEulerSwap.CurveParams memory curveParams = IEulerSwap.CurveParams(0.4e18, 0.85e18, 1e18, 1e18);
 
         vm.prank(holder);
         vm.expectRevert(EulerSwap.AssetsOutOfOrderOrEqual.selector);
@@ -84,10 +84,10 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
     function testDeployWithBadFee() public {
         bytes32 salt = bytes32(uint256(1234));
         IEulerSwap.Params memory poolParams = IEulerSwap.Params(address(eTST), address(eTST2), holder, 1e18, 1e18, 1e18);
-        IEulerSwap.CurveParams memory curveParams = IEulerSwap.CurveParams(0.4e18, 0.85e18, 50e18, 50e18);
+        IEulerSwap.CurveParams memory curveParams = IEulerSwap.CurveParams(0.4e18, 0.85e18, 1e18, 1e18);
 
         vm.prank(holder);
-        vm.expectRevert(EulerSwap.BadFee.selector);
+        vm.expectRevert(EulerSwap.BadParam.selector);
         eulerSwapFactory.deployPool(poolParams, curveParams, salt);
     }
 
