@@ -4,10 +4,12 @@ pragma solidity ^0.8.27;
 import {SafeERC20, IERC20} from "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol";
 import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
 import {IEVault, IBorrowing, IERC4626, IRiskManager} from "evk/EVault/IEVault.sol";
+import {Errors as EVKErrors} from "evk/EVault/shared/Errors.sol";
 import {IUniswapV2Callee} from "./interfaces/IUniswapV2Callee.sol";
 import {IEulerSwap} from "./interfaces/IEulerSwap.sol";
 import {IAllowanceTransfer} from "permit2/src/interfaces/IAllowanceTransfer.sol";
 import {EVCUtil} from "evc/utils/EVCUtil.sol";
+import {Math} from "openzeppelin-contracts/utils/math/Math.sol";
 
 contract EulerSwap is IEulerSwap, EVCUtil {
     using SafeERC20 for IERC20;
@@ -47,10 +49,11 @@ contract EulerSwap is IEulerSwap, EVCUtil {
 
     error Locked();
     error Overflow();
-    error BadFee();
+    error BadParam();
     error DifferentEVC();
     error AssetsOutOfOrderOrEqual();
     error CurveViolation();
+    error DepositFailure(bytes reason);
 
     modifier nonReentrant() {
         if (status == 0) activate();
@@ -63,7 +66,11 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     constructor(Params memory params, CurveParams memory curveParams) EVCUtil(IEVault(params.vault0).EVC()) {
         // EulerSwap params
 
-        require(params.fee < 1e18, BadFee());
+        require(params.fee < 1e18, BadParam());
+        require(params.debtLimit0 <= type(uint112).max && params.debtLimit1 <= type(uint112).max, BadParam());
+        require(curveParams.priceX > 0 && curveParams.priceY > 0, BadParam());
+        require(curveParams.priceX <= 1e36 && curveParams.priceY <= 1e36, BadParam());
+        require(curveParams.concentrationX <= 1e18 && curveParams.concentrationY <= 1e18, BadParam());
         require(IEVault(params.vault0).EVC() == IEVault(params.vault1).EVC(), DifferentEVC());
 
         address asset0Addr = IEVault(params.vault0).asset();
@@ -107,16 +114,10 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         // Deposit all available funds, adjust received amounts downward to collect fees
 
         uint256 amount0In = IERC20(asset0).balanceOf(address(this));
-        if (amount0In > 0) {
-            depositAssets(vault0, amount0In);
-            amount0In = amount0In * feeMultiplier / 1e18;
-        }
+        if (amount0In > 0) amount0In = depositAssets(vault0, amount0In) * feeMultiplier / 1e18;
 
         uint256 amount1In = IERC20(asset1).balanceOf(address(this));
-        if (amount1In > 0) {
-            depositAssets(vault1, amount1In);
-            amount1In = amount1In * feeMultiplier / 1e18;
-        }
+        if (amount1In > 0) amount1In = depositAssets(vault1, amount1In) * feeMultiplier / 1e18;
 
         // Verify curve invariant is satisified
 
@@ -145,6 +146,12 @@ contract EulerSwap is IEulerSwap, EVCUtil {
 
     function getReserves() external view returns (uint112, uint112, uint32) {
         return (reserve0, reserve1, status);
+    }
+
+    /// @notice Returns the address of the Ethereum Vault Connector (EVC) used by this contract.
+    /// @return The address of the EVC contract.
+    function EVC() external view override(EVCUtil, IEulerSwap) returns (address) {
+        return address(evc);
     }
 
     /// @inheritdoc IEulerSwap
@@ -198,8 +205,12 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         }
     }
 
-    function depositAssets(address vault, uint256 amount) internal {
-        IEVault(vault).deposit(amount, myAccount);
+    function depositAssets(address vault, uint256 amount) internal returns (uint256) {
+        try IEVault(vault).deposit(amount, myAccount) {}
+        catch (bytes memory reason) {
+            require(bytes4(reason) == EVKErrors.E_ZeroShares.selector, DepositFailure(reason));
+            return 0;
+        }
 
         if (IEVC(evc).isControllerEnabled(myAccount, vault)) {
             IEVC(evc).call(
@@ -210,6 +221,8 @@ contract EulerSwap is IEulerSwap, EVCUtil {
                 IEVC(evc).call(vault, myAccount, 0, abi.encodeCall(IRiskManager.disableController, ()));
             }
         }
+
+        return amount;
     }
 
     function myDebt(address vault) internal view returns (uint256) {
@@ -236,7 +249,12 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     }
 
     /// @dev EulerSwap curve definition
-    function f(uint256 xt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c) internal pure returns (uint256) {
-        return y0 + px * 1e18 / py * (c * (2 * x0 - xt) / 1e18 + (1e18 - c) * x0 / 1e18 * x0 / xt - x0) / 1e18;
+    /// Pre-conditions: x <= x0, 1 <= {px,py} <= 1e36, {x0,y0} <= type(uint112).max, c <= 1e18
+    function f(uint256 x, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c) internal pure returns (uint256) {
+        unchecked {
+            uint256 v = Math.mulDiv(px * (x0 - x), c * x + (1e18 - c) * x0, x * 1e18, Math.Rounding.Ceil);
+            require(v <= type(uint248).max, Overflow());
+            return y0 + (v + (py - 1)) / py;
+        }
     }
 }

@@ -3,20 +3,40 @@ pragma solidity ^0.8.27;
 
 import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
 import {IEVault} from "evk/EVault/IEVault.sol";
-import {IEulerSwap} from "./interfaces/IEulerSwap.sol";
 import {IEulerSwapPeriphery} from "./interfaces/IEulerSwapPeriphery.sol";
+import {IERC20, IEulerSwap, SafeERC20} from "./EulerSwap.sol";
 
 contract EulerSwapPeriphery is IEulerSwapPeriphery {
-    address private immutable evc;
-
-    constructor(address evc_) {
-        evc = evc_;
-    }
+    using SafeERC20 for IERC20;
 
     error UnsupportedPair();
     error OperatorNotInstalled();
     error InsufficientReserves();
     error InsufficientCash();
+    error AmountOutLessThanMin();
+    error AmountInMoreThanMax();
+
+    /// @inheritdoc IEulerSwapPeriphery
+    function swapExactIn(address eulerSwap, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOutMin)
+        external
+    {
+        uint256 amountOut = computeQuote(IEulerSwap(eulerSwap), tokenIn, tokenOut, amountIn, true);
+
+        require(amountOut >= amountOutMin, AmountOutLessThanMin());
+
+        swap(eulerSwap, tokenIn, tokenOut, amountIn, amountOut);
+    }
+
+    /// @inheritdoc IEulerSwapPeriphery
+    function swapExactOut(address eulerSwap, address tokenIn, address tokenOut, uint256 amountOut, uint256 amountInMax)
+        external
+    {
+        uint256 amountIn = computeQuote(IEulerSwap(eulerSwap), tokenIn, tokenOut, amountOut, false);
+
+        require(amountIn <= amountInMax, AmountInMoreThanMax());
+
+        swap(eulerSwap, tokenIn, tokenOut, amountIn, amountOut);
+    }
 
     /// @inheritdoc IEulerSwapPeriphery
     function quoteExactInput(address eulerSwap, address tokenIn, address tokenOut, uint256 amountIn)
@@ -36,15 +56,41 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         return computeQuote(IEulerSwap(eulerSwap), tokenIn, tokenOut, amountOut, false);
     }
 
-    /// @dev High-level quoting function. It handles fees and performs
-    /// state validation, for example that there is sufficient cash available.
+    /// @dev Internal function to execute a token swap through EulerSwap
+    /// @param eulerSwap The EulerSwap contract address to execute the swap through
+    /// @param tokenIn The address of the input token being swapped
+    /// @param tokenOut The address of the output token being received
+    /// @param amountIn The amount of input tokens to swap
+    /// @param amountOut The amount of output tokens to receive
+    function swap(address eulerSwap, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut) internal {
+        IERC20(tokenIn).safeTransferFrom(msg.sender, eulerSwap, amountIn);
+
+        bool isAsset0In = tokenIn < tokenOut;
+        (isAsset0In)
+            ? IEulerSwap(eulerSwap).swap(0, amountOut, msg.sender, "")
+            : IEulerSwap(eulerSwap).swap(amountOut, 0, msg.sender, "");
+    }
+
+    /// @dev Computes the quote for a swap by applying fees and validating state conditions
+    /// @param eulerSwap The EulerSwap contract to quote from
+    /// @param tokenIn The input token address
+    /// @param tokenOut The output token address
+    /// @param amount The amount to quote (input amount if exactIn=true, output amount if exactIn=false)
+    /// @param exactIn True if quoting for exact input amount, false if quoting for exact output amount
+    /// @return The quoted amount (output amount if exactIn=true, input amount if exactIn=false)
+    /// @dev Validates:
+    ///      - EulerSwap operator is installed
+    ///      - Token pair is supported
+    ///      - Sufficient reserves exist
+    ///      - Sufficient cash is available
     function computeQuote(IEulerSwap eulerSwap, address tokenIn, address tokenOut, uint256 amount, bool exactIn)
         internal
         view
         returns (uint256)
     {
         require(
-            IEVC(evc).isAccountOperatorAuthorized(eulerSwap.myAccount(), address(eulerSwap)), OperatorNotInstalled()
+            IEVC(eulerSwap.EVC()).isAccountOperatorAuthorized(eulerSwap.myAccount(), address(eulerSwap)),
+            OperatorNotInstalled()
         );
 
         uint256 feeMultiplier = eulerSwap.feeMultiplier();
@@ -83,9 +129,17 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         return quote;
     }
 
+    /// @notice Binary searches for the output amount along a swap curve given input parameters
     /// @dev General-purpose routine for binary searching swapping curves.
     /// Although some curves may have more efficient closed-form solutions,
     /// this works with any monotonic curve.
+    /// @param eulerSwap The EulerSwap contract to search the curve for
+    /// @param reserve0 Current reserve of asset0 in the pool
+    /// @param reserve1 Current reserve of asset1 in the pool
+    /// @param amount The input or output amount depending on exactIn
+    /// @param exactIn True if amount is input amount, false if amount is output amount
+    /// @param asset0IsInput True if asset0 is being input, false if asset1 is being input
+    /// @return output The calculated output amount from the binary search
     function binarySearch(
         IEulerSwap eulerSwap,
         uint112 reserve0,
