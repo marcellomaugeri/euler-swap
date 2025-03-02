@@ -47,11 +47,11 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
         external
         returns (address)
     {
-        require(_msgSender() == params.myAccount, Unauthorized());
+        require(_msgSender() == params.eulerAccount, Unauthorized());
 
-        EulerSwap pool = new EulerSwap{salt: keccak256(abi.encode(params.myAccount, salt))}(params, curveParams);
+        EulerSwap pool = new EulerSwap{salt: keccak256(abi.encode(params.eulerAccount, salt))}(params, curveParams);
 
-        checkSwapAccountOperators(params.myAccount, address(pool));
+        checkSwapAccountOperators(params.eulerAccount, address(pool));
 
         allPools.push(address(pool));
 
@@ -63,7 +63,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
             params.vault0,
             params.vault1,
             pool.feeMultiplier(),
-            params.myAccount,
+            params.eulerAccount,
             curveParams.priceX,
             curveParams.priceY,
             curveParams.concentrationX,

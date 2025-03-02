@@ -89,7 +89,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         returns (uint256)
     {
         require(
-            IEVC(eulerSwap.EVC()).isAccountOperatorAuthorized(eulerSwap.myAccount(), address(eulerSwap)),
+            IEVC(eulerSwap.EVC()).isAccountOperatorAuthorized(eulerSwap.eulerAccount(), address(eulerSwap)),
             OperatorNotInstalled()
         );
 

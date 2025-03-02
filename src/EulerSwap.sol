@@ -20,7 +20,7 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     address public immutable vault1;
     address public immutable asset0;
     address public immutable asset1;
-    address public immutable myAccount;
+    address public immutable eulerAccount;
     uint112 public immutable debtLimit0;
     uint112 public immutable debtLimit1;
     uint112 public immutable initialReserve0;
@@ -82,7 +82,7 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         vault1 = params.vault1;
         asset0 = asset0Addr;
         asset1 = asset1Addr;
-        myAccount = params.myAccount;
+        eulerAccount = params.eulerAccount;
         debtLimit0 = params.debtLimit0;
         debtLimit1 = params.debtLimit1;
         initialReserve0 = reserve0 = offsetReserve(params.debtLimit0, params.vault0);
@@ -178,8 +178,8 @@ contract EulerSwap is IEulerSwap, EVCUtil {
             IAllowanceTransfer(permit2).approve(asset1, vault1, type(uint160).max, type(uint48).max);
         }
 
-        IEVC(evc).enableCollateral(myAccount, vault0);
-        IEVC(evc).enableCollateral(myAccount, vault1);
+        IEVC(evc).enableCollateral(eulerAccount, vault0);
+        IEVC(evc).enableCollateral(eulerAccount, vault1);
     }
 
     /// @inheritdoc IEulerSwap
@@ -198,30 +198,30 @@ contract EulerSwap is IEulerSwap, EVCUtil {
 
         if (balance > 0) {
             uint256 avail = amount < balance ? amount : balance;
-            IEVC(evc).call(vault, myAccount, 0, abi.encodeCall(IERC4626.withdraw, (avail, to, myAccount)));
+            IEVC(evc).call(vault, eulerAccount, 0, abi.encodeCall(IERC4626.withdraw, (avail, to, eulerAccount)));
             amount -= avail;
         }
 
         if (amount > 0) {
-            IEVC(evc).enableController(myAccount, vault);
-            IEVC(evc).call(vault, myAccount, 0, abi.encodeCall(IBorrowing.borrow, (amount, to)));
+            IEVC(evc).enableController(eulerAccount, vault);
+            IEVC(evc).call(vault, eulerAccount, 0, abi.encodeCall(IBorrowing.borrow, (amount, to)));
         }
     }
 
     function depositAssets(address vault, uint256 amount) internal returns (uint256) {
-        try IEVault(vault).deposit(amount, myAccount) {}
+        try IEVault(vault).deposit(amount, eulerAccount) {}
         catch (bytes memory reason) {
             require(bytes4(reason) == EVKErrors.E_ZeroShares.selector, DepositFailure(reason));
             return 0;
         }
 
-        if (IEVC(evc).isControllerEnabled(myAccount, vault)) {
+        if (IEVC(evc).isControllerEnabled(eulerAccount, vault)) {
             IEVC(evc).call(
-                vault, myAccount, 0, abi.encodeCall(IBorrowing.repayWithShares, (type(uint256).max, myAccount))
+                vault, eulerAccount, 0, abi.encodeCall(IBorrowing.repayWithShares, (type(uint256).max, eulerAccount))
             );
 
             if (myDebt(vault) == 0) {
-                IEVC(evc).call(vault, myAccount, 0, abi.encodeCall(IRiskManager.disableController, ()));
+                IEVC(evc).call(vault, eulerAccount, 0, abi.encodeCall(IRiskManager.disableController, ()));
             }
         }
 
@@ -229,11 +229,11 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     }
 
     function myDebt(address vault) internal view returns (uint256) {
-        return IEVault(vault).debtOf(myAccount);
+        return IEVault(vault).debtOf(eulerAccount);
     }
 
     function myBalance(address vault) internal view returns (uint256) {
-        uint256 shares = IEVault(vault).balanceOf(myAccount);
+        uint256 shares = IEVault(vault).balanceOf(eulerAccount);
         return shares == 0 ? 0 : IEVault(vault).convertToAssets(shares);
     }
 

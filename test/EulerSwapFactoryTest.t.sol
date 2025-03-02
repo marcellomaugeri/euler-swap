@@ -104,7 +104,7 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
                         abi.encodePacked(
                             bytes1(0xff),
                             factoryAddress,
-                            keccak256(abi.encode(address(poolParams.myAccount), salt)),
+                            keccak256(abi.encode(address(poolParams.eulerAccount), salt)),
                             keccak256(
                                 abi.encodePacked(type(EulerSwap).creationCode, abi.encode(poolParams, curveParams))
                             )
