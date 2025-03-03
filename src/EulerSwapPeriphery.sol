@@ -6,7 +6,6 @@ import {IEVault} from "evk/EVault/IEVault.sol";
 import {IEulerSwapPeriphery} from "./interfaces/IEulerSwapPeriphery.sol";
 import {IERC20, IEulerSwap, SafeERC20} from "./EulerSwap.sol";
 import {Math} from "openzeppelin-contracts/utils/math/Math.sol";
-import "@uniswap/v4-core/libraries/FullMath.sol";
 
 contract EulerSwapPeriphery is IEulerSwapPeriphery {
     using SafeERC20 for IERC20;
@@ -195,7 +194,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
      * @notice Computes the inverse of the `f()` function for the EulerSwap liquidity curve.
      * @dev Solves for `x` given `y` using the quadratic formula derived from the liquidity curve:
      *      x = (-b + sqrt(b^2 + 4ac)) / 2a
-     *      Utilises Uniswap's FullMath to avoid overflow and ensures precision with upward rounding.
+     *      Utilises mulDiv to avoid overflow and ensures precision with upward rounding.
      *
      * @param y The y-coordinate input value (must be greater than `y0`).
      * @param px Price factor for the x-axis (scaled by 1e18, between 1e18 and 1e36).
@@ -223,7 +222,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
 
         // B^2 component, using FullMath for overflow safety
         uint256 absB = B < 0 ? uint256(-B) : uint256(B);
-        uint256 squaredB = FullMath.mulDiv(absB, absB, 1e18) + (absB * absB % 1e18 == 0 ? 0 : 1);
+        uint256 squaredB = Math.mulDiv(absB, absB, 1e18, Math.Rounding.Ceil);
 
         // 4 * A * C component of the quadratic formula
         uint256 AC4 = Math.mulDiv(
