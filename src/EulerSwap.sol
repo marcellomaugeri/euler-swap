@@ -66,11 +66,6 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         // EulerSwap params
 
         require(params.fee < 1e18, BadParam());
-        require(
-            params.equilibriumReserve0 <= type(uint112).max && params.equilibriumReserve1 <= type(uint112).max,
-            BadParam()
-        );
-        require(params.currReserve0 <= type(uint112).max && params.currReserve1 <= type(uint112).max, BadParam());
         require(curveParams.priceX > 0 && curveParams.priceY > 0, BadParam());
         require(curveParams.priceX <= 1e36 && curveParams.priceY <= 1e36, BadParam());
         require(curveParams.concentrationX <= 1e18 && curveParams.concentrationY <= 1e18, BadParam());
@@ -100,6 +95,7 @@ contract EulerSwap is IEulerSwap, EVCUtil {
 
         // Validate reserves
 
+        require(verify(equilibriumReserve0, equilibriumReserve1), CurveViolation());
         require(verify(reserve0, reserve1), CurveViolation());
         require(!verify(reserve0 > 0 ? reserve0 - 1 : 0, reserve1 > 0 ? reserve1 - 1 : 0), CurveViolation());
 
@@ -135,7 +131,6 @@ contract EulerSwap is IEulerSwap, EVCUtil {
             uint256 newReserve0 = reserve0 + amount0In - amount0Out;
             uint256 newReserve1 = reserve1 + amount1In - amount1Out;
 
-            require(newReserve0 <= type(uint112).max && newReserve1 <= type(uint112).max, Overflow());
             require(verify(newReserve0, newReserve1), CurveViolation());
 
             reserve0 = uint112(newReserve0);
@@ -191,6 +186,8 @@ contract EulerSwap is IEulerSwap, EVCUtil {
 
     /// @inheritdoc IEulerSwap
     function verify(uint256 newReserve0, uint256 newReserve1) public view returns (bool) {
+        if (newReserve0 > type(uint112).max || newReserve1 > type(uint112).max) return false;
+
         if (newReserve0 >= equilibriumReserve0) {
             if (newReserve1 >= equilibriumReserve1) return true;
             return
