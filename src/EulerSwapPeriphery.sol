@@ -5,6 +5,8 @@ import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
 import {IEVault} from "evk/EVault/IEVault.sol";
 import {IEulerSwapPeriphery} from "./interfaces/IEulerSwapPeriphery.sol";
 import {IERC20, IEulerSwap, SafeERC20} from "./EulerSwap.sol";
+import {Math} from "openzeppelin-contracts/utils/math/Math.sol";
+import "@uniswap/v4-core/libraries/FullMath.sol";
 
 contract EulerSwapPeriphery is IEulerSwapPeriphery {
     using SafeERC20 for IERC20;
@@ -187,5 +189,58 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
             if (asset0IsInput) output = uint256(dx);
             else output = uint256(dy);
         }
+    }
+
+    /**
+     * @notice Computes the inverse of the `f()` function for the EulerSwap liquidity curve.
+     * @dev Solves for `x` given `y` using the quadratic formula derived from the liquidity curve:
+     *      x = (-b + sqrt(b^2 + 4ac)) / 2a
+     *      Utilises Uniswap's FullMath to avoid overflow and ensures precision with upward rounding.
+     *
+     * @param y The y-coordinate input value (must be greater than `y0`).
+     * @param px Price factor for the x-axis (scaled by 1e18, between 1e18 and 1e36).
+     * @param py Price factor for the y-axis (scaled by 1e18, between 1e18 and 1e36).
+     * @param x0 Reference x-value on the liquidity curve (≤ 2^112 - 1).
+     * @param y0 Reference y-value on the liquidity curve (≤ 2^112 - 1).
+     * @param c Curve parameter shaping liquidity concentration (scaled by 1e18, between 0 and 1e18).
+     *
+     * @return x The computed x-coordinate on the liquidity curve.
+     *
+     * @custom:precision Uses rounding up to maintain precision in all calculations.
+     * @custom:safety FullMath handles potential overflow in the b^2 computation.
+     * @custom:requirement Input `y` must be strictly greater than `y0`; otherwise, the function will revert.
+     */
+    function fInverse(uint256 y, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c)
+        external
+        pure
+        returns (uint256)
+    {
+        // A component of the quadratic formula: a = 2 * c
+        uint256 A = 2 * c;
+
+        // B component of the quadratic formula
+        int256 B = int256((px * (y - y0) + py - 1) / py) - int256((x0 * (2 * c - 1e18) + 1e18 - 1) / 1e18);
+
+        // B^2 component, using FullMath for overflow safety
+        uint256 absB = B < 0 ? uint256(-B) : uint256(B);
+        uint256 squaredB = FullMath.mulDiv(absB, absB, 1e18) + (absB * absB % 1e18 == 0 ? 0 : 1);
+
+        // 4 * A * C component of the quadratic formula
+        uint256 AC4 = Math.mulDiv(
+            Math.mulDiv(4 * c, (1e18 - c), 1e18, Math.Rounding.Ceil),
+            Math.mulDiv(x0, x0, 1e18, Math.Rounding.Ceil),
+            1e18,
+            Math.Rounding.Ceil
+        );
+
+        // Discriminant: b^2 + 4ac, scaled up to maintain precision
+        uint256 discriminant = (squaredB + AC4) * 1e18;
+
+        // Square root of the discriminant (rounded up)
+        uint256 sqrt = Math.sqrt(discriminant);
+        sqrt = (sqrt * sqrt < discriminant) ? sqrt + 1 : sqrt;
+
+        // Compute and return x = fInverse(y) using the quadratic formula
+        return Math.mulDiv(uint256(int256(sqrt) - B), 1e18, A, Math.Rounding.Ceil);
     }
 }
