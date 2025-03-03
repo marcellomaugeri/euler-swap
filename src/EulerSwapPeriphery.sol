@@ -5,6 +5,7 @@ import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
 import {IEVault} from "evk/EVault/IEVault.sol";
 import {IEulerSwapPeriphery} from "./interfaces/IEulerSwapPeriphery.sol";
 import {IERC20, IEulerSwap, SafeERC20} from "./EulerSwap.sol";
+import "@uniswap/v4-core/libraries/FullMath.sol";
 
 contract EulerSwapPeriphery is IEulerSwapPeriphery {
     using SafeERC20 for IERC20;
