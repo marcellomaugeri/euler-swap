@@ -11,5 +11,5 @@
 	path = lib/ethereum-vault-connector
 	url = https://github.com/euler-xyz/ethereum-vault-connector
 [submodule "lib/lib/v4-core"]
-	path = lib/lib/v4-core
+	path = lib/v4-core
 	url = https://github.com/Uniswap/v4-core
