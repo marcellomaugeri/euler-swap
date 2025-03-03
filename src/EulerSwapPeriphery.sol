@@ -243,5 +243,4 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         // Compute and return x = fInverse(y) using the quadratic formula
         return Math.mulDiv(uint256(int256(sqrt) - B), 1e18, A, Math.Rounding.Ceil);
     }
-
 }
