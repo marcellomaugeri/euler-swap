@@ -211,7 +211,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
      * @custom:requirement Input `y` must be strictly greater than `y0`; otherwise, the function will revert.
      */
     function fInverse(uint256 y, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c)
-        public
+        external
         pure
         returns (uint256)
     {
