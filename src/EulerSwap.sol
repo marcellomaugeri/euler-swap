@@ -38,7 +38,6 @@ contract EulerSwap is IEulerSwap, EVCUtil {
 
     event EulerSwapCreated(address indexed asset0, address indexed asset1);
     event Swap(
-        address pool,
         address indexed sender,
         uint256 amount0In,
         uint256 amount1In,
@@ -136,7 +135,6 @@ contract EulerSwap is IEulerSwap, EVCUtil {
             reserve1 = uint112(newReserve1);
 
             emit Swap(
-                address(this),
                 _msgSender(),
                 amount0In,
                 amount1In,
