@@ -214,7 +214,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         pure
         returns (uint256)
     {
-        // A component of the quadratic formula: a = 2 * c
+        // A component of the quadratic formula
         uint256 A = 2 * c;
 
         // B component of the quadratic formula
@@ -225,12 +225,9 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         uint256 squaredB = Math.mulDiv(absB, absB, 1e18, Math.Rounding.Ceil);
 
         // 4 * A * C component of the quadratic formula
-        uint256 AC4 = Math.mulDiv(
-            Math.mulDiv(4 * c, (1e18 - c), 1e18, Math.Rounding.Ceil),
-            Math.mulDiv(x0, x0, 1e18, Math.Rounding.Ceil),
-            1e18,
-            Math.Rounding.Ceil
-        );
+        uint256 AC4a = Math.mulDiv(4 * c, (1e18 - c), 1e18, Math.Rounding.Ceil);
+        uint256 AC4b = Math.mulDiv(x0, x0, 1e18, Math.Rounding.Ceil);
+        uint256 AC4 = Math.mulDiv(AC4a, AC4b, 1e18, Math.Rounding.Ceil);
 
         // Discriminant: b^2 + 4ac, scaled up to maintain precision
         uint256 discriminant = (squaredB + AC4) * 1e18;
