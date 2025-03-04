@@ -102,15 +102,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         // exactIn: decrease received amountIn, rounding down
         if (exactIn) amount = amount * feeMultiplier / 1e18;
 
-        bool asset0IsInput;
-        {
-            address asset0 = eulerSwap.asset0();
-            address asset1 = eulerSwap.asset1();
-
-            if (tokenIn == asset0 && tokenOut == asset1) asset0IsInput = true;
-            else if (tokenIn == asset1 && tokenOut == asset0) asset0IsInput = false;
-            else revert UnsupportedPair();
-        }
+        bool asset0IsInput = checkTokens(eulerSwap, tokenIn, tokenOut);
 
         uint256 quote = binarySearch(eulerSwap, reserve0, reserve1, amount, exactIn, asset0IsInput);
 
@@ -241,5 +233,72 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
 
         // Compute and return x = fInverse(y) using the quadratic formula
         return Math.mulDiv(uint256(int256(sqrt) - B), 1e18, A, Math.Rounding.Ceil);
+    }
+
+    /// @dev Max amount the pool can buy of tokenIn and sell of tokenOut
+    function getLimits(address eulerSwap, address tokenIn, address tokenOut)
+        external
+        view
+        returns (uint256 inLimit, uint256 outLimit)
+    {
+        IEulerSwap es = IEulerSwap(eulerSwap);
+        if (!IEVC(es.EVC()).isAccountOperatorAuthorized(es.eulerAccount(), eulerSwap)) return (0, 0);
+
+        inLimit = outLimit = type(uint112).max;
+        bool asset0IsInput = checkTokens(es, tokenIn, tokenOut);
+
+        // Supply caps on input
+        {
+            IEVault vault = IEVault(asset0IsInput ? es.vault0() : es.vault1());
+            uint256 maxDeposit = vault.debtOf(es.eulerAccount()) + vault.maxDeposit(es.eulerAccount());
+            if (maxDeposit < inLimit) inLimit = maxDeposit;
+        }
+
+        // Remaining reserves of output
+
+        {
+            (uint112 reserve0, uint112 reserve1,) = es.getReserves();
+            uint112 reserveLimit = asset0IsInput ? reserve1 : reserve0;
+            if (reserveLimit < outLimit) outLimit = reserveLimit;
+        }
+
+        // Remaining cash and borrow caps in output
+
+        {
+            IEVault vault = IEVault(asset0IsInput ? es.vault1() : es.vault0());
+
+            uint256 cash = vault.cash();
+            if (cash < outLimit) outLimit = cash;
+
+            (, uint16 borrowCap) = vault.caps();
+            uint256 maxWithdraw = decodeCap(uint256(borrowCap));
+            maxWithdraw = vault.totalBorrows() > maxWithdraw ? 0 : maxWithdraw - vault.totalBorrows();
+            if (maxWithdraw > cash) maxWithdraw = cash;
+            maxWithdraw += vault.convertToAssets(vault.balanceOf(es.eulerAccount()));
+            if (maxWithdraw < outLimit) outLimit = maxWithdraw;
+        }
+    }
+
+    function decodeCap(uint256 amountCap) internal pure returns (uint256) {
+        if (amountCap == 0) return type(uint256).max;
+
+        unchecked {
+            // Cannot overflow because this is less than 2**256:
+            //   10**(2**6 - 1) * (2**10 - 1) = 1.023e+66
+            return 10 ** (amountCap & 63) * (amountCap >> 6) / 100;
+        }
+    }
+
+    function checkTokens(IEulerSwap eulerSwap, address tokenIn, address tokenOut)
+        internal
+        view
+        returns (bool asset0IsInput)
+    {
+        address asset0 = eulerSwap.asset0();
+        address asset1 = eulerSwap.asset1();
+
+        if (tokenIn == asset0 && tokenOut == asset1) asset0IsInput = true;
+        else if (tokenIn == asset1 && tokenOut == asset0) asset0IsInput = false;
+        else revert UnsupportedPair();
     }
 }
