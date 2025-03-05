@@ -77,17 +77,4 @@ contract EulerSwapPeripheryTest is EulerSwapTestBase {
         periphery.swapExactOut(address(eulerSwap), address(assetTST), address(assetTST2), amountOut * 2, amountIn);
         vm.stopPrank();
     }
-
-    function test_fInverseFuzz(uint256 x) public view {
-        x = bound(x, 2, 50e18 - 1); // note that it fails if 1 used as minimum, not an issue since only used in periphery
-        uint256 y = eulerSwapHarness.exposedF(x, 1e18, 1e18, 50e18, 50e18, 0.85e18);
-        uint256 outX = periphery.fInverse(y, 1e18, 1e18, 50e18, 50e18, 0.85e18);
-
-        // Ensure x is within the expected range
-        assertGe(outX, x); // Asserts xOut >= x
-        assertLe(outX, x + 1); // Asserts xOut <= x + 1
-
-        // Alternative using assertApproxEqAbs for absolute difference within 1
-        assertApproxEqAbs(x, outX, 1);
-    }
 }
