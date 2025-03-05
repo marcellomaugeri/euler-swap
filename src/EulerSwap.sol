@@ -14,7 +14,7 @@ import {Math} from "openzeppelin-contracts/utils/math/Math.sol";
 contract EulerSwap is IEulerSwap, EVCUtil {
     using SafeERC20 for IERC20;
 
-    bytes32 public constant curve = keccak256("EulerSwap v1");
+    bytes32 public constant curve = bytes32("EulerSwap v1");
 
     address public immutable vault0;
     address public immutable vault1;
