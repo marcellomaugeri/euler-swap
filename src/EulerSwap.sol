@@ -171,16 +171,6 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         IEVC(evc).enableCollateral(eulerAccount, vault1);
     }
 
-    function approveVault(address asset, address vault) internal {
-        address permit2 = IEVault(vault).permit2Address();
-        if (permit2 == address(0)) {
-            IERC20(asset).forceApprove(vault, type(uint256).max);
-        } else {
-            IERC20(asset).forceApprove(permit2, type(uint256).max);
-            IAllowanceTransfer(permit2).approve(asset, vault, type(uint160).max, type(uint48).max);
-        }
-    }
-
     /// @inheritdoc IEulerSwap
     function verify(uint256 newReserve0, uint256 newReserve1) public view returns (bool) {
         if (newReserve0 > type(uint112).max || newReserve1 > type(uint112).max) return false;
@@ -229,6 +219,19 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         }
 
         return amount;
+    }
+
+    /// @notice Approves tokens for a given vault, supporting both standard approvals and permit2
+    /// @param asset The address of the token to approve
+    /// @param vault The address of the vault to approve the token for
+    function approveVault(address asset, address vault) internal {
+        address permit2 = IEVault(vault).permit2Address();
+        if (permit2 == address(0)) {
+            IERC20(asset).forceApprove(vault, type(uint256).max);
+        } else {
+            IERC20(asset).forceApprove(permit2, type(uint256).max);
+            IAllowanceTransfer(permit2).approve(asset, vault, type(uint160).max, type(uint48).max);
+        }
     }
 
     function myDebt(address vault) internal view returns (uint256) {
