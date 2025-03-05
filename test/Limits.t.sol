@@ -9,7 +9,7 @@ contract LimitsTest is EulerSwapTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        eulerSwap = createEulerSwap(50e18, 50e18, 0, 1e18, 1e18, 0.9e18, 0.9e18);
+        eulerSwap = createEulerSwap(60e18, 60e18, 0, 1e18, 1e18, 0.9e18, 0.9e18);
     }
 
     function test_basicLimits() public {
