@@ -254,7 +254,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         (IEVault vault0, IEVault vault1) = (IEVault(es.vault0()), IEVault(es.vault1()));
         // Supply caps on input
         {
-            IEVault vault = IEVault(asset0IsInput ? vault0 : vault1);
+            IEVault vault = (asset0IsInput ? vault0 : vault1);
             uint256 maxDeposit = vault.debtOf(eulerAccount) + vault.maxDeposit(eulerAccount);
             if (maxDeposit < inLimit) inLimit = maxDeposit;
         }
@@ -268,7 +268,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
 
         // Remaining cash and borrow caps in output
         {
-            IEVault vault = IEVault(asset0IsInput ? vault1 : vault0);
+            IEVault vault = (asset0IsInput ? vault1 : vault0);
 
             uint256 cash = vault.cash();
             if (cash < outLimit) outLimit = cash;
