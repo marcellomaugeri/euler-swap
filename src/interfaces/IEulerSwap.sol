@@ -51,6 +51,10 @@ interface IEulerSwap {
     function equilibriumReserve0() external view returns (uint112);
     function equilibriumReserve1() external view returns (uint112);
     function feeMultiplier() external view returns (uint256);
+    /// @notice Returns the current reserves of the pool
+    /// @return reserve0 The amount of asset0 in the pool
+    /// @return reserve1 The amount of asset1 in the pool
+    /// @return status The status of the pool (0 = unactivated, 1 = unlocked, 2 = locked)
     function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 status);
 
     // Curve Accessors
