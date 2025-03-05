@@ -23,10 +23,7 @@ interface IEulerSwapPeriphery {
         returns (uint256);
 
     /// @notice Max amount the pool can buy of tokenIn and sell of tokenOut
-    function getLimits(address eulerSwap, address tokenIn, address tokenOut)
-        external
-        view
-        returns (uint256 inLimit, uint256 outLimit);
+    function getLimits(address eulerSwap, address tokenIn, address tokenOut) external view returns (uint256, uint256);
 
     /**
      * @notice Computes the inverse of the `f()` function for the EulerSwap liquidity curve.

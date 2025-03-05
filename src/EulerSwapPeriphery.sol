@@ -57,11 +57,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
     }
 
     /// @inheritdoc IEulerSwapPeriphery
-    function getLimits(address eulerSwap, address tokenIn, address tokenOut)
-        external
-        view
-        returns (uint256 inLimit, uint256 outLimit)
-    {
+    function getLimits(address eulerSwap, address tokenIn, address tokenOut) external view returns (uint256, uint256) {
         if (
             !IEVC(IEulerSwap(eulerSwap).EVC()).isAccountOperatorAuthorized(
                 IEulerSwap(eulerSwap).eulerAccount(), eulerSwap
