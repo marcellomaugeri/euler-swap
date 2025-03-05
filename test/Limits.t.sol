@@ -107,4 +107,12 @@ contract LimitsTest is EulerSwapTestBase {
         assertEq(inLimit, type(uint112).max - 110e18);
         assertEq(outLimit, 18.5e18); // 10 in balance, plus 8.5 borrow cap
     }
+
+    function test_amountTooBig() public monotonicHolderNAV {
+        vm.expectRevert(EulerSwap.AmountTooBig.selector);
+        eulerSwap.swap(type(uint256).max, 0, address(this), "");
+
+        vm.expectRevert(EulerSwap.AmountTooBig.selector);
+        eulerSwap.swap(0, type(uint256).max, address(this), "");
+    }
 }

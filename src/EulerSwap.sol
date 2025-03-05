@@ -51,6 +51,7 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     error Locked();
     error Overflow();
     error BadParam();
+    error AmountTooBig();
     error DifferentEVC();
     error AssetsOutOfOrderOrEqual();
     error CurveViolation();
@@ -105,6 +106,8 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         callThroughEVC
         nonReentrant
     {
+        require(amount0Out <= type(uint112).max && amount1Out <= type(uint112).max, AmountTooBig());
+
         // Optimistically send tokens
 
         if (amount0Out > 0) withdrawAssets(vault0, amount0Out, to);
