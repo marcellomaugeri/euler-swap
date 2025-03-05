@@ -198,20 +198,23 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         unchecked {
             int256 reserve0New = int256(uint256(reserve0)) + dx;
             int256 reserve1New = int256(uint256(reserve1)) + dy;
+            require(reserve0New > 0 && reserve1New > 0, SwapLimitExceeded());
 
             uint256 low;
             uint256 high = type(uint112).max;
 
             while (low < high) {
                 uint256 mid = (low + high) / 2;
+                require(mid > 0, SwapLimitExceeded());
                 (uint256 a, uint256 b) = dy == 0 ? (uint256(reserve0New), mid) : (mid, uint256(reserve1New));
-                require(a > 0 && b > 0, SwapLimitExceeded());
                 if (eulerSwap.verify(a, b)) {
                     high = mid;
                 } else {
                     low = mid + 1;
                 }
             }
+
+            require(high < type(uint112).max, SwapLimitExceeded()); // at least one point verified
 
             if (dx != 0) dy = int256(low) - reserve1New;
             else dx = int256(low) - reserve0New;
