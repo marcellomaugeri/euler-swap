@@ -9,7 +9,7 @@ contract LimitsTest is EulerSwapTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        eulerSwap = createEulerSwap(50e18, 50e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
+        eulerSwap = createEulerSwap(50e18, 50e18, 0, 1e18, 1e18, 0.9e18, 0.9e18);
     }
 
     function test_basicLimits() public {
@@ -18,6 +18,33 @@ contract LimitsTest is EulerSwapTestBase {
 
         assertEq(inLimit, type(uint112).max - 110e18); // max uint minus 110 (100 deposited by depositor, 10 by holder)
         assertEq(outLimit, 60e18);
+
+        // Exact output
+
+        uint256 quote = periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), 50e18);
+        assertEq(quote, 75e18);
+
+        quote = periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), 59.9999999e18);
+        assertApproxEqAbs(quote, 3.6e27, 0.1e27);
+
+        vm.expectRevert(EulerSwapPeriphery.SwapLimitExceeded.selector);
+        quote = periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), 60e18);
+
+        vm.expectRevert(EulerSwapPeriphery.SwapLimitExceeded.selector);
+        quote = periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), 60.000001e18);
+
+        // Exact input
+
+        vm.expectRevert(EulerSwapPeriphery.SwapLimitExceeded.selector);
+        quote = periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), type(uint112).max);
+    }
+
+    function test_basicLimitsReverse() public view {
+        (uint256 inLimit, uint256 outLimit) =
+            periphery.getLimits(address(eulerSwap), address(assetTST2), address(assetTST));
+
+        assertEq(outLimit, 60e18);
+        assertEq(inLimit, type(uint112).max - 110e18);
     }
 
     function test_supplyCapExceeded() public {
@@ -25,6 +52,19 @@ contract LimitsTest is EulerSwapTestBase {
 
         (uint256 inLimit, uint256 outLimit) =
             periphery.getLimits(address(eulerSwap), address(assetTST), address(assetTST2));
+
+        assertEq(inLimit, 0); // cap exceeded
+        assertEq(outLimit, 60e18);
+
+        vm.expectRevert(EulerSwapPeriphery.SwapLimitExceeded.selector);
+        periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), 1);
+    }
+
+    function test_supplyCapExceededReverse() public {
+        eTST2.setCaps(uint16(2.72e2 << 6) | 18, 0);
+
+        (uint256 inLimit, uint256 outLimit) =
+            periphery.getLimits(address(eulerSwap), address(assetTST2), address(assetTST));
 
         assertEq(inLimit, 0); // cap exceeded
         assertEq(outLimit, 60e18);
@@ -38,6 +78,13 @@ contract LimitsTest is EulerSwapTestBase {
 
         assertEq(inLimit, 162e18); // 272 - 110
         assertEq(outLimit, 60e18);
+
+        uint256 quote =
+            periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), 161.9999e18);
+        assertApproxEqAbs(quote, 56.9e18, 0.1e18);
+
+        vm.expectRevert(EulerSwapPeriphery.SwapLimitExceeded.selector);
+        periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), 162e18 + 1);
     }
 
     function test_utilisation() public {

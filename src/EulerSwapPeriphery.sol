@@ -12,8 +12,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
 
     error UnsupportedPair();
     error OperatorNotInstalled();
-    error InsufficientReserves();
-    error InsufficientCash();
+    error SwapLimitExceeded();
     error AmountOutLessThanMin();
     error AmountInMoreThanMax();
 
@@ -93,27 +92,25 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
             IEVC(eulerSwap.EVC()).isAccountOperatorAuthorized(eulerSwap.eulerAccount(), address(eulerSwap)),
             OperatorNotInstalled()
         );
+        require(amount <= type(uint112).max, SwapLimitExceeded());
 
         uint256 feeMultiplier = eulerSwap.feeMultiplier();
-        address vault0 = eulerSwap.vault0();
-        address vault1 = eulerSwap.vault1();
         (uint112 reserve0, uint112 reserve1,) = eulerSwap.getReserves();
 
         // exactIn: decrease received amountIn, rounding down
         if (exactIn) amount = amount * feeMultiplier / 1e18;
 
         bool asset0IsInput = checkTokens(eulerSwap, tokenIn, tokenOut);
+        (uint256 inLimit, uint256 outLimit) = _getLimits(eulerSwap, asset0IsInput);
 
         uint256 quote = binarySearch(eulerSwap, reserve0, reserve1, amount, exactIn, asset0IsInput);
 
         if (exactIn) {
             // if `exactIn`, `quote` is the amount of assets to buy from the AMM
-            require(quote <= (asset0IsInput ? reserve1 : reserve0), InsufficientReserves());
-            require(quote <= IEVault(asset0IsInput ? vault1 : vault0).cash(), InsufficientCash());
+            require(amount <= inLimit && quote <= outLimit, SwapLimitExceeded());
         } else {
             // if `!exactIn`, `amount` is the amount of assets to buy from the AMM
-            require(amount <= (asset0IsInput ? reserve1 : reserve0), InsufficientReserves());
-            require(amount <= IEVault(asset0IsInput ? vault1 : vault0).cash(), InsufficientCash());
+            require(amount <= outLimit && quote <= inLimit, SwapLimitExceeded());
         }
 
         // exactOut: increase required quote(amountIn), rounding up
@@ -161,8 +158,9 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
 
             while (low < high) {
                 uint256 mid = (low + high) / 2;
-                if (dy == 0 ? eulerSwap.verify(uint256(reserve0New), mid) : eulerSwap.verify(mid, uint256(reserve1New)))
-                {
+                (uint256 a, uint256 b) = dy == 0 ? (uint256(reserve0New), mid) : (mid, uint256(reserve1New));
+                require(a > 0 && b > 0, SwapLimitExceeded());
+                if (eulerSwap.verify(a, b)) {
                     high = mid;
                 } else {
                     low = mid + 1;
@@ -235,19 +233,22 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         return Math.mulDiv(uint256(int256(sqrt) - B), 1e18, A, Math.Rounding.Ceil);
     }
 
-    /// @dev Max amount the pool can buy of tokenIn and sell of tokenOut
+    /// @notice Max amount the pool can buy of tokenIn and sell of tokenOut
     function getLimits(address eulerSwap, address tokenIn, address tokenOut)
         external
         view
         returns (uint256 inLimit, uint256 outLimit)
     {
-        IEulerSwap es = IEulerSwap(eulerSwap);
-        if (!IEVC(es.EVC()).isAccountOperatorAuthorized(es.eulerAccount(), eulerSwap)) return (0, 0);
+        return _getLimits(IEulerSwap(eulerSwap), checkTokens(IEulerSwap(eulerSwap), tokenIn, tokenOut));
+    }
+
+    function _getLimits(IEulerSwap es, bool asset0IsInput) internal view returns (uint256 inLimit, uint256 outLimit) {
+        if (!IEVC(es.EVC()).isAccountOperatorAuthorized(es.eulerAccount(), address(es))) return (0, 0);
 
         inLimit = outLimit = type(uint112).max;
-        bool asset0IsInput = checkTokens(es, tokenIn, tokenOut);
 
         // Supply caps on input
+
         {
             IEVault vault = IEVault(asset0IsInput ? es.vault0() : es.vault1());
             uint256 maxDeposit = vault.debtOf(es.eulerAccount()) + vault.maxDeposit(es.eulerAccount());
