@@ -115,4 +115,35 @@ contract LimitsTest is EulerSwapTestBase {
         vm.expectRevert(EulerSwap.AmountTooBig.selector);
         eulerSwap.swap(0, type(uint256).max, address(this), "");
     }
+
+    function test_quoteWhenAboveCurve() public {
+        // Donate 100 and 100 to the pool, raising the reserves above the curve
+        assetTST.mint(depositor, 100e18);
+        assetTST2.mint(depositor, 100e18);
+        vm.prank(depositor);
+        assetTST.transfer(address(eulerSwap), 10e18);
+        vm.prank(depositor);
+        assetTST2.transfer(address(eulerSwap), 10e18);
+        eulerSwap.swap(0, 0, address(this), "");
+
+        uint256 amount;
+
+        // Exact output quotes: Costs nothing to perform this swap (in theory the quote could
+        // be negative, but this is not supported by the interface)
+
+        amount = periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), 1e18);
+        assertEq(amount, 0);
+
+        amount = periphery.quoteExactOutput(address(eulerSwap), address(assetTST2), address(assetTST), 1e18);
+        assertEq(amount, 0);
+
+        // Exact input quotes: The additional extractable value is provided as swap output, even
+        // with tiny quotes such as 1 wei.
+
+        amount = periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), 1);
+        assertApproxEqAbs(amount, 19.8e18, 0.1e18);
+
+        amount = periphery.quoteExactInput(address(eulerSwap), address(assetTST2), address(assetTST), 1);
+        assertApproxEqAbs(amount, 19.8e18, 0.1e18);
+    }
 }

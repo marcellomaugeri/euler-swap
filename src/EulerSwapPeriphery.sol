@@ -189,8 +189,8 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
             if (asset0IsInput) output = uint256(-dy);
             else output = uint256(-dx);
         } else {
-            if (asset0IsInput) output = uint256(dx);
-            else output = uint256(dy);
+            if (asset0IsInput) output = dx >= 0 ? uint256(dx) : 0;
+            else output = dy >= 0 ? uint256(dy) : 0;
         }
     }
 
