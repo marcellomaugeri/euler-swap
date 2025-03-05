@@ -239,16 +239,19 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         view
         returns (uint256 inLimit, uint256 outLimit)
     {
+        if (
+            !IEVC(IEulerSwap(eulerSwap).EVC()).isAccountOperatorAuthorized(
+                IEulerSwap(eulerSwap).eulerAccount(), eulerSwap
+            )
+        ) return (0, 0);
+
         return _getLimits(IEulerSwap(eulerSwap), checkTokens(IEulerSwap(eulerSwap), tokenIn, tokenOut));
     }
 
     function _getLimits(IEulerSwap es, bool asset0IsInput) internal view returns (uint256 inLimit, uint256 outLimit) {
-        if (!IEVC(es.EVC()).isAccountOperatorAuthorized(es.eulerAccount(), address(es))) return (0, 0);
-
         inLimit = outLimit = type(uint112).max;
 
         // Supply caps on input
-
         {
             IEVault vault = IEVault(asset0IsInput ? es.vault0() : es.vault1());
             uint256 maxDeposit = vault.debtOf(es.eulerAccount()) + vault.maxDeposit(es.eulerAccount());
@@ -256,7 +259,6 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         }
 
         // Remaining reserves of output
-
         {
             (uint112 reserve0, uint112 reserve1,) = es.getReserves();
             uint112 reserveLimit = asset0IsInput ? reserve1 : reserve0;
@@ -264,7 +266,6 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         }
 
         // Remaining cash and borrow caps in output
-
         {
             IEVault vault = IEVault(asset0IsInput ? es.vault1() : es.vault0());
 
