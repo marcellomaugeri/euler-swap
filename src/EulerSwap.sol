@@ -152,12 +152,12 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         }
     }
 
+    /// @inheritdoc IEulerSwap
     function getReserves() external view returns (uint112, uint112, uint32) {
         return (reserve0, reserve1, status);
     }
 
-    /// @notice Returns the address of the Ethereum Vault Connector (EVC) used by this contract.
-    /// @return The address of the EVC contract.
+    /// @inheritdoc IEulerSwap
     function EVC() external view override(EVCUtil, IEulerSwap) returns (address) {
         return address(evc);
     }
@@ -189,6 +189,13 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         }
     }
 
+    /// @notice Withdraws assets from a vault, first using available balance and then borrowing if needed
+    /// @param vault The address of the vault to withdraw from
+    /// @param amount The total amount of assets to withdraw
+    /// @param to The address that will receive the withdrawn assets
+    /// @dev This function first checks if there's an existing balance in the vault.
+    /// @dev If there is, it withdraws the minimum of the requested amount and available balance.
+    /// @dev If more assets are needed after withdrawal, it enables the controller and borrows the remaining amount.
     function withdrawAssets(address vault, uint256 amount, address to) internal {
         uint256 balance = myBalance(vault);
 
@@ -204,6 +211,14 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         }
     }
 
+    /// @notice Deposits assets into a vault and automatically repays any outstanding debt
+    /// @param vault The address of the vault to deposit into
+    /// @param amount The amount of assets to deposit
+    /// @return The amount of assets successfully deposited
+    /// @dev This function attempts to deposit assets into the specified vault.
+    /// @dev If the deposit fails with E_ZeroShares error, it safely returns 0 (this happens with very small amounts).
+    /// @dev After successful deposit, if the user has any outstanding controller-enabled debt, it attempts to repay it.
+    /// @dev If all debt is repaid, the controller is automatically disabled to reduce gas costs in future operations.
     function depositAssets(address vault, uint256 amount) internal returns (uint256) {
         try IEVault(vault).deposit(amount, eulerAccount) {}
         catch (bytes memory reason) {
@@ -237,10 +252,16 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         }
     }
 
+    /// @notice Retrieves the current debt amount for the pool's eulerAccount
+    /// @param vault The address of the vault to check for debt
+    /// @return The amount of debt that the Euler account has in the specified vault
     function myDebt(address vault) internal view returns (uint256) {
         return IEVault(vault).debtOf(eulerAccount);
     }
 
+    /// @notice Calculates the asset balance of the pool's eulerAccount
+    /// @param vault The address of the vault to check for balance
+    /// @return The amount of assets that the Euler account has deposited in the specified vault
     function myBalance(address vault) internal view returns (uint256) {
         uint256 shares = IEVault(vault).balanceOf(eulerAccount);
         return shares == 0 ? 0 : IEVault(vault).convertToAssets(shares);
