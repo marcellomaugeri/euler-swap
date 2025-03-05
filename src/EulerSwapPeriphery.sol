@@ -12,8 +12,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
 
     error UnsupportedPair();
     error OperatorNotInstalled();
-    error InsufficientReserves();
-    error InsufficientCash();
+    error SwapLimitExceeded();
     error AmountOutLessThanMin();
     error AmountInMoreThanMax();
 
@@ -57,6 +56,52 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         return computeQuote(IEulerSwap(eulerSwap), tokenIn, tokenOut, amountOut, false);
     }
 
+    /// @inheritdoc IEulerSwapPeriphery
+    function getLimits(address eulerSwap, address tokenIn, address tokenOut) external view returns (uint256, uint256) {
+        if (
+            !IEVC(IEulerSwap(eulerSwap).EVC()).isAccountOperatorAuthorized(
+                IEulerSwap(eulerSwap).eulerAccount(), eulerSwap
+            )
+        ) return (0, 0);
+
+        return calcLimits(IEulerSwap(eulerSwap), checkTokens(IEulerSwap(eulerSwap), tokenIn, tokenOut));
+    }
+
+    /// @inheritdoc IEulerSwapPeriphery
+    function fInverse(uint256 y, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c)
+        external
+        pure
+        returns (uint256)
+    {
+        // A component of the quadratic formula: a = 2 * c
+        uint256 A = 2 * c;
+
+        // B component of the quadratic formula
+        int256 B = int256((px * (y - y0) + py - 1) / py) - int256((x0 * (2 * c - 1e18) + 1e18 - 1) / 1e18);
+
+        // B^2 component, using FullMath for overflow safety
+        uint256 absB = B < 0 ? uint256(-B) : uint256(B);
+        uint256 squaredB = Math.mulDiv(absB, absB, 1e18, Math.Rounding.Ceil);
+
+        // 4 * A * C component of the quadratic formula
+        uint256 AC4 = Math.mulDiv(
+            Math.mulDiv(4 * c, (1e18 - c), 1e18, Math.Rounding.Ceil),
+            Math.mulDiv(x0, x0, 1e18, Math.Rounding.Ceil),
+            1e18,
+            Math.Rounding.Ceil
+        );
+
+        // Discriminant: b^2 + 4ac, scaled up to maintain precision
+        uint256 discriminant = (squaredB + AC4) * 1e18;
+
+        // Square root of the discriminant (rounded up)
+        uint256 sqrt = Math.sqrt(discriminant);
+        sqrt = (sqrt * sqrt < discriminant) ? sqrt + 1 : sqrt;
+
+        // Compute and return x = fInverse(y) using the quadratic formula
+        return Math.mulDiv(uint256(int256(sqrt) - B), 1e18, A, Math.Rounding.Ceil);
+    }
+
     /// @dev Internal function to execute a token swap through EulerSwap
     /// @param eulerSwap The EulerSwap contract address to execute the swap through
     /// @param tokenIn The address of the input token being swapped
@@ -93,35 +138,25 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
             IEVC(eulerSwap.EVC()).isAccountOperatorAuthorized(eulerSwap.eulerAccount(), address(eulerSwap)),
             OperatorNotInstalled()
         );
+        require(amount <= type(uint112).max, SwapLimitExceeded());
 
         uint256 feeMultiplier = eulerSwap.feeMultiplier();
-        address vault0 = eulerSwap.vault0();
-        address vault1 = eulerSwap.vault1();
         (uint112 reserve0, uint112 reserve1,) = eulerSwap.getReserves();
 
         // exactIn: decrease received amountIn, rounding down
         if (exactIn) amount = amount * feeMultiplier / 1e18;
 
-        bool asset0IsInput;
-        {
-            address asset0 = eulerSwap.asset0();
-            address asset1 = eulerSwap.asset1();
-
-            if (tokenIn == asset0 && tokenOut == asset1) asset0IsInput = true;
-            else if (tokenIn == asset1 && tokenOut == asset0) asset0IsInput = false;
-            else revert UnsupportedPair();
-        }
+        bool asset0IsInput = checkTokens(eulerSwap, tokenIn, tokenOut);
+        (uint256 inLimit, uint256 outLimit) = calcLimits(eulerSwap, asset0IsInput);
 
         uint256 quote = binarySearch(eulerSwap, reserve0, reserve1, amount, exactIn, asset0IsInput);
 
         if (exactIn) {
             // if `exactIn`, `quote` is the amount of assets to buy from the AMM
-            require(quote <= (asset0IsInput ? reserve1 : reserve0), InsufficientReserves());
-            require(quote <= IEVault(asset0IsInput ? vault1 : vault0).cash(), InsufficientCash());
+            require(amount <= inLimit && quote <= outLimit, SwapLimitExceeded());
         } else {
             // if `!exactIn`, `amount` is the amount of assets to buy from the AMM
-            require(amount <= (asset0IsInput ? reserve1 : reserve0), InsufficientReserves());
-            require(amount <= IEVault(asset0IsInput ? vault1 : vault0).cash(), InsufficientCash());
+            require(amount <= outLimit && quote <= inLimit, SwapLimitExceeded());
         }
 
         // exactOut: increase required quote(amountIn), rounding up
@@ -169,8 +204,9 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
 
             while (low < high) {
                 uint256 mid = (low + high) / 2;
-                if (dy == 0 ? eulerSwap.verify(uint256(reserve0New), mid) : eulerSwap.verify(mid, uint256(reserve1New)))
-                {
+                (uint256 a, uint256 b) = dy == 0 ? (uint256(reserve0New), mid) : (mid, uint256(reserve1New));
+                require(a > 0 && b > 0, SwapLimitExceeded());
+                if (eulerSwap.verify(a, b)) {
                     high = mid;
                 } else {
                     low = mid + 1;
@@ -191,54 +227,97 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
     }
 
     /**
-     * @notice Computes the inverse of the `f()` function for the EulerSwap liquidity curve.
-     * @dev Solves for `x` given `y` using the quadratic formula derived from the liquidity curve:
-     *      x = (-b + sqrt(b^2 + 4ac)) / 2a
-     *      Utilises mulDiv to avoid overflow and ensures precision with upward rounding.
+     * @notice Calculates the maximum input and output amounts for a swap based on protocol constraints
+     * @dev Determines limits by checking multiple factors:
+     *      1. Supply caps and existing debt for the input token
+     *      2. Available reserves in the EulerSwap for the output token
+     *      3. Available cash and borrow caps for the output token
+     *      4. Account balances in the respective vaults
      *
-     * @param y The y-coordinate input value (must be greater than `y0`).
-     * @param px Price factor for the x-axis (scaled by 1e18, between 1e18 and 1e36).
-     * @param py Price factor for the y-axis (scaled by 1e18, between 1e18 and 1e36).
-     * @param x0 Reference x-value on the liquidity curve (≤ 2^112 - 1).
-     * @param y0 Reference y-value on the liquidity curve (≤ 2^112 - 1).
-     * @param c Curve parameter shaping liquidity concentration (scaled by 1e18, between 0 and 1e18).
-     *
-     * @return x The computed x-coordinate on the liquidity curve.
-     *
-     * @custom:precision Uses rounding up to maintain precision in all calculations.
-     * @custom:safety FullMath handles potential overflow in the b^2 computation.
-     * @custom:requirement Input `y` must be strictly greater than `y0`; otherwise, the function will revert.
+     * @param es The EulerSwap contract to calculate limits for
+     * @param asset0IsInput Boolean indicating whether asset0 (true) or asset1 (false) is the input token
+     * @return uint256 Maximum amount of input token that can be deposited
+     * @return uint256 Maximum amount of output token that can be withdrawn
      */
-    function fInverse(uint256 y, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c)
-        external
-        pure
-        returns (uint256)
-    {
-        unchecked {
-            // A component of the quadratic formula: a = 2 * c
-            uint256 A = 2 * c;
+    function calcLimits(IEulerSwap es, bool asset0IsInput) internal view returns (uint256, uint256) {
+        uint256 inLimit = type(uint112).max;
+        uint256 outLimit = type(uint112).max;
 
-            // B component of the quadratic formula
-            int256 B = int256((px * (y - y0) + py - 1) / py) - int256((x0 * (2 * c - 1e18) + 1e18 - 1) / 1e18);
-
-            // B^2 component, using FullMath for overflow safety
-            uint256 absB = B < 0 ? uint256(-B) : uint256(B);
-            uint256 squaredB = Math.mulDiv(absB, absB, 1e18, Math.Rounding.Ceil);
-
-            // 4 * A * C component of the quadratic formula
-            uint256 AC4a = Math.mulDiv(4 * c, (1e18 - c), 1e18, Math.Rounding.Ceil);
-            uint256 AC4b = Math.mulDiv(x0, x0, 1e18, Math.Rounding.Ceil);
-            uint256 AC4 = Math.mulDiv(AC4a, AC4b, 1e18, Math.Rounding.Ceil);
-
-            // Discriminant: b^2 + 4ac, scaled up to maintain precision
-            uint256 discriminant = (squaredB + AC4) * 1e18;
-
-            // Square root of the discriminant (rounded up)
-            uint256 sqrt = Math.sqrt(discriminant);
-            sqrt = (sqrt * sqrt < discriminant) ? sqrt + 1 : sqrt;
-
-            // Compute and return x = fInverse(y) using the quadratic formula
-            return Math.mulDiv(uint256(int256(sqrt) - B), 1e18, A, Math.Rounding.Ceil);
+        address eulerAccount = es.eulerAccount();
+        (IEVault vault0, IEVault vault1) = (IEVault(es.vault0()), IEVault(es.vault1()));
+        // Supply caps on input
+        {
+            IEVault vault = (asset0IsInput ? vault0 : vault1);
+            uint256 maxDeposit = vault.debtOf(eulerAccount) + vault.maxDeposit(eulerAccount);
+            if (maxDeposit < inLimit) inLimit = maxDeposit;
         }
+
+        // Remaining reserves of output
+        {
+            (uint112 reserve0, uint112 reserve1,) = es.getReserves();
+            uint112 reserveLimit = asset0IsInput ? reserve1 : reserve0;
+            if (reserveLimit < outLimit) outLimit = reserveLimit;
+        }
+
+        // Remaining cash and borrow caps in output
+        {
+            IEVault vault = (asset0IsInput ? vault1 : vault0);
+
+            uint256 cash = vault.cash();
+            if (cash < outLimit) outLimit = cash;
+
+            (, uint16 borrowCap) = vault.caps();
+            uint256 maxWithdraw = decodeCap(uint256(borrowCap));
+            maxWithdraw = vault.totalBorrows() > maxWithdraw ? 0 : maxWithdraw - vault.totalBorrows();
+            if (maxWithdraw > cash) maxWithdraw = cash;
+            maxWithdraw += vault.convertToAssets(vault.balanceOf(eulerAccount));
+            if (maxWithdraw < outLimit) outLimit = maxWithdraw;
+        }
+
+        return (inLimit, outLimit);
+    }
+
+    /**
+     * @notice Decodes a compact-format cap value to its actual numerical value
+     * @dev The cap uses a compact-format where:
+     *      - If amountCap == 0, there's no cap (returns max uint256)
+     *      - Otherwise, the lower 6 bits represent the exponent (10^exp)
+     *      - The upper bits (>> 6) represent the mantissa
+     *      - The formula is: (10^exponent * mantissa) / 100
+     * @param amountCap The compact-format cap value to decode
+     * @return The actual numerical cap value (type(uint256).max if uncapped)
+     * @custom:security Uses unchecked math for gas optimization as calculations cannot overflow:
+     *                  maximum possible value 10^(2^6-1) * (2^10-1) ≈ 1.023e+66 < 2^256
+     */
+    function decodeCap(uint256 amountCap) internal pure returns (uint256) {
+        if (amountCap == 0) return type(uint256).max;
+
+        unchecked {
+            // Cannot overflow because this is less than 2**256:
+            //   10**(2**6 - 1) * (2**10 - 1) = 1.023e+66
+            return 10 ** (amountCap & 63) * (amountCap >> 6) / 100;
+        }
+    }
+
+    /**
+     * @notice Verifies that the given tokens are supported by the EulerSwap pool and determines swap direction
+     * @dev Returns a boolean indicating whether the input token is asset0 (true) or asset1 (false)
+     * @param eulerSwap The EulerSwap pool contract to check against
+     * @param tokenIn The input token address for the swap
+     * @param tokenOut The output token address for the swap
+     * @return asset0IsInput True if tokenIn is asset0 and tokenOut is asset1, false if reversed
+     * @custom:error UnsupportedPair Thrown if the token pair is not supported by the EulerSwap pool
+     */
+    function checkTokens(IEulerSwap eulerSwap, address tokenIn, address tokenOut)
+        internal
+        view
+        returns (bool asset0IsInput)
+    {
+        address asset0 = eulerSwap.asset0();
+        address asset1 = eulerSwap.asset1();
+
+        if (tokenIn == asset0 && tokenOut == asset1) asset0IsInput = true;
+        else if (tokenIn == asset1 && tokenOut == asset0) asset0IsInput = false;
+        else revert UnsupportedPair();
     }
 }
