@@ -6,8 +6,10 @@ interface IEulerSwap {
         address vault0;
         address vault1;
         address eulerAccount;
-        uint112 debtLimit0;
-        uint112 debtLimit1;
+        uint112 equilibriumReserve0;
+        uint112 equilibriumReserve1;
+        uint112 currReserve0;
+        uint112 currReserve1;
         uint256 fee;
     }
 
@@ -46,8 +48,8 @@ interface IEulerSwap {
     function asset0() external view returns (address);
     function asset1() external view returns (address);
     function eulerAccount() external view returns (address);
-    function initialReserve0() external view returns (uint112);
-    function initialReserve1() external view returns (uint112);
+    function equilibriumReserve0() external view returns (uint112);
+    function equilibriumReserve1() external view returns (uint112);
     function feeMultiplier() external view returns (uint256);
     function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 status);
 

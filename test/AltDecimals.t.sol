@@ -11,7 +11,7 @@ contract AltDecimals is EulerSwapTestBase {
     }
 
     function test_alt_decimals_6_18_in() public {
-        eulerSwap = createEulerSwap(50e6, 50e18, 0, 1e18, 1e6, 0.9e18, 0.9e18);
+        eulerSwap = createEulerSwap(50e6, 60e18, 0, 1e18, 1e6, 0.9e18, 0.9e18);
         skimAll(eulerSwap, true);
 
         uint256 amount = 1e6;
@@ -31,7 +31,7 @@ contract AltDecimals is EulerSwapTestBase {
     }
 
     function test_alt_decimals_6_18_out() public {
-        eulerSwap = createEulerSwap(50e6, 50e18, 0, 1e18, 1e6, 0.9e18, 0.9e18);
+        eulerSwap = createEulerSwap(50e6, 60e18, 0, 1e18, 1e6, 0.9e18, 0.9e18);
         skimAll(eulerSwap, true);
 
         uint256 amount = 1e18;
@@ -51,7 +51,7 @@ contract AltDecimals is EulerSwapTestBase {
     }
 
     function test_alt_decimals_18_6_in() public {
-        eulerSwap = createEulerSwap(50e18, 50e6, 0, 1e6, 1e18, 0.9e18, 0.9e18);
+        eulerSwap = createEulerSwap(60e18, 50e6, 0, 1e6, 1e18, 0.9e18, 0.9e18);
         skimAll(eulerSwap, true);
 
         uint256 amount = 1e18;
@@ -71,7 +71,7 @@ contract AltDecimals is EulerSwapTestBase {
     }
 
     function test_alt_decimals_18_6_out() public {
-        eulerSwap = createEulerSwap(50e18, 50e6, 0, 1e6, 1e18, 0.9e18, 0.9e18);
+        eulerSwap = createEulerSwap(60e18, 50e6, 0, 1e6, 1e18, 0.9e18, 0.9e18);
         skimAll(eulerSwap, false);
 
         uint256 amount = 1e6;

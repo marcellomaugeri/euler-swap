@@ -21,10 +21,8 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     address public immutable asset0;
     address public immutable asset1;
     address public immutable eulerAccount;
-    uint112 public immutable debtLimit0;
-    uint112 public immutable debtLimit1;
-    uint112 public immutable initialReserve0;
-    uint112 public immutable initialReserve1;
+    uint112 public immutable equilibriumReserve0;
+    uint112 public immutable equilibriumReserve1;
     uint256 public immutable feeMultiplier;
 
     uint256 public immutable priceX;
@@ -69,7 +67,6 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         // EulerSwap params
 
         require(params.fee < 1e18, BadParam());
-        require(params.debtLimit0 <= type(uint112).max && params.debtLimit1 <= type(uint112).max, BadParam());
         require(curveParams.priceX > 0 && curveParams.priceY > 0, BadParam());
         require(curveParams.priceX <= 1e36 && curveParams.priceY <= 1e36, BadParam());
         require(curveParams.concentrationX <= 1e18 && curveParams.concentrationY <= 1e18, BadParam());
@@ -84,10 +81,10 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         asset0 = asset0Addr;
         asset1 = asset1Addr;
         eulerAccount = params.eulerAccount;
-        debtLimit0 = params.debtLimit0;
-        debtLimit1 = params.debtLimit1;
-        initialReserve0 = reserve0 = offsetReserve(params.debtLimit0, params.vault0);
-        initialReserve1 = reserve1 = offsetReserve(params.debtLimit1, params.vault1);
+        equilibriumReserve0 = params.equilibriumReserve0;
+        equilibriumReserve1 = params.equilibriumReserve1;
+        reserve0 = params.currReserve0;
+        reserve1 = params.currReserve1;
         feeMultiplier = 1e18 - params.fee;
 
         // Curve params
@@ -96,6 +93,12 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         priceY = curveParams.priceY;
         concentrationX = curveParams.concentrationX;
         concentrationY = curveParams.concentrationY;
+
+        // Validate reserves
+
+        require(verify(equilibriumReserve0, equilibriumReserve1), CurveViolation());
+        require(verify(reserve0, reserve1), CurveViolation());
+        require(!verify(reserve0 > 0 ? reserve0 - 1 : 0, reserve1 > 0 ? reserve1 - 1 : 0), CurveViolation());
 
         emit EulerSwapCreated(asset0Addr, asset1Addr);
     }
@@ -131,7 +134,6 @@ contract EulerSwap is IEulerSwap, EVCUtil {
             uint256 newReserve0 = reserve0 + amount0In - amount0Out;
             uint256 newReserve1 = reserve1 + amount1In - amount1Out;
 
-            require(newReserve0 <= type(uint112).max && newReserve1 <= type(uint112).max, Overflow());
             require(verify(newReserve0, newReserve1), CurveViolation());
 
             reserve0 = uint112(newReserve0);
@@ -187,12 +189,16 @@ contract EulerSwap is IEulerSwap, EVCUtil {
 
     /// @inheritdoc IEulerSwap
     function verify(uint256 newReserve0, uint256 newReserve1) public view returns (bool) {
-        if (newReserve0 >= initialReserve0) {
-            if (newReserve1 >= initialReserve1) return true;
-            return newReserve0 >= f(newReserve1, priceY, priceX, initialReserve1, initialReserve0, concentrationY);
+        if (newReserve0 > type(uint112).max || newReserve1 > type(uint112).max) return false;
+
+        if (newReserve0 >= equilibriumReserve0) {
+            if (newReserve1 >= equilibriumReserve1) return true;
+            return
+                newReserve0 >= f(newReserve1, priceY, priceX, equilibriumReserve1, equilibriumReserve0, concentrationY);
         } else {
-            if (newReserve1 < initialReserve1) return false;
-            return newReserve1 >= f(newReserve0, priceX, priceY, initialReserve0, initialReserve1, concentrationX);
+            if (newReserve1 < equilibriumReserve1) return false;
+            return
+                newReserve1 >= f(newReserve0, priceX, priceY, equilibriumReserve0, equilibriumReserve1, concentrationX);
         }
     }
 
@@ -238,20 +244,6 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     function myBalance(address vault) internal view returns (uint256) {
         uint256 shares = IEVault(vault).balanceOf(eulerAccount);
         return shares == 0 ? 0 : IEVault(vault).convertToAssets(shares);
-    }
-
-    function offsetReserve(uint112 reserve, address vault) internal view returns (uint112) {
-        uint256 offset;
-        uint256 debt = myDebt(vault);
-
-        if (debt != 0) {
-            offset = reserve > debt ? reserve - debt : 0;
-        } else {
-            offset = reserve + myBalance(vault);
-        }
-
-        require(offset <= type(uint112).max, Overflow());
-        return uint112(offset);
     }
 
     /// @dev EulerSwap curve definition
