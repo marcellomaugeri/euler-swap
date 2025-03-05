@@ -141,7 +141,7 @@ contract EulerSwapTestBase is EVaultTestBase {
         return skimmed;
     }
 
-    function getEulerSwapParams(uint112 debtLimitA, uint112 debtLimitB, uint256 fee)
+    function getEulerSwapParams(uint112 reserve0, uint112 reserve1, uint256 fee)
         internal
         view
         returns (EulerSwap.Params memory)
@@ -150,8 +150,10 @@ contract EulerSwapTestBase is EVaultTestBase {
             vault0: address(eTST),
             vault1: address(eTST2),
             eulerAccount: holder,
-            debtLimit0: debtLimitA,
-            debtLimit1: debtLimitB,
+            equilibriumReserve0: reserve0,
+            equilibriumReserve1: reserve1,
+            currReserve0: reserve0,
+            currReserve1: reserve1,
             fee: fee
         });
     }

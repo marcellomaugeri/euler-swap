@@ -13,7 +13,7 @@ contract DepositFailuresTest is EulerSwapTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        eulerSwap = createEulerSwap(50e18, 50e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
+        eulerSwap = createEulerSwap(60e18, 60e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
     }
 
     function test_griefing() public monotonicHolderNAV {
