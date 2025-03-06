@@ -20,8 +20,8 @@ contract DeployProtocol is ScriptUtil {
 
         vm.startBroadcast(deployerAddress);
 
-        new EulerSwapFactory();
-        new EulerSwapPeriphery(evc);
+        new EulerSwapFactory(evc);
+        new EulerSwapPeriphery();
 
         vm.stopBroadcast();
     }

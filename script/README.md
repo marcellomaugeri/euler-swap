@@ -14,16 +14,11 @@ After filling the `.env` file, make sure to run: `source .env` in your terminal.
 ## Deploy new pool
 
 - Fill the `DeployPool_input.json` file with the needed inputs.
+- In pool deployment, the `eulerAccount` address is the deployer address, so we derive the address from the attached private key in the `.env` file.
 - Run `forge script ./script/DeployPool.s.sol --rpc-url network_name --broadcast --slow`
-
-## Activate new pool
-
-- Fill the `SetOperatorAndActivatePool_input.json` file with the needed inputs.
-- Run `forge script ./script/SetOperatorAndActivatePool.s.sol --rpc-url network_name --broadcast --slow`
 
 ## Exact in swap
 
-- Fill the `SwapExactIn_input.json` file with the needed inputs. For the `swapUtil` field, use the address of the `SwapUtil` contract deployed in the network you are using:
-  - For mainnet, use `0xcdd2d349eeD309a0016C9A17f01bF1670913708b`
+- Fill the `SwapExactIn_input.json` file with the needed inputs.
 - Run `forge script ./script/SwapExactIn.s.sol --rpc-url network_name --broadcast --slow`
 

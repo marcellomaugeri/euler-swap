@@ -3,8 +3,7 @@ pragma solidity ^0.8.0;
 
 import {ScriptUtil} from "./ScriptUtil.s.sol";
 import {IERC20, SafeERC20, EulerSwap} from "../src/EulerSwap.sol";
-import {SwapUtil} from "./util/SwapUtil.sol";
-
+import {EulerSwapPeriphery} from "../src/EulerSwapPeriphery.sol";
 contract SwapExactIn is ScriptUtil {
     using SafeERC20 for IERC20;
 
@@ -17,17 +16,18 @@ contract SwapExactIn is ScriptUtil {
         string memory inputScriptFileName = "SwapExactIn_input.json";
         string memory json = _getJsonFile(inputScriptFileName);
 
-        SwapUtil swapUtil = SwapUtil(vm.parseJsonAddress(json, ".swapUtil"));   // Do not change address of this one unless u manually deploy new one
+        EulerSwapPeriphery periphery = EulerSwapPeriphery(vm.parseJsonAddress(json, ".periphery"));
         EulerSwap pool = EulerSwap(vm.parseJsonAddress(json, ".pool"));
         address tokenIn = vm.parseJsonAddress(json, ".tokenIn");
         address tokenOut = vm.parseJsonAddress(json, ".tokenOut");
         uint256 amountIn = vm.parseJsonUint(json, ".amountIn");
+        uint256 amountOutMin = vm.parseJsonUint(json, ".amountOutMin");
 
         vm.startBroadcast(swapperAddress);
 
-        IERC20(tokenIn).forceApprove(address(swapUtil), amountIn);
+        IERC20(tokenIn).forceApprove(address(periphery), amountIn);
 
-        swapUtil.executeSwap(address(pool), tokenIn, tokenOut, amountIn, true);
+        periphery.swapExactIn(address(pool), tokenIn, tokenOut, amountIn, amountOutMin);
 
         vm.stopBroadcast();
     }
