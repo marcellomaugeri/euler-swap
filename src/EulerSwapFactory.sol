@@ -54,7 +54,8 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     {
         require(_msgSender() == params.eulerAccount, Unauthorized());
 
-        EulerSwapHook pool = new EulerSwapHook{salt: keccak256(abi.encode(params.eulerAccount, salt))}(poolManager, params, curveParams);
+        EulerSwapHook pool =
+            new EulerSwapHook{salt: keccak256(abi.encode(params.eulerAccount, salt))}(poolManager, params, curveParams);
 
         checkEulerAccountOperators(params.eulerAccount, address(pool));
 
