@@ -7,6 +7,7 @@ import {PoolKey} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
+import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
 import {EulerSwap, IEulerSwap, IEVault} from "./EulerSwap.sol";
 
 contract EulerSwapHook is EulerSwap, BaseHook {
@@ -32,6 +33,15 @@ contract EulerSwapHook is EulerSwap, BaseHook {
 
         // create the pool on v4, using starting price as sqrtPrice(1/1) * Q96
         poolManager.initialize(poolKey, 79228162514264337593543950336);
+    }
+
+    function _beforeSwap(address, PoolKey calldata, IPoolManager.SwapParams calldata, bytes calldata)
+        internal
+        override
+        returns (bytes4, BeforeSwapDelta, uint24)
+    {
+        // TODO: implement custom curve logic, using depositAssets/withdrawAssets
+        return (BaseHook.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
     }
 
     // TODO: fix salt mining & verification for the hook
