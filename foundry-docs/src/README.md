@@ -48,11 +48,6 @@ forge coverage
 forge doc --serve --port 4000
 ```
 
-## Private Deployment
-
-- EulerSwapFactory: 0x04C54FF83e4BC428FD1eDA2f41cdBd583A2e9cF8
-- EulerSwapPeriphery: 0x64A8410D7D2ecF3Aaf32b6C3932e4586f3C42ecE
-
 ## Safety
 
 This software is experimental and is provided "as is" and "as available".

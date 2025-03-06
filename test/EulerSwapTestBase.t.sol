@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import {Test, console} from "forge-std/Test.sol";
 import {EVaultTestBase, TestERC20} from "evk-test/unit/evault/EVaultTestBase.t.sol";
 import {IEVault} from "evk/EVault/IEVault.sol";
-import {IEulerSwap, EulerSwap} from "../src/EulerSwap.sol";
+import {IEulerSwap, IEVC, EulerSwap} from "../src/EulerSwap.sol";
 import {EulerSwapPeriphery} from "../src/EulerSwapPeriphery.sol";
 
 contract EulerSwapTestBase is EVaultTestBase {
@@ -25,7 +25,7 @@ contract EulerSwapTestBase is EVaultTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        periphery = new EulerSwapPeriphery(address(evc));
+        periphery = new EulerSwapPeriphery();
 
         // Vault config
 
@@ -141,7 +141,7 @@ contract EulerSwapTestBase is EVaultTestBase {
         return skimmed;
     }
 
-    function getEulerSwapParams(uint112 debtLimitA, uint112 debtLimitB, uint256 fee)
+    function getEulerSwapParams(uint112 reserve0, uint112 reserve1, uint256 fee)
         internal
         view
         returns (EulerSwap.Params memory)
@@ -149,9 +149,11 @@ contract EulerSwapTestBase is EVaultTestBase {
         return IEulerSwap.Params({
             vault0: address(eTST),
             vault1: address(eTST2),
-            myAccount: holder,
-            debtLimit0: debtLimitA,
-            debtLimit1: debtLimitB,
+            eulerAccount: holder,
+            equilibriumReserve0: reserve0,
+            equilibriumReserve1: reserve1,
+            currReserve0: reserve0,
+            currReserve1: reserve1,
             fee: fee
         });
     }

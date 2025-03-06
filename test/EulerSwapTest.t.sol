@@ -9,7 +9,7 @@ contract EulerSwapTest is EulerSwapTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        eulerSwap = createEulerSwap(50e18, 50e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
+        eulerSwap = createEulerSwap(60e18, 60e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
     }
 
     function test_basicSwap_exactIn() public monotonicHolderNAV {
@@ -49,7 +49,7 @@ contract EulerSwapTest is EulerSwapTestBase {
 
         int256 origNAV = getHolderNAV();
 
-        eulerSwap = createEulerSwap(50e18, 50e18, 0, px, py, 0.4e18, 0.85e18);
+        eulerSwap = createEulerSwap(60e18, 60e18, 0, px, py, 0.4e18, 0.85e18);
 
         uint256 amountIn = 1e18;
         uint256 amountOut =
@@ -102,7 +102,7 @@ contract EulerSwapTest is EulerSwapTestBase {
             oracle.setPrice(address(eTST), unitOfAccount, price);
             oracle.setPrice(address(assetTST), unitOfAccount, price);
 
-            eulerSwap = createEulerSwap(50e18, 50e18, 0, px, py, cx, cy);
+            eulerSwap = createEulerSwap(60e18, 60e18, 0, px, py, cx, cy);
         }
 
         int256 origNAV = getHolderNAV();
@@ -138,7 +138,7 @@ contract EulerSwapTest is EulerSwapTestBase {
         cy = bound(cy, 0.01e18, 0.99e18);
         fee = bound(fee, 0, 0.1e18);
 
-        eulerSwap = createEulerSwap(50e18, 50e18, fee, 1e18, 1e18, cx, cy);
+        eulerSwap = createEulerSwap(60e18, 60e18, fee, 1e18, 1e18, cx, cy);
 
         int256 origNAV = getHolderNAV();
 
@@ -175,4 +175,18 @@ contract EulerSwapTest is EulerSwapTestBase {
             assertGe(getHolderNAV(), origNAV);
         }
     }
+
+    /*
+    // Make `f()` function public to run this test
+    function test_fFuncOverflow(uint256 xt, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c) public view {
+        x0 = bound(x0, 1, type(uint112).max);
+        y0 = bound(y0, 0, type(uint112).max);
+        xt = bound(xt, 1 + x0 / 1e3, x0); // thousand-fold price movement
+        px = bound(px, 1, 1e36);
+        py = bound(py, 1, 1e36);
+        c = bound(c, 1, 1e18);
+
+        eulerSwap.f(xt, px, py, x0, y0, c);
+    }
+    */
 }

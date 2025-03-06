@@ -14,3 +14,7 @@ script/json/out/
 
 # Coverage file
 lcov.info
+
+# MAC files
+.DS_Store
+__MACOSX

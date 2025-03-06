@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.27;
 
-import {IEulerSwapFactory} from "./interfaces/IEulerSwapFactory.sol";
-import {IEulerSwap, EulerSwap} from "./EulerSwap.sol";
+import {IEulerSwapFactory, IEulerSwap} from "./interfaces/IEulerSwapFactory.sol";
+import {EulerSwap} from "./EulerSwap.sol";
+import {EVCUtil} from "ethereum-vault-connector/utils/EVCUtil.sol";
 
 /// @title EulerSwapFactory contract
 /// @custom:security-contact security@euler.xyz
 /// @author Euler Labs (https://www.eulerlabs.com/)
-contract EulerSwapFactory is IEulerSwapFactory {
+contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     /// @dev An array to store all pools addresses.
     address[] public allPools;
-    /// @dev Mapping to store pool addresses
-    mapping(bytes32 poolKey => address pool) public getPool;
+    /// @dev Mapping between euler account and deployed pool that is currently set as operator
+    mapping(address eulerAccount => address operator) public eulerAccountToPool;
 
     event PoolDeployed(
         address indexed asset0,
@@ -19,7 +20,7 @@ contract EulerSwapFactory is IEulerSwapFactory {
         address vault0,
         address vault1,
         uint256 indexed feeMultiplier,
-        address swapAccount,
+        address eulerAccount,
         uint256 priceX,
         uint256 priceY,
         uint256 concentrationX,
@@ -28,64 +29,45 @@ contract EulerSwapFactory is IEulerSwapFactory {
     );
 
     error InvalidQuery();
-    error AlreadyDeployed();
+    error Unauthorized();
+    error OldOperatorStillInstalled();
+    error OperatorNotInstalled();
 
-    /// @notice Deploy EulerSwap pool.
-    function deployPool(DeployParams memory params) external returns (address) {
-        EulerSwap pool = new EulerSwap(
-            IEulerSwap.Params({
-                vault0: params.vault0,
-                vault1: params.vault1,
-                myAccount: params.swapAccount,
-                debtLimit0: params.debtLimit0,
-                debtLimit1: params.debtLimit1,
-                fee: params.fee
-            }),
-            IEulerSwap.CurveParams({
-                priceX: params.priceX,
-                priceY: params.priceY,
-                concentrationX: params.concentrationX,
-                concentrationY: params.concentrationY
-            })
-        );
+    constructor(address evc) EVCUtil(evc) {}
 
-        address poolAsset0 = pool.asset0();
-        address poolAsset1 = pool.asset1();
-        uint256 feeMultiplier = pool.feeMultiplier();
+    /// @notice Deploy a new EulerSwap pool with the given parameters
+    /// @dev The pool address is deterministically generated using CREATE2 with a salt derived from
+    ///      the euler account address and provided salt parameter. This allows the pool address to be
+    ///      predicted before deployment.
+    /// @param params Core pool parameters including vaults, account, and fee settings
+    /// @param curveParams Parameters defining the curve shape including prices and concentrations
+    /// @param salt Unique value to generate deterministic pool address
+    /// @return Address of the newly deployed pool
+    function deployPool(IEulerSwap.Params memory params, IEulerSwap.CurveParams memory curveParams, bytes32 salt)
+        external
+        returns (address)
+    {
+        require(_msgSender() == params.eulerAccount, Unauthorized());
 
-        {
-            bytes32 poolKey = keccak256(
-                abi.encode(
-                    poolAsset0,
-                    poolAsset1,
-                    params.vault0,
-                    params.vault1,
-                    params.swapAccount,
-                    feeMultiplier,
-                    params.priceX,
-                    params.priceY,
-                    params.concentrationX,
-                    params.concentrationY
-                )
-            );
+        EulerSwap pool = new EulerSwap{salt: keccak256(abi.encode(params.eulerAccount, salt))}(params, curveParams);
 
-            require(getPool[poolKey] == address(0), AlreadyDeployed());
+        checkEulerAccountOperators(params.eulerAccount, address(pool));
 
-            getPool[poolKey] = address(pool);
-            allPools.push(address(pool));
-        }
+        allPools.push(address(pool));
+
+        EulerSwap(pool).activate();
 
         emit PoolDeployed(
-            poolAsset0,
-            poolAsset1,
+            pool.asset0(),
+            pool.asset1(),
             params.vault0,
             params.vault1,
-            feeMultiplier,
-            params.swapAccount,
-            params.priceX,
-            params.priceY,
-            params.concentrationX,
-            params.concentrationY,
+            pool.feeMultiplier(),
+            params.eulerAccount,
+            curveParams.priceX,
+            curveParams.priceY,
+            curveParams.concentrationX,
+            curveParams.concentrationY,
             address(pool)
         );
 
@@ -113,5 +95,22 @@ contract EulerSwapFactory is IEulerSwapFactory {
         }
 
         return allPoolsList;
+    }
+
+    /// @notice Validates operator authorization for euler account. First checks if the account has an existing operator
+    /// and ensures it is deauthorized. Then verifies the new pool is authorized as an operator. Finally, updates the
+    /// mapping to track the new pool as the account's operator.
+    /// @param eulerAccount The address of the euler account.
+    /// @param newPool The address of the new pool.
+    function checkEulerAccountOperators(address eulerAccount, address newPool) internal {
+        address operator = eulerAccountToPool[eulerAccount];
+
+        if (operator != address(0)) {
+            require(!evc.isAccountOperatorAuthorized(eulerAccount, operator), OldOperatorStillInstalled());
+        }
+
+        require(evc.isAccountOperatorAuthorized(eulerAccount, newPool), OperatorNotInstalled());
+
+        eulerAccountToPool[eulerAccount] = newPool;
     }
 }

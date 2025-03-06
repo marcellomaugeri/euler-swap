@@ -20,4 +20,8 @@ base = "${BASE_RPC_URL}"
 mainnet = { key = "${ETHERSCAN_MAINNET_API_KEY}" }
 base = { key = "${ETHERSCAN_BASE_API_KEY}" }
 
+[doc]
+out = "foundry-docs/"
+title = "Euler Swap Contracts Documentation"
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

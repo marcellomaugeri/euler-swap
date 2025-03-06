@@ -42,17 +42,17 @@ The `IEulerSwap` interface defines the core functionality for executing token sw
 
 - **description**: Returns the address of asset 1.
 
-#### `myAccount() external view returns (address);`
+#### `eulerAccount() external view returns (address);`
 
 - **description**: Returns the address of the account managing EulerSwap.
 
-#### `initialReserve0() external view returns (uint112);`
+#### `equilibriumReserve0() external view returns (uint112);`
 
-- **description**: Returns the initial reserve amount of asset 0.
+- **description**: Returns the equilibrium reserve amount of asset 0.
 
-#### `initialReserve1() external view returns (uint112);`
+#### `equilibriumReserve1() external view returns (uint112);`
 
-- **description**: Returns the initial reserve amount of asset 1.
+- **description**: Returns the equilibrium reserve amount of asset 1.
 
 #### `feeMultiplier() external view returns (uint256);`
 
@@ -66,11 +66,11 @@ The `IEulerSwap` interface defines the core functionality for executing token sw
 
 #### `priceX() external view returns (uint256);`
 
-- **description**: Returns the price of asset X in terms of asset Y.
+- **description**: Returns the marginal price of asset X in terms of asset Y at the equilibrium point.
 
 #### `priceY() external view returns (uint256);`
 
-- **description**: Returns the price of asset Y in terms of asset X.
+- **description**: Returns the marginal price of asset Y in terms of asset X at the equilibrium point.
 
 #### `concentrationX() external view returns (uint256);`
 
