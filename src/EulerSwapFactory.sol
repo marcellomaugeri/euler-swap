@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.27;
 
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {IEulerSwapFactory, IEulerSwap} from "./interfaces/IEulerSwapFactory.sol";
-import {EulerSwap} from "./EulerSwap.sol";
+import {EulerSwapHook} from "./EulerSwapHook.sol";
 import {EVCUtil} from "ethereum-vault-connector/utils/EVCUtil.sol";
 
 /// @title EulerSwapFactory contract
@@ -13,6 +14,8 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     address[] public allPools;
     /// @dev Mapping between euler account and deployed pool that is currently set as operator
     mapping(address eulerAccount => address operator) public eulerAccountToPool;
+
+    IPoolManager immutable poolManager;
 
     event PoolDeployed(
         address indexed asset0,
@@ -33,7 +36,9 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     error OldOperatorStillInstalled();
     error OperatorNotInstalled();
 
-    constructor(address evc) EVCUtil(evc) {}
+    constructor(IPoolManager _manager, address evc) EVCUtil(evc) {
+        poolManager = _manager;
+    }
 
     /// @notice Deploy a new EulerSwap pool with the given parameters
     /// @dev The pool address is deterministically generated using CREATE2 with a salt derived from
@@ -49,13 +54,13 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     {
         require(_msgSender() == params.eulerAccount, Unauthorized());
 
-        EulerSwap pool = new EulerSwap{salt: keccak256(abi.encode(params.eulerAccount, salt))}(params, curveParams);
+        EulerSwapHook pool = new EulerSwapHook{salt: keccak256(abi.encode(params.eulerAccount, salt))}(poolManager, params, curveParams);
 
         checkEulerAccountOperators(params.eulerAccount, address(pool));
 
         allPools.push(address(pool));
 
-        EulerSwap(pool).activate();
+        pool.activate();
 
         emit PoolDeployed(
             pool.asset0(),

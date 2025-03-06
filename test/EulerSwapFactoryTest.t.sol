@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.24;
 
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {EulerSwapTestBase, IEulerSwap, IEVC, EulerSwap} from "./EulerSwapTestBase.t.sol";
 import {EulerSwapFactory, IEulerSwapFactory} from "../src/EulerSwapFactory.sol";
 
@@ -13,7 +14,7 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
         super.setUp();
 
         vm.prank(creator);
-        eulerSwapFactory = new EulerSwapFactory(address(evc));
+        eulerSwapFactory = new EulerSwapFactory(IPoolManager(address(0)), address(evc));
     }
 
     function testDeployPool() public {
