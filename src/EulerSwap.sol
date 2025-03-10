@@ -96,9 +96,9 @@ contract EulerSwap is IEulerSwap, EVCUtil {
 
         // Validate reserves
 
-        require(verify(equilibriumReserve0, equilibriumReserve1), CurveViolation());
         require(verify(reserve0, reserve1), CurveViolation());
-        require(!verify(reserve0 > 0 ? reserve0 - 1 : 0, reserve1 > 0 ? reserve1 - 1 : 0), CurveViolation());
+        require(!verify(reserve0 > 0 ? reserve0 - 1 : 0, reserve1), CurveViolation());
+        require(!verify(reserve0, reserve1 > 0 ? reserve1 - 1 : 0), CurveViolation());
 
         emit EulerSwapCreated(asset0Addr, asset1Addr);
     }
