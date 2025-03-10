@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {ScriptUtil} from "./ScriptUtil.s.sol";
 import {IERC20, SafeERC20, EulerSwap} from "../src/EulerSwap.sol";
 import {EulerSwapPeriphery} from "../src/EulerSwapPeriphery.sol";
+
 contract SwapExactIn is ScriptUtil {
     using SafeERC20 for IERC20;
 
