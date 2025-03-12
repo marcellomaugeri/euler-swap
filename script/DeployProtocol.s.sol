@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {ScriptUtil} from "./ScriptUtil.s.sol";
 import {EulerSwapFactory} from "../src/EulerSwapFactory.sol";
 import {EulerSwapPeriphery} from "../src/EulerSwapPeriphery.sol";
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 
 /// @title Script to deploy EulerSwapFactory & EulerSwapPeriphery.
 contract DeployProtocol is ScriptUtil {
@@ -17,10 +18,11 @@ contract DeployProtocol is ScriptUtil {
         string memory json = _getJsonFile(inputScriptFileName);
 
         address evc = vm.parseJsonAddress(json, ".evc");
+        address poolManager = vm.parseJsonAddress(json, ".poolManager");
 
         vm.startBroadcast(deployerAddress);
 
-        new EulerSwapFactory(evc);
+        new EulerSwapFactory(IPoolManager(poolManager), evc);
         new EulerSwapPeriphery();
 
         vm.stopBroadcast();
