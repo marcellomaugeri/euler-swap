@@ -8,9 +8,13 @@ import {IPoolManager, PoolManagerDeployer} from "./utils/PoolManagerDeployer.sol
 import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 import {HookMiner} from "v4-periphery/src/utils/HookMiner.sol";
+import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
+import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 
 contract EulerSwapHookTest is EulerSwapTestBase {
-    EulerSwap public eulerSwap;
+    using StateLibrary for IPoolManager;
+
+    EulerSwapHook public eulerSwap;
 
     IPoolManager public poolManager;
     PoolSwapTest public swapRouter;
@@ -35,6 +39,11 @@ contract EulerSwapHookTest is EulerSwapTestBase {
         vm.prank(creator);
         eulerSwap = new EulerSwapHook{salt: salt}(poolManager, poolParams, curveParams);
         assertEq(address(eulerSwap), hookAddress);
+
+        // confirm pool was created
+        assertFalse(eulerSwap.poolKey().currency1 == CurrencyLibrary.ADDRESS_ZERO);
+        (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(eulerSwap.poolKey().toId());
+        assertNotEq(sqrtPriceX96, 0);
 
         vm.prank(holder);
         evc.setAccountOperator(holder, address(eulerSwap), true);
