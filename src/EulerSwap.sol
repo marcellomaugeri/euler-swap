@@ -50,7 +50,6 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     error Overflow();
     error BadParam();
     error AmountTooBig();
-    error DifferentEVC();
     error AssetsOutOfOrderOrEqual();
     error CurveViolation();
     error DepositFailure(bytes reason);
@@ -70,7 +69,6 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         require(curveParams.priceX > 0 && curveParams.priceY > 0, BadParam());
         require(curveParams.priceX <= 1e36 && curveParams.priceY <= 1e36, BadParam());
         require(curveParams.concentrationX <= 1e18 && curveParams.concentrationY <= 1e18, BadParam());
-        require(IEVault(params.vault0).EVC() == IEVault(params.vault1).EVC(), DifferentEVC());
 
         address asset0Addr = IEVault(params.vault0).asset();
         address asset1Addr = IEVault(params.vault1).asset();
