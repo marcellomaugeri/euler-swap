@@ -14,17 +14,15 @@ import {Math} from "openzeppelin-contracts/utils/math/Math.sol";
 contract EulerSwap is IEulerSwap, EVCUtil {
     using SafeERC20 for IERC20;
 
-    bytes32 public constant curve = keccak256("EulerSwap v1");
+    bytes32 public constant curve = bytes32("EulerSwap v1");
 
     address public immutable vault0;
     address public immutable vault1;
     address public immutable asset0;
     address public immutable asset1;
     address public immutable eulerAccount;
-    uint112 public immutable debtLimit0;
-    uint112 public immutable debtLimit1;
-    uint112 public immutable initialReserve0;
-    uint112 public immutable initialReserve1;
+    uint112 public immutable equilibriumReserve0;
+    uint112 public immutable equilibriumReserve1;
     uint256 public immutable feeMultiplier;
 
     uint256 public immutable priceX;
@@ -51,6 +49,7 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     error Locked();
     error Overflow();
     error BadParam();
+    error AmountTooBig();
     error DifferentEVC();
     error AssetsOutOfOrderOrEqual();
     error CurveViolation();
@@ -68,7 +67,6 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         // EulerSwap params
 
         require(params.fee < 1e18, BadParam());
-        require(params.debtLimit0 <= type(uint112).max && params.debtLimit1 <= type(uint112).max, BadParam());
         require(curveParams.priceX > 0 && curveParams.priceY > 0, BadParam());
         require(curveParams.priceX <= 1e36 && curveParams.priceY <= 1e36, BadParam());
         require(curveParams.concentrationX <= 1e18 && curveParams.concentrationY <= 1e18, BadParam());
@@ -83,10 +81,10 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         asset0 = asset0Addr;
         asset1 = asset1Addr;
         eulerAccount = params.eulerAccount;
-        debtLimit0 = params.debtLimit0;
-        debtLimit1 = params.debtLimit1;
-        initialReserve0 = reserve0 = offsetReserve(params.debtLimit0, params.vault0);
-        initialReserve1 = reserve1 = offsetReserve(params.debtLimit1, params.vault1);
+        equilibriumReserve0 = params.equilibriumReserve0;
+        equilibriumReserve1 = params.equilibriumReserve1;
+        reserve0 = params.currReserve0;
+        reserve1 = params.currReserve1;
         feeMultiplier = 1e18 - params.fee;
 
         // Curve params
@@ -95,6 +93,12 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         priceY = curveParams.priceY;
         concentrationX = curveParams.concentrationX;
         concentrationY = curveParams.concentrationY;
+
+        // Validate reserves
+
+        require(verify(equilibriumReserve0, equilibriumReserve1), CurveViolation());
+        require(verify(reserve0, reserve1), CurveViolation());
+        require(!verify(reserve0 > 0 ? reserve0 - 1 : 0, reserve1 > 0 ? reserve1 - 1 : 0), CurveViolation());
 
         emit EulerSwapCreated(asset0Addr, asset1Addr);
     }
@@ -105,6 +109,8 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         callThroughEVC
         nonReentrant
     {
+        require(amount0Out <= type(uint112).max && amount1Out <= type(uint112).max, AmountTooBig());
+
         // Optimistically send tokens
 
         if (amount0Out > 0) withdrawAssets(vault0, amount0Out, to);
@@ -128,7 +134,6 @@ contract EulerSwap is IEulerSwap, EVCUtil {
             uint256 newReserve0 = reserve0 + amount0In - amount0Out;
             uint256 newReserve1 = reserve1 + amount1In - amount1Out;
 
-            require(newReserve0 <= type(uint112).max && newReserve1 <= type(uint112).max, Overflow());
             require(verify(newReserve0, newReserve1), CurveViolation());
 
             reserve0 = uint112(newReserve0);
@@ -147,12 +152,12 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         }
     }
 
+    /// @inheritdoc IEulerSwap
     function getReserves() external view returns (uint112, uint112, uint32) {
         return (reserve0, reserve1, status);
     }
 
-    /// @notice Returns the address of the Ethereum Vault Connector (EVC) used by this contract.
-    /// @return The address of the EVC contract.
+    /// @inheritdoc IEulerSwap
     function EVC() external view override(EVCUtil, IEulerSwap) returns (address) {
         return address(evc);
     }
@@ -162,21 +167,8 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         require(status != 2, Locked());
         status = 1;
 
-        address permit2 = IEVault(vault0).permit2Address();
-        if (permit2 == address(0)) {
-            IERC20(asset0).forceApprove(vault0, type(uint256).max);
-        } else {
-            IERC20(asset0).forceApprove(permit2, type(uint256).max);
-            IAllowanceTransfer(permit2).approve(asset0, vault0, type(uint160).max, type(uint48).max);
-        }
-
-        permit2 = IEVault(vault1).permit2Address();
-        if (permit2 == address(0)) {
-            IERC20(asset1).forceApprove(vault1, type(uint256).max);
-        } else {
-            IERC20(asset1).forceApprove(permit2, type(uint256).max);
-            IAllowanceTransfer(permit2).approve(asset1, vault1, type(uint160).max, type(uint48).max);
-        }
+        approveVault(asset0, vault0);
+        approveVault(asset1, vault1);
 
         IEVC(evc).enableCollateral(eulerAccount, vault0);
         IEVC(evc).enableCollateral(eulerAccount, vault1);
@@ -184,15 +176,26 @@ contract EulerSwap is IEulerSwap, EVCUtil {
 
     /// @inheritdoc IEulerSwap
     function verify(uint256 newReserve0, uint256 newReserve1) public view returns (bool) {
-        if (newReserve0 >= initialReserve0) {
-            if (newReserve1 >= initialReserve1) return true;
-            return newReserve0 >= f(newReserve1, priceY, priceX, initialReserve1, initialReserve0, concentrationY);
+        if (newReserve0 > type(uint112).max || newReserve1 > type(uint112).max) return false;
+
+        if (newReserve0 >= equilibriumReserve0) {
+            if (newReserve1 >= equilibriumReserve1) return true;
+            return
+                newReserve0 >= f(newReserve1, priceY, priceX, equilibriumReserve1, equilibriumReserve0, concentrationY);
         } else {
-            if (newReserve1 < initialReserve1) return false;
-            return newReserve1 >= f(newReserve0, priceX, priceY, initialReserve0, initialReserve1, concentrationX);
+            if (newReserve1 < equilibriumReserve1) return false;
+            return
+                newReserve1 >= f(newReserve0, priceX, priceY, equilibriumReserve0, equilibriumReserve1, concentrationX);
         }
     }
 
+    /// @notice Withdraws assets from a vault, first using available balance and then borrowing if needed
+    /// @param vault The address of the vault to withdraw from
+    /// @param amount The total amount of assets to withdraw
+    /// @param to The address that will receive the withdrawn assets
+    /// @dev This function first checks if there's an existing balance in the vault.
+    /// @dev If there is, it withdraws the minimum of the requested amount and available balance.
+    /// @dev If more assets are needed after withdrawal, it enables the controller and borrows the remaining amount.
     function withdrawAssets(address vault, uint256 amount, address to) internal {
         uint256 balance = myBalance(vault);
 
@@ -208,6 +211,14 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         }
     }
 
+    /// @notice Deposits assets into a vault and automatically repays any outstanding debt
+    /// @param vault The address of the vault to deposit into
+    /// @param amount The amount of assets to deposit
+    /// @return The amount of assets successfully deposited
+    /// @dev This function attempts to deposit assets into the specified vault.
+    /// @dev If the deposit fails with E_ZeroShares error, it safely returns 0 (this happens with very small amounts).
+    /// @dev After successful deposit, if the user has any outstanding controller-enabled debt, it attempts to repay it.
+    /// @dev If all debt is repaid, the controller is automatically disabled to reduce gas costs in future operations.
     function depositAssets(address vault, uint256 amount) internal returns (uint256) {
         try IEVault(vault).deposit(amount, eulerAccount) {}
         catch (bytes memory reason) {
@@ -228,27 +239,32 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         return amount;
     }
 
+    /// @notice Approves tokens for a given vault, supporting both standard approvals and permit2
+    /// @param asset The address of the token to approve
+    /// @param vault The address of the vault to approve the token for
+    function approveVault(address asset, address vault) internal {
+        address permit2 = IEVault(vault).permit2Address();
+        if (permit2 == address(0)) {
+            IERC20(asset).forceApprove(vault, type(uint256).max);
+        } else {
+            IERC20(asset).forceApprove(permit2, type(uint256).max);
+            IAllowanceTransfer(permit2).approve(asset, vault, type(uint160).max, type(uint48).max);
+        }
+    }
+
+    /// @notice Retrieves the current debt amount for the pool's eulerAccount
+    /// @param vault The address of the vault to check for debt
+    /// @return The amount of debt that the Euler account has in the specified vault
     function myDebt(address vault) internal view returns (uint256) {
         return IEVault(vault).debtOf(eulerAccount);
     }
 
+    /// @notice Calculates the asset balance of the pool's eulerAccount
+    /// @param vault The address of the vault to check for balance
+    /// @return The amount of assets that the Euler account has deposited in the specified vault
     function myBalance(address vault) internal view returns (uint256) {
         uint256 shares = IEVault(vault).balanceOf(eulerAccount);
         return shares == 0 ? 0 : IEVault(vault).convertToAssets(shares);
-    }
-
-    function offsetReserve(uint112 reserve, address vault) internal view returns (uint112) {
-        uint256 offset;
-        uint256 debt = myDebt(vault);
-
-        if (debt != 0) {
-            offset = reserve > debt ? reserve - debt : 0;
-        } else {
-            offset = reserve + myBalance(vault);
-        }
-
-        require(offset <= type(uint112).max, Overflow());
-        return uint112(offset);
     }
 
     /// @dev EulerSwap curve definition

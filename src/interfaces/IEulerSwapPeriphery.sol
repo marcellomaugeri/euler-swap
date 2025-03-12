@@ -21,4 +21,7 @@ interface IEulerSwapPeriphery {
         external
         view
         returns (uint256);
+
+    /// @notice Max amount the pool can buy of tokenIn and sell of tokenOut
+    function getLimits(address eulerSwap, address tokenIn, address tokenOut) external view returns (uint256, uint256);
 }
