@@ -154,6 +154,7 @@ contract EulerSwap is IEulerSwap, EVCUtil {
 
     /// @inheritdoc IEulerSwap
     function getReserves() external view returns (uint112, uint112, uint32) {
+        require(status != 2, Locked());
         return (reserve0, reserve1, status);
     }
 
