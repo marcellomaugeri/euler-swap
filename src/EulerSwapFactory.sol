@@ -92,7 +92,9 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
                             address(this),
                             keccak256(abi.encode(address(poolParams.eulerAccount), salt)),
                             keccak256(
-                                abi.encodePacked(type(EulerSwap).creationCode, abi.encode(poolParams, curveParams))
+                                abi.encodePacked(
+                                    type(EulerSwapHook).creationCode, abi.encode(poolManager, poolParams, curveParams)
+                                )
                             )
                         )
                     )
