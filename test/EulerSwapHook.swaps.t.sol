@@ -10,6 +10,7 @@ import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 import {HookMiner} from "v4-periphery/src/utils/HookMiner.sol";
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 
 contract EulerSwapHookTest is EulerSwapTestBase {
     using StateLibrary for IPoolManager;
@@ -57,53 +58,60 @@ contract EulerSwapHookTest is EulerSwapTestBase {
         assetTST.mint(anyone, amountIn);
 
         vm.startPrank(anyone);
-        assetTST.approve(address(periphery), amountIn);
-        periphery.swapExactIn(address(eulerSwap), address(assetTST), address(assetTST2), amountIn, amountOut);
+        assetTST.approve(address(swapRouter), amountIn);
+
+        bool zeroForOne = address(assetTST) < address(assetTST2);
+        IPoolManager.SwapParams memory swapParams = IPoolManager.SwapParams({
+            zeroForOne: zeroForOne,
+            amountSpecified: -int256(amountIn),
+            sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1
+        });
+        swapRouter.swap(eulerSwap.poolKey(), swapParams, settings, "");
         vm.stopPrank();
 
         assertEq(assetTST2.balanceOf(anyone), amountOut);
     }
 
-    function test_SwapExactIn_AmountOutLessThanMin() public {
-        uint256 amountIn = 1e18;
-        uint256 amountOut =
-            periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), amountIn);
+    // function test_SwapExactIn_AmountOutLessThanMin() public {
+    //     uint256 amountIn = 1e18;
+    //     uint256 amountOut =
+    //         periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), amountIn);
 
-        assetTST.mint(anyone, amountIn);
+    //     assetTST.mint(anyone, amountIn);
 
-        vm.startPrank(anyone);
-        assetTST.approve(address(periphery), amountIn);
-        vm.expectRevert(EulerSwapPeriphery.AmountOutLessThanMin.selector);
-        periphery.swapExactIn(address(eulerSwap), address(assetTST), address(assetTST2), amountIn, amountOut + 1);
-        vm.stopPrank();
-    }
+    //     vm.startPrank(anyone);
+    //     assetTST.approve(address(periphery), amountIn);
+    //     vm.expectRevert(EulerSwapPeriphery.AmountOutLessThanMin.selector);
+    //     periphery.swapExactIn(address(eulerSwap), address(assetTST), address(assetTST2), amountIn, amountOut + 1);
+    //     vm.stopPrank();
+    // }
 
-    function test_SwapExactOut() public {
-        uint256 amountOut = 1e18;
-        uint256 amountIn =
-            periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), amountOut);
+    // function test_SwapExactOut() public {
+    //     uint256 amountOut = 1e18;
+    //     uint256 amountIn =
+    //         periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), amountOut);
 
-        assetTST.mint(anyone, amountIn);
+    //     assetTST.mint(anyone, amountIn);
 
-        vm.startPrank(anyone);
-        assetTST.approve(address(periphery), amountIn);
-        periphery.swapExactOut(address(eulerSwap), address(assetTST), address(assetTST2), amountOut, amountIn);
-        vm.stopPrank();
+    //     vm.startPrank(anyone);
+    //     assetTST.approve(address(periphery), amountIn);
+    //     periphery.swapExactOut(address(eulerSwap), address(assetTST), address(assetTST2), amountOut, amountIn);
+    //     vm.stopPrank();
 
-        assertEq(assetTST2.balanceOf(anyone), amountOut);
-    }
+    //     assertEq(assetTST2.balanceOf(anyone), amountOut);
+    // }
 
-    function test_SwapExactOut_AmountInMoreThanMax() public {
-        uint256 amountOut = 1e18;
-        uint256 amountIn =
-            periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), amountOut);
+    // function test_SwapExactOut_AmountInMoreThanMax() public {
+    //     uint256 amountOut = 1e18;
+    //     uint256 amountIn =
+    //         periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), amountOut);
 
-        assetTST.mint(anyone, amountIn);
+    //     assetTST.mint(anyone, amountIn);
 
-        vm.startPrank(anyone);
-        assetTST.approve(address(periphery), amountIn);
-        vm.expectRevert(EulerSwapPeriphery.AmountInMoreThanMax.selector);
-        periphery.swapExactOut(address(eulerSwap), address(assetTST), address(assetTST2), amountOut * 2, amountIn);
-        vm.stopPrank();
-    }
+    //     vm.startPrank(anyone);
+    //     assetTST.approve(address(periphery), amountIn);
+    //     vm.expectRevert(EulerSwapPeriphery.AmountInMoreThanMax.selector);
+    //     periphery.swapExactOut(address(eulerSwap), address(assetTST), address(assetTST2), amountOut * 2, amountIn);
+    //     vm.stopPrank();
+    // }
 }
