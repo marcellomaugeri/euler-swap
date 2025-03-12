@@ -221,23 +221,34 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     /// @dev After successful deposit, if the user has any outstanding controller-enabled debt, it attempts to repay it.
     /// @dev If all debt is repaid, the controller is automatically disabled to reduce gas costs in future operations.
     function depositAssets(address vault, uint256 amount) internal returns (uint256) {
-        try IEVault(vault).deposit(amount, eulerAccount) {}
-        catch (bytes memory reason) {
-            require(bytes4(reason) == EVKErrors.E_ZeroShares.selector, DepositFailure(reason));
-            return 0;
-        }
+        uint256 debt = myDebt(vault);
+        uint256 deposited;
 
-        if (IEVC(evc).isControllerEnabled(eulerAccount, vault)) {
-            IEVC(evc).call(
-                vault, eulerAccount, 0, abi.encodeCall(IBorrowing.repayWithShares, (type(uint256).max, eulerAccount))
-            );
+        if (debt > 0) {
+            uint256 repayAmount = amount > debt ? debt : amount;
 
-            if (myDebt(vault) == 0) {
+            IEVault(vault).repay(repayAmount, eulerAccount);
+
+            amount -= repayAmount;
+            debt -= repayAmount;
+            deposited += repayAmount;
+
+            if (debt == 0) {
                 IEVC(evc).call(vault, eulerAccount, 0, abi.encodeCall(IRiskManager.disableController, ()));
             }
         }
 
-        return amount;
+        if (amount > 0) {
+            try IEVault(vault).deposit(amount, eulerAccount) {}
+            catch (bytes memory reason) {
+                require(bytes4(reason) == EVKErrors.E_ZeroShares.selector, DepositFailure(reason));
+                return deposited;
+            }
+
+            deposited += amount;
+        }
+
+        return deposited;
     }
 
     /// @notice Approves tokens for a given vault, supporting both standard approvals and permit2
