@@ -8,8 +8,6 @@ import {EulerSwapHook} from "../src/EulerSwapHook.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {IPoolManager, PoolManagerDeployer} from "./utils/PoolManagerDeployer.sol";
 import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
-import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
-import {HookMiner} from "v4-periphery/src/utils/HookMiner.sol";
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
@@ -27,29 +25,15 @@ contract EulerSwapHookTest is EulerSwapTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        // TODO: move upstream to EulerSwapTestBase?
         poolManager = PoolManagerDeployer.deploy(address(this));
         swapRouter = new PoolSwapTest(poolManager);
 
-        // eulerSwap = createEulerSwap(60e18, 60e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
-        IEulerSwap.Params memory poolParams = getEulerSwapParams(60e18, 60e18, 0);
-        IEulerSwap.CurveParams memory curveParams =
-            IEulerSwap.CurveParams({priceX: 1e18, priceY: 1e18, concentrationX: 0.4e18, concentrationY: 0.85e18});
-        bytes memory constructorArgs = abi.encode(poolManager, poolParams, curveParams);
-        uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG);
-        (address hookAddress, bytes32 salt) =
-            HookMiner.find(creator, flags, type(EulerSwapHook).creationCode, constructorArgs);
-        vm.prank(creator);
-        eulerSwap = new EulerSwapHook{salt: salt}(poolManager, poolParams, curveParams);
-        assertEq(address(eulerSwap), hookAddress);
+        eulerSwap = createEulerSwapHook(poolManager, 60e18, 60e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
 
         // confirm pool was created
         assertFalse(eulerSwap.poolKey().currency1 == CurrencyLibrary.ADDRESS_ZERO);
         (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(eulerSwap.poolKey().toId());
         assertNotEq(sqrtPriceX96, 0);
-
-        vm.prank(holder);
-        evc.setAccountOperator(holder, address(eulerSwap), true);
     }
 
     function test_SwapExactIn() public {
