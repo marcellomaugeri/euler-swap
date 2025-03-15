@@ -50,6 +50,7 @@ contract EulerSwapHookTest is EulerSwapTestBase {
         _swap(eulerSwap.poolKey(), zeroForOne, true, amountIn);
         vm.stopPrank();
 
+        assertEq(assetTST.balanceOf(anyone), 0);
         assertEq(assetTST2.balanceOf(anyone), amountOut);
     }
 
@@ -66,6 +67,7 @@ contract EulerSwapHookTest is EulerSwapTestBase {
         _swap(eulerSwap.poolKey(), zeroForOne, false, amountOut);
         vm.stopPrank();
 
+        assertEq(assetTST.balanceOf(anyone), 0);
         assertEq(assetTST2.balanceOf(anyone), amountOut);
     }
 
