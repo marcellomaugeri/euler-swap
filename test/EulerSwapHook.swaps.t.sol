@@ -69,20 +69,6 @@ contract EulerSwapHookTest is EulerSwapTestBase {
         assertEq(assetTST2.balanceOf(anyone), amountOut);
     }
 
-    // function test_SwapExactIn_AmountOutLessThanMin() public {
-    //     uint256 amountIn = 1e18;
-    //     uint256 amountOut =
-    //         periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), amountIn);
-
-    //     assetTST.mint(anyone, amountIn);
-
-    //     vm.startPrank(anyone);
-    //     assetTST.approve(address(periphery), amountIn);
-    //     vm.expectRevert(EulerSwapPeriphery.AmountOutLessThanMin.selector);
-    //     periphery.swapExactIn(address(eulerSwap), address(assetTST), address(assetTST2), amountIn, amountOut + 1);
-    //     vm.stopPrank();
-    // }
-
     function test_SwapExactOut() public {
         uint256 amountOut = 1e18;
         uint256 amountIn =
@@ -98,20 +84,6 @@ contract EulerSwapHookTest is EulerSwapTestBase {
 
         assertEq(assetTST2.balanceOf(anyone), amountOut);
     }
-
-    // function test_SwapExactOut_AmountInMoreThanMax() public {
-    //     uint256 amountOut = 1e18;
-    //     uint256 amountIn =
-    //         periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), amountOut);
-
-    //     assetTST.mint(anyone, amountIn);
-
-    //     vm.startPrank(anyone);
-    //     assetTST.approve(address(periphery), amountIn);
-    //     vm.expectRevert(EulerSwapPeriphery.AmountInMoreThanMax.selector);
-    //     periphery.swapExactOut(address(eulerSwap), address(assetTST), address(assetTST2), amountOut * 2, amountIn);
-    //     vm.stopPrank();
-    // }
 
     function _swap(PoolKey memory key, bool zeroForOne, bool exactInput, uint256 amount) internal {
         IPoolManager.SwapParams memory swapParams = IPoolManager.SwapParams({
