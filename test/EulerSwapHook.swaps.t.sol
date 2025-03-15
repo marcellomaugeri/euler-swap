@@ -2,8 +2,10 @@
 pragma solidity ^0.8.24;
 
 import {EulerSwapTestBase, EulerSwap, EulerSwapPeriphery, IEulerSwap} from "./EulerSwapTestBase.t.sol";
+import {TestERC20} from "evk-test/unit/evault/EVaultTestBase.t.sol";
 import {EulerSwapHook} from "../src/EulerSwapHook.sol";
 
+import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {IPoolManager, PoolManagerDeployer} from "./utils/PoolManagerDeployer.sol";
 import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
@@ -61,12 +63,7 @@ contract EulerSwapHookTest is EulerSwapTestBase {
         assetTST.approve(address(swapRouter), amountIn);
 
         bool zeroForOne = address(assetTST) < address(assetTST2);
-        IPoolManager.SwapParams memory swapParams = IPoolManager.SwapParams({
-            zeroForOne: zeroForOne,
-            amountSpecified: -int256(amountIn),
-            sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1
-        });
-        swapRouter.swap(eulerSwap.poolKey(), swapParams, settings, "");
+        _swap(eulerSwap.poolKey(), zeroForOne, true, amountIn);
         vm.stopPrank();
 
         assertEq(assetTST2.balanceOf(anyone), amountOut);
@@ -86,20 +83,21 @@ contract EulerSwapHookTest is EulerSwapTestBase {
     //     vm.stopPrank();
     // }
 
-    // function test_SwapExactOut() public {
-    //     uint256 amountOut = 1e18;
-    //     uint256 amountIn =
-    //         periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), amountOut);
+    function test_SwapExactOut() public {
+        uint256 amountOut = 1e18;
+        uint256 amountIn =
+            periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), amountOut);
 
-    //     assetTST.mint(anyone, amountIn);
+        assetTST.mint(anyone, amountIn);
 
-    //     vm.startPrank(anyone);
-    //     assetTST.approve(address(periphery), amountIn);
-    //     periphery.swapExactOut(address(eulerSwap), address(assetTST), address(assetTST2), amountOut, amountIn);
-    //     vm.stopPrank();
+        vm.startPrank(anyone);
+        assetTST.approve(address(periphery), amountIn);
+        bool zeroForOne = address(assetTST) < address(assetTST2);
+        _swap(eulerSwap.poolKey(), zeroForOne, false, amountOut);
+        vm.stopPrank();
 
-    //     assertEq(assetTST2.balanceOf(anyone), amountOut);
-    // }
+        assertEq(assetTST2.balanceOf(anyone), amountOut);
+    }
 
     // function test_SwapExactOut_AmountInMoreThanMax() public {
     //     uint256 amountOut = 1e18;
@@ -114,4 +112,13 @@ contract EulerSwapHookTest is EulerSwapTestBase {
     //     periphery.swapExactOut(address(eulerSwap), address(assetTST), address(assetTST2), amountOut * 2, amountIn);
     //     vm.stopPrank();
     // }
+
+    function _swap(PoolKey memory key, bool zeroForOne, bool exactInput, uint256 amount) internal {
+        IPoolManager.SwapParams memory swapParams = IPoolManager.SwapParams({
+            zeroForOne: zeroForOne,
+            amountSpecified: exactInput ? -int256(amount) : int256(amount),
+            sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1
+        });
+        swapRouter.swap(key, swapParams, settings, "");
+    }
 }
