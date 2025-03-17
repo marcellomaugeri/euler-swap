@@ -16,7 +16,7 @@ import {EulerSwap, IEulerSwap, IEVault} from "./EulerSwap.sol";
 contract EulerSwapHook is EulerSwap, BaseHook {
     using SafeCast for uint256;
 
-    PoolKey poolKey;
+    PoolKey internal _poolKey;
 
     constructor(IPoolManager _manager, Params memory params, CurveParams memory curveParams)
         EulerSwap(params, curveParams)
@@ -28,7 +28,7 @@ contract EulerSwapHook is EulerSwap, BaseHook {
         // convert fee in WAD to pips. 0.003e18 / 1e12 = 3000 = 0.30%
         uint24 fee = uint24(params.fee / 1e12);
 
-        poolKey = PoolKey({
+        _poolKey = PoolKey({
             currency0: Currency.wrap(asset0Addr),
             currency1: Currency.wrap(asset1Addr),
             fee: fee,
@@ -37,7 +37,12 @@ contract EulerSwapHook is EulerSwap, BaseHook {
         });
 
         // create the pool on v4, using starting price as sqrtPrice(1/1) * Q96
-        poolManager.initialize(poolKey, 79228162514264337593543950336);
+        poolManager.initialize(_poolKey, 79228162514264337593543950336);
+    }
+
+    /// @dev Helper function to return the poolKey as its struct type
+    function poolKey() external view returns (PoolKey memory) {
+        return _poolKey;
     }
 
     function _beforeSwap(address, PoolKey calldata key, IPoolManager.SwapParams calldata params, bytes calldata)
