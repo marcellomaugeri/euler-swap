@@ -29,11 +29,16 @@ contract EulerSwapHookTest is EulerSwapTestBase {
         swapRouter = new PoolSwapTest(poolManager);
 
         eulerSwap = createEulerSwapHook(poolManager, 60e18, 60e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
+        eulerSwap.activate();
 
         // confirm pool was created
         assertFalse(eulerSwap.poolKey().currency1 == CurrencyLibrary.ADDRESS_ZERO);
         (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(eulerSwap.poolKey().toId());
         assertNotEq(sqrtPriceX96, 0);
+
+        // Seed the poolManager with balance so that transient withdrawing before depositing succeeds
+        assetTST.mint(address(poolManager), 1000e18);
+        assetTST2.mint(address(poolManager), 1000e18);
     }
 
     function test_SwapExactIn() public {
@@ -62,7 +67,7 @@ contract EulerSwapHookTest is EulerSwapTestBase {
         assetTST.mint(anyone, amountIn);
 
         vm.startPrank(anyone);
-        assetTST.approve(address(periphery), amountIn);
+        assetTST.approve(address(swapRouter), amountIn);
         bool zeroForOne = address(assetTST) < address(assetTST2);
         _swap(eulerSwap.poolKey(), zeroForOne, false, amountOut);
         vm.stopPrank();
