@@ -106,23 +106,11 @@ contract EulerSwapHook is EulerSwap, BaseHook {
     function getHookPermissions() public pure override returns (Hooks.Permissions memory) {}
     function validateHookAddress(BaseHook) internal pure override {}
 
-
-
-
-
-
     error SwapLimitExceeded();
     error OperatorNotInstalled();
 
-    function computeQuote(bool asset0IsInput, uint256 amount, bool exactIn)
-        internal
-        view
-        returns (uint256)
-    {
-        require(
-            evc.isAccountOperatorAuthorized(eulerAccount, address(this)),
-            OperatorNotInstalled()
-        );
+    function computeQuote(bool asset0IsInput, uint256 amount, bool exactIn) internal view returns (uint256) {
+        require(evc.isAccountOperatorAuthorized(eulerAccount, address(this)), OperatorNotInstalled());
         require(amount <= type(uint112).max, SwapLimitExceeded());
 
         // exactIn: decrease received amountIn, rounding down
@@ -146,11 +134,7 @@ contract EulerSwapHook is EulerSwap, BaseHook {
         return quote;
     }
 
-    function binarySearch(
-        uint256 amount,
-        bool exactIn,
-        bool asset0IsInput
-    ) internal view returns (uint256 output) {
+    function binarySearch(uint256 amount, bool exactIn, bool asset0IsInput) internal view returns (uint256 output) {
         int256 dx;
         int256 dy;
 
