@@ -55,11 +55,16 @@ contract EulerSwapHook is EulerSwap, BaseHook {
             params.zeroForOne ? (key.currency0, key.currency1) : (key.currency1, key.currency0);
         bool isExactInput = params.amountSpecified < 0;
 
-        // TODO: compute the open side of the trade, using computeQuote() ?
         uint256 amountIn;
         uint256 amountOut;
-        // uint256 amountIn = isExactInput ? uint256(-params.amountSpecified) : computeQuote(..., false);
-        // uint256 amountOut = isExactInput ? computeQuote(..., true) : uint256(params.amountSpecified);
+
+        if (isExactInput) {
+            amountIn = uint256(-params.amountSpecified);
+            amountOut = computeQuote(params.zeroForOne, uint256(-params.amountSpecified), true);
+        } else {
+            amountIn = computeQuote(params.zeroForOne, uint256(params.amountSpecified), false);
+            amountOut = uint256(params.amountSpecified);
+        }
 
         // take the input token, from the PoolManager to the Euler vault
         // the debt will be paid by the swapper via the swap router
@@ -100,4 +105,124 @@ contract EulerSwapHook is EulerSwap, BaseHook {
     // TODO: fix salt mining & verification for the hook
     function getHookPermissions() public pure override returns (Hooks.Permissions memory) {}
     function validateHookAddress(BaseHook) internal pure override {}
+
+    error SwapLimitExceeded();
+    error OperatorNotInstalled();
+
+    function computeQuote(bool asset0IsInput, uint256 amount, bool exactIn) internal view returns (uint256) {
+        require(evc.isAccountOperatorAuthorized(eulerAccount, address(this)), OperatorNotInstalled());
+        require(amount <= type(uint112).max, SwapLimitExceeded());
+
+        // exactIn: decrease received amountIn, rounding down
+        if (exactIn) amount = amount * feeMultiplier / 1e18;
+
+        (uint256 inLimit, uint256 outLimit) = calcLimits(asset0IsInput);
+
+        uint256 quote = binarySearch(amount, exactIn, asset0IsInput);
+
+        if (exactIn) {
+            // if `exactIn`, `quote` is the amount of assets to buy from the AMM
+            require(amount <= inLimit && quote <= outLimit, SwapLimitExceeded());
+        } else {
+            // if `!exactIn`, `amount` is the amount of assets to buy from the AMM
+            require(amount <= outLimit && quote <= inLimit, SwapLimitExceeded());
+        }
+
+        // exactOut: increase required quote(amountIn), rounding up
+        if (!exactIn) quote = (quote * 1e18 + (feeMultiplier - 1)) / feeMultiplier;
+
+        return quote;
+    }
+
+    function binarySearch(uint256 amount, bool exactIn, bool asset0IsInput) internal view returns (uint256 output) {
+        int256 dx;
+        int256 dy;
+
+        if (exactIn) {
+            if (asset0IsInput) dx = int256(amount);
+            else dy = int256(amount);
+        } else {
+            if (asset0IsInput) dy = -int256(amount);
+            else dx = -int256(amount);
+        }
+
+        unchecked {
+            int256 reserve0New = int256(uint256(reserve0)) + dx;
+            int256 reserve1New = int256(uint256(reserve1)) + dy;
+            require(reserve0New > 0 && reserve1New > 0, SwapLimitExceeded());
+
+            uint256 low;
+            uint256 high = type(uint112).max;
+
+            while (low < high) {
+                uint256 mid = (low + high) / 2;
+                require(mid > 0, SwapLimitExceeded());
+                (uint256 a, uint256 b) = dy == 0 ? (uint256(reserve0New), mid) : (mid, uint256(reserve1New));
+                if (verify(a, b)) {
+                    high = mid;
+                } else {
+                    low = mid + 1;
+                }
+            }
+
+            require(high < type(uint112).max, SwapLimitExceeded()); // at least one point verified
+
+            if (dx != 0) dy = int256(low) - reserve1New;
+            else dx = int256(low) - reserve0New;
+        }
+
+        if (exactIn) {
+            if (asset0IsInput) output = uint256(-dy);
+            else output = uint256(-dx);
+        } else {
+            if (asset0IsInput) output = dx >= 0 ? uint256(dx) : 0;
+            else output = dy >= 0 ? uint256(dy) : 0;
+        }
+    }
+
+    function calcLimits(bool asset0IsInput) internal view returns (uint256, uint256) {
+        uint256 inLimit = type(uint112).max;
+        uint256 outLimit = type(uint112).max;
+
+        (IEVault vault0, IEVault vault1) = (IEVault(vault0), IEVault(vault1));
+        // Supply caps on input
+        {
+            IEVault vault = (asset0IsInput ? vault0 : vault1);
+            uint256 maxDeposit = vault.debtOf(eulerAccount) + vault.maxDeposit(eulerAccount);
+            if (maxDeposit < inLimit) inLimit = maxDeposit;
+        }
+
+        // Remaining reserves of output
+        {
+            uint112 reserveLimit = asset0IsInput ? reserve1 : reserve0;
+            if (reserveLimit < outLimit) outLimit = reserveLimit;
+        }
+
+        // Remaining cash and borrow caps in output
+        {
+            IEVault vault = (asset0IsInput ? vault1 : vault0);
+
+            uint256 cash = vault.cash();
+            if (cash < outLimit) outLimit = cash;
+
+            (, uint16 borrowCap) = vault.caps();
+            uint256 maxWithdraw = decodeCap(uint256(borrowCap));
+            maxWithdraw = vault.totalBorrows() > maxWithdraw ? 0 : maxWithdraw - vault.totalBorrows();
+            if (maxWithdraw > cash) maxWithdraw = cash;
+            maxWithdraw += vault.convertToAssets(vault.balanceOf(eulerAccount));
+            if (maxWithdraw < outLimit) outLimit = maxWithdraw;
+        }
+
+        return (inLimit, outLimit);
+    }
+
+    function decodeCap(uint256 amountCap) internal pure returns (uint256) {
+        if (amountCap == 0) return type(uint256).max;
+
+        unchecked {
+            // Cannot overflow because this is less than 2**256:
+            //   10**(2**6 - 1) * (2**10 - 1) = 1.023e+66
+            return 10 ** (amountCap & 63) * (amountCap >> 6) / 100;
+        }
+    }
 }
