@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.27;
 
+import {console} from "forge-std/Test.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {BaseHook} from "v4-periphery/src/utils/BaseHook.sol";
 import {PoolKey} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
@@ -55,11 +56,19 @@ contract EulerSwapHook is EulerSwap, BaseHook {
             params.zeroForOne ? (key.currency0, key.currency1) : (key.currency1, key.currency0);
         bool isExactInput = params.amountSpecified < 0;
 
-        // TODO: compute the open side of the trade, using computeQuote() ?
         uint256 amountIn;
         uint256 amountOut;
-        // uint256 amountIn = isExactInput ? uint256(-params.amountSpecified) : computeQuote(..., false);
-        // uint256 amountOut = isExactInput ? computeQuote(..., true) : uint256(params.amountSpecified);
+
+        if (isExactInput) {
+            amountIn = uint256(-params.amountSpecified);
+            amountOut = computeQuote(params.zeroForOne, uint256(-params.amountSpecified), true);
+        } else {
+            amountIn = computeQuote(params.zeroForOne, uint256(params.amountSpecified), false);
+            amountOut = uint256(params.amountSpecified);
+        }
+
+        console.log("amountIn", amountIn);
+        console.log("amountOut", amountOut);
 
         // take the input token, from the PoolManager to the Euler vault
         // the debt will be paid by the swapper via the swap router
@@ -106,42 +115,26 @@ contract EulerSwapHook is EulerSwap, BaseHook {
 
 
 
+    error SwapLimitExceeded();
+    error OperatorNotInstalled();
 
-
-
-    /// @dev Computes the quote for a swap by applying fees and validating state conditions
-    /// @param eulerSwap The EulerSwap contract to quote from
-    /// @param tokenIn The input token address
-    /// @param tokenOut The output token address
-    /// @param amount The amount to quote (input amount if exactIn=true, output amount if exactIn=false)
-    /// @param exactIn True if quoting for exact input amount, false if quoting for exact output amount
-    /// @return The quoted amount (output amount if exactIn=true, input amount if exactIn=false)
-    /// @dev Validates:
-    ///      - EulerSwap operator is installed
-    ///      - Token pair is supported
-    ///      - Sufficient reserves exist
-    ///      - Sufficient cash is available
-    function computeQuote(IEulerSwap eulerSwap, address tokenIn, address tokenOut, uint256 amount, bool exactIn)
+    function computeQuote(bool asset0IsInput, uint256 amount, bool exactIn)
         internal
         view
         returns (uint256)
     {
         require(
-            IEVC(eulerSwap.EVC()).isAccountOperatorAuthorized(eulerSwap.eulerAccount(), address(eulerSwap)),
+            evc.isAccountOperatorAuthorized(eulerAccount, address(this)),
             OperatorNotInstalled()
         );
         require(amount <= type(uint112).max, SwapLimitExceeded());
 
-        uint256 feeMultiplier = eulerSwap.feeMultiplier();
-        (uint112 reserve0, uint112 reserve1,) = eulerSwap.getReserves();
-
         // exactIn: decrease received amountIn, rounding down
         if (exactIn) amount = amount * feeMultiplier / 1e18;
 
-        bool asset0IsInput = checkTokens(eulerSwap, tokenIn, tokenOut);
-        (uint256 inLimit, uint256 outLimit) = calcLimits(eulerSwap, asset0IsInput);
+        (uint256 inLimit, uint256 outLimit) = calcLimits(asset0IsInput);
 
-        uint256 quote = binarySearch(eulerSwap, reserve0, reserve1, amount, exactIn, asset0IsInput);
+        uint256 quote = binarySearch(amount, exactIn, asset0IsInput);
 
         if (exactIn) {
             // if `exactIn`, `quote` is the amount of assets to buy from the AMM
@@ -157,21 +150,7 @@ contract EulerSwapHook is EulerSwap, BaseHook {
         return quote;
     }
 
-    /// @notice Binary searches for the output amount along a swap curve given input parameters
-    /// @dev General-purpose routine for binary searching swapping curves.
-    /// Although some curves may have more efficient closed-form solutions,
-    /// this works with any monotonic curve.
-    /// @param eulerSwap The EulerSwap contract to search the curve for
-    /// @param reserve0 Current reserve of asset0 in the pool
-    /// @param reserve1 Current reserve of asset1 in the pool
-    /// @param amount The input or output amount depending on exactIn
-    /// @param exactIn True if amount is input amount, false if amount is output amount
-    /// @param asset0IsInput True if asset0 is being input, false if asset1 is being input
-    /// @return output The calculated output amount from the binary search
     function binarySearch(
-        IEulerSwap eulerSwap,
-        uint112 reserve0,
-        uint112 reserve1,
         uint256 amount,
         bool exactIn,
         bool asset0IsInput
@@ -199,7 +178,7 @@ contract EulerSwapHook is EulerSwap, BaseHook {
                 uint256 mid = (low + high) / 2;
                 require(mid > 0, SwapLimitExceeded());
                 (uint256 a, uint256 b) = dy == 0 ? (uint256(reserve0New), mid) : (mid, uint256(reserve1New));
-                if (eulerSwap.verify(a, b)) {
+                if (verify(a, b)) {
                     high = mid;
                 } else {
                     low = mid + 1;
@@ -221,25 +200,11 @@ contract EulerSwapHook is EulerSwap, BaseHook {
         }
     }
 
-    /**
-     * @notice Calculates the maximum input and output amounts for a swap based on protocol constraints
-     * @dev Determines limits by checking multiple factors:
-     *      1. Supply caps and existing debt for the input token
-     *      2. Available reserves in the EulerSwap for the output token
-     *      3. Available cash and borrow caps for the output token
-     *      4. Account balances in the respective vaults
-     *
-     * @param es The EulerSwap contract to calculate limits for
-     * @param asset0IsInput Boolean indicating whether asset0 (true) or asset1 (false) is the input token
-     * @return uint256 Maximum amount of input token that can be deposited
-     * @return uint256 Maximum amount of output token that can be withdrawn
-     */
-    function calcLimits(IEulerSwap es, bool asset0IsInput) internal view returns (uint256, uint256) {
+    function calcLimits(bool asset0IsInput) internal view returns (uint256, uint256) {
         uint256 inLimit = type(uint112).max;
         uint256 outLimit = type(uint112).max;
 
-        address eulerAccount = es.eulerAccount();
-        (IEVault vault0, IEVault vault1) = (IEVault(es.vault0()), IEVault(es.vault1()));
+        (IEVault vault0, IEVault vault1) = (IEVault(vault0), IEVault(vault1));
         // Supply caps on input
         {
             IEVault vault = (asset0IsInput ? vault0 : vault1);
@@ -249,7 +214,6 @@ contract EulerSwapHook is EulerSwap, BaseHook {
 
         // Remaining reserves of output
         {
-            (uint112 reserve0, uint112 reserve1,) = es.getReserves();
             uint112 reserveLimit = asset0IsInput ? reserve1 : reserve0;
             if (reserveLimit < outLimit) outLimit = reserveLimit;
         }
@@ -272,18 +236,6 @@ contract EulerSwapHook is EulerSwap, BaseHook {
         return (inLimit, outLimit);
     }
 
-    /**
-     * @notice Decodes a compact-format cap value to its actual numerical value
-     * @dev The cap uses a compact-format where:
-     *      - If amountCap == 0, there's no cap (returns max uint256)
-     *      - Otherwise, the lower 6 bits represent the exponent (10^exp)
-     *      - The upper bits (>> 6) represent the mantissa
-     *      - The formula is: (10^exponent * mantissa) / 100
-     * @param amountCap The compact-format cap value to decode
-     * @return The actual numerical cap value (type(uint256).max if uncapped)
-     * @custom:security Uses unchecked math for gas optimization as calculations cannot overflow:
-     *                  maximum possible value 10^(2^6-1) * (2^10-1) ≈ 1.023e+66 < 2^256
-     */
     function decodeCap(uint256 amountCap) internal pure returns (uint256) {
         if (amountCap == 0) return type(uint256).max;
 
@@ -292,27 +244,5 @@ contract EulerSwapHook is EulerSwap, BaseHook {
             //   10**(2**6 - 1) * (2**10 - 1) = 1.023e+66
             return 10 ** (amountCap & 63) * (amountCap >> 6) / 100;
         }
-    }
-
-    /**
-     * @notice Verifies that the given tokens are supported by the EulerSwap pool and determines swap direction
-     * @dev Returns a boolean indicating whether the input token is asset0 (true) or asset1 (false)
-     * @param eulerSwap The EulerSwap pool contract to check against
-     * @param tokenIn The input token address for the swap
-     * @param tokenOut The output token address for the swap
-     * @return asset0IsInput True if tokenIn is asset0 and tokenOut is asset1, false if reversed
-     * @custom:error UnsupportedPair Thrown if the token pair is not supported by the EulerSwap pool
-     */
-    function checkTokens(IEulerSwap eulerSwap, address tokenIn, address tokenOut)
-        internal
-        view
-        returns (bool asset0IsInput)
-    {
-        address asset0 = eulerSwap.asset0();
-        address asset1 = eulerSwap.asset1();
-
-        if (tokenIn == asset0 && tokenOut == asset1) asset0IsInput = true;
-        else if (tokenIn == asset1 && tokenOut == asset0) asset0IsInput = false;
-        else revert UnsupportedPair();
     }
 }
