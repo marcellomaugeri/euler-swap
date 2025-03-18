@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.27;
 
-import {console} from "forge-std/Test.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {BaseHook} from "v4-periphery/src/utils/BaseHook.sol";
 import {PoolKey} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
@@ -66,9 +65,6 @@ contract EulerSwapHook is EulerSwap, BaseHook {
             amountIn = computeQuote(params.zeroForOne, uint256(params.amountSpecified), false);
             amountOut = uint256(params.amountSpecified);
         }
-
-        console.log("amountIn", amountIn);
-        console.log("amountOut", amountOut);
 
         // take the input token, from the PoolManager to the Euler vault
         // the debt will be paid by the swapper via the swap router
