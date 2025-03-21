@@ -219,17 +219,15 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     /// @dev After successful deposit, if the user has any outstanding controller-enabled debt, it attempts to repay it.
     /// @dev If all debt is repaid, the controller is automatically disabled to reduce gas costs in future operations.
     function depositAssets(address vault, uint256 amount) internal returns (uint256) {
-        uint256 debt = myDebt(vault);
         uint256 deposited;
 
-        if (debt > 0) {
-            uint256 repayAmount = amount > debt ? debt : amount;
+        if (IEVC(evc).isControllerEnabled(eulerAccount, vault)) {
+            uint256 debt = myDebt(vault);
+            uint256 repaid = IEVault(vault).repay(amount > debt ? debt : amount, eulerAccount);
 
-            IEVault(vault).repay(repayAmount, eulerAccount);
-
-            amount -= repayAmount;
-            debt -= repayAmount;
-            deposited += repayAmount;
+            amount -= repaid;
+            debt -= repaid;
+            deposited += repaid;
 
             if (debt == 0) {
                 IEVC(evc).call(vault, eulerAccount, 0, abi.encodeCall(IRiskManager.disableController, ()));

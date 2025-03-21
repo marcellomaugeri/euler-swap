@@ -85,4 +85,26 @@ contract DepositFailuresTest is EulerSwapTestBase {
 
         assertEq(assetTST2.balanceOf(address(eulerSwap)), 1); // griefing transfer was untouched
     }
+
+    function test_manualEnableController() public monotonicHolderNAV {
+        vm.prank(holder);
+        evc.enableController(holder, address(eTST));
+
+        uint256 amountIn = 50e18;
+        uint256 amountOut =
+            periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), amountIn);
+
+        assetTST.mint(address(this), amountIn);
+        assetTST.transfer(address(eulerSwap), amountIn);
+        eulerSwap.swap(0, amountOut, address(this), "");
+
+        // Swap the other way to measure gas impact
+
+        amountIn = 100e18;
+        amountOut = periphery.quoteExactInput(address(eulerSwap), address(assetTST2), address(assetTST), amountIn);
+
+        assetTST2.mint(address(this), amountIn);
+        assetTST2.transfer(address(eulerSwap), amountIn);
+        eulerSwap.swap(amountOut, 0, address(this), "");
+    }
 }
