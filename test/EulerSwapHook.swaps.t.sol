@@ -8,6 +8,7 @@ import {EulerSwapHook} from "../src/EulerSwapHook.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {IPoolManager, PoolManagerDeployer} from "./utils/PoolManagerDeployer.sol";
 import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
+import {MinimalRouter} from "./utils/MinimalRouter.sol";
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
@@ -19,6 +20,7 @@ contract EulerSwapHookTest is EulerSwapTestBase {
 
     IPoolManager public poolManager;
     PoolSwapTest public swapRouter;
+    MinimalRouter public minimalRouter;
 
     PoolSwapTest.TestSettings public settings = PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
 
@@ -27,6 +29,7 @@ contract EulerSwapHookTest is EulerSwapTestBase {
 
         poolManager = PoolManagerDeployer.deploy(address(this));
         swapRouter = new PoolSwapTest(poolManager);
+        minimalRouter = new MinimalRouter(poolManager);
 
         eulerSwap = createEulerSwapHook(poolManager, 60e18, 60e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
         eulerSwap.activate();
@@ -42,9 +45,27 @@ contract EulerSwapHookTest is EulerSwapTestBase {
     }
 
     function test_SwapExactIn() public {
-        uint256 amountIn = 1e18;
+        uint256 amountIn = 1001e18;
         uint256 amountOut =
             periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), amountIn);
+
+        assetTST.mint(anyone, amountIn);
+
+        vm.startPrank(anyone);
+        assetTST.approve(address(minimalRouter), amountIn);
+
+        bool zeroForOne = address(assetTST) < address(assetTST2);
+        minimalRouter.swap(eulerSwap.poolKey(), zeroForOne, true, amountIn, "");
+        vm.stopPrank();
+
+        assertEq(assetTST.balanceOf(anyone), 0);
+        assertEq(assetTST2.balanceOf(anyone), amountOut);
+    }
+
+    /// @dev swapping with an amount that exceeds PoolManager's ERC20 token balance will revert
+    /// if the router does not pre-pay the input
+    function test_swapExactIn_revertWithoutTokenLiquidity() public {
+        uint256 amountIn = 1001e18; // input amount exceeds
 
         assetTST.mint(anyone, amountIn);
 
@@ -52,11 +73,10 @@ contract EulerSwapHookTest is EulerSwapTestBase {
         assetTST.approve(address(swapRouter), amountIn);
 
         bool zeroForOne = address(assetTST) < address(assetTST2);
-        _swap(eulerSwap.poolKey(), zeroForOne, true, amountIn);
+        PoolKey memory poolKey = eulerSwap.poolKey();
+        vm.expectRevert();
+        _swap(poolKey, zeroForOne, true, amountIn);
         vm.stopPrank();
-
-        assertEq(assetTST.balanceOf(anyone), 0);
-        assertEq(assetTST2.balanceOf(anyone), amountOut);
     }
 
     function test_SwapExactOut() public {
