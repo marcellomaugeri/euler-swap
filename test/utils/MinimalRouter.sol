@@ -55,6 +55,7 @@ contract MinimalRouter is SafeCallback {
             ? key.currency0.settle(poolManager, sender, amountIn, false)
             : key.currency1.settle(poolManager, sender, amountIn, false);
 
+        // execute the swap
         poolManager.swap(
             key,
             IPoolManager.SwapParams({
@@ -69,18 +70,9 @@ contract MinimalRouter is SafeCallback {
         int256 delta0 = poolManager.currencyDelta(address(this), key.currency0);
         int256 delta1 = poolManager.currencyDelta(address(this), key.currency1);
 
-        // primarily take the output token, and excess amounts for exact output swaps
-        if (delta0 < 0) {
-            key.currency0.settle(poolManager, sender, uint256(-delta0), false);
-        } else if (delta0 > 0) {
-            key.currency0.take(poolManager, sender, uint256(delta0), false);
-        }
-
-        if (delta1 < 0) {
-            key.currency1.settle(poolManager, sender, uint256(-delta1), false);
-        } else if (delta1 > 0) {
-            key.currency1.take(poolManager, sender, uint256(delta1), false);
-        }
+        // take the output
+        if (delta0 > 0) key.currency0.take(poolManager, sender, uint256(delta0), false);
+        if (delta1 > 0) key.currency1.take(poolManager, sender, uint256(delta1), false);
 
         // account for prepaid input against the observed deltas
         BalanceDelta returnDelta = toBalanceDelta(int128(delta0), int128(delta1))
