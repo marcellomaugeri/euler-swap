@@ -50,7 +50,6 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     error Overflow();
     error BadParam();
     error AmountTooBig();
-    error DifferentEVC();
     error AssetsOutOfOrderOrEqual();
     error CurveViolation();
     error DepositFailure(bytes reason);
@@ -70,7 +69,6 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         require(curveParams.priceX > 0 && curveParams.priceY > 0, BadParam());
         require(curveParams.priceX <= 1e36 && curveParams.priceY <= 1e36, BadParam());
         require(curveParams.concentrationX <= 1e18 && curveParams.concentrationY <= 1e18, BadParam());
-        require(IEVault(params.vault0).EVC() == IEVault(params.vault1).EVC(), DifferentEVC());
 
         address asset0Addr = IEVault(params.vault0).asset();
         address asset1Addr = IEVault(params.vault1).asset();
@@ -96,9 +94,9 @@ contract EulerSwap is IEulerSwap, EVCUtil {
 
         // Validate reserves
 
-        require(verify(equilibriumReserve0, equilibriumReserve1), CurveViolation());
         require(verify(reserve0, reserve1), CurveViolation());
-        require(!verify(reserve0 > 0 ? reserve0 - 1 : 0, reserve1 > 0 ? reserve1 - 1 : 0), CurveViolation());
+        require(!verify(reserve0 > 0 ? reserve0 - 1 : 0, reserve1), CurveViolation());
+        require(!verify(reserve0, reserve1 > 0 ? reserve1 - 1 : 0), CurveViolation());
 
         emit EulerSwapCreated(asset0Addr, asset1Addr);
     }
@@ -128,7 +126,7 @@ contract EulerSwap is IEulerSwap, EVCUtil {
         uint256 amount1In = IERC20(asset1).balanceOf(address(this));
         if (amount1In > 0) amount1In = depositAssets(vault1, amount1In) * feeMultiplier / 1e18;
 
-        // Verify curve invariant is satisified
+        // Verify curve invariant is satisfied
 
         {
             uint256 newReserve0 = reserve0 + amount0In - amount0Out;
@@ -154,6 +152,7 @@ contract EulerSwap is IEulerSwap, EVCUtil {
 
     /// @inheritdoc IEulerSwap
     function getReserves() external view returns (uint112, uint112, uint32) {
+        require(status != 2, Locked());
         return (reserve0, reserve1, status);
     }
 
@@ -220,23 +219,32 @@ contract EulerSwap is IEulerSwap, EVCUtil {
     /// @dev After successful deposit, if the user has any outstanding controller-enabled debt, it attempts to repay it.
     /// @dev If all debt is repaid, the controller is automatically disabled to reduce gas costs in future operations.
     function depositAssets(address vault, uint256 amount) internal returns (uint256) {
-        try IEVault(vault).deposit(amount, eulerAccount) {}
-        catch (bytes memory reason) {
-            require(bytes4(reason) == EVKErrors.E_ZeroShares.selector, DepositFailure(reason));
-            return 0;
-        }
+        uint256 deposited;
 
         if (IEVC(evc).isControllerEnabled(eulerAccount, vault)) {
-            IEVC(evc).call(
-                vault, eulerAccount, 0, abi.encodeCall(IBorrowing.repayWithShares, (type(uint256).max, eulerAccount))
-            );
+            uint256 debt = myDebt(vault);
+            uint256 repaid = IEVault(vault).repay(amount > debt ? debt : amount, eulerAccount);
 
-            if (myDebt(vault) == 0) {
+            amount -= repaid;
+            debt -= repaid;
+            deposited += repaid;
+
+            if (debt == 0) {
                 IEVC(evc).call(vault, eulerAccount, 0, abi.encodeCall(IRiskManager.disableController, ()));
             }
         }
 
-        return amount;
+        if (amount > 0) {
+            try IEVault(vault).deposit(amount, eulerAccount) {}
+            catch (bytes memory reason) {
+                require(bytes4(reason) == EVKErrors.E_ZeroShares.selector, DepositFailure(reason));
+                return deposited;
+            }
+
+            deposited += amount;
+        }
+
+        return deposited;
     }
 
     /// @notice Approves tokens for a given vault, supporting both standard approvals and permit2

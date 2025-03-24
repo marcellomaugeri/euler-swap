@@ -20,7 +20,7 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
 
         vm.startPrank(creator);
         poolManager = PoolManagerDeployer.deploy(creator);
-        eulerSwapFactory = new EulerSwapFactory(poolManager, address(evc));
+        eulerSwapFactory = new EulerSwapFactory(poolManager, address(evc), address(factory));
         vm.stopPrank();
     }
 
