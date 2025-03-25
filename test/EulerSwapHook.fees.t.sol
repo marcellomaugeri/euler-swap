@@ -43,7 +43,10 @@ contract EulerSwapHookTest is EulerSwapTestBase {
     }
 
     function test_SwapExactIn_withLpFee() public {
+        (uint112 r0, uint112 r1,) = eulerSwap.getReserves();
+
         uint256 amountIn = 1e18;
+        uint256 amountInWithoutFee = amountIn * eulerSwap.feeMultiplier() / 1e18;
         uint256 amountOut =
             periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), amountIn);
 
@@ -61,12 +64,26 @@ contract EulerSwapHookTest is EulerSwapTestBase {
 
         assertEq(zeroForOne ? uint256(-int256(result.amount0())) : uint256(-int256(result.amount1())), amountIn);
         assertEq(zeroForOne ? uint256(int256(result.amount1())) : uint256(int256(result.amount0())), amountOut);
+
+        // assert fees were not added to the reserves
+        (uint112 r0New, uint112 r1New,) = eulerSwap.getReserves();
+        if (zeroForOne) {
+            assertEq(r0New, r0 + amountInWithoutFee);
+            assertEq(r1New, r1 - amountOut);
+        } else {
+            // oneForZero, so the curve received asset1
+            assertEq(r0New, r0 - amountOut);
+            assertEq(r1New, r1 + amountInWithoutFee);
+        }
     }
 
     function test_SwapExactOut_withLpFee() public {
+        (uint112 r0, uint112 r1,) = eulerSwap.getReserves();
+
         uint256 amountOut = 1e18;
         uint256 amountIn =
             periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), amountOut);
+        uint256 amountInWithoutFee = (amountIn * 1e18) / (2e18 - eulerSwap.feeMultiplier());
 
         assetTST.mint(anyone, amountIn);
 
@@ -82,6 +99,17 @@ contract EulerSwapHookTest is EulerSwapTestBase {
 
         assertEq(zeroForOne ? uint256(-int256(result.amount0())) : uint256(-int256(result.amount1())), amountIn);
         assertEq(zeroForOne ? uint256(int256(result.amount1())) : uint256(int256(result.amount0())), amountOut);
+
+        // assert fees were not added to the reserves
+        (uint112 r0New, uint112 r1New,) = eulerSwap.getReserves();
+        if (zeroForOne) {
+            assertEq(r0New, r0 + amountInWithoutFee, "A");
+            assertEq(r1New, r1 - amountOut, "B");
+        } else {
+            // oneForZero, so the curve received asset1
+            assertEq(r0New, r0 - amountOut, "C");
+            assertEq(r1New, r1 + amountInWithoutFee, "D");
+        }
     }
 
     function _swap(PoolKey memory key, bool zeroForOne, bool exactInput, uint256 amount) internal {
