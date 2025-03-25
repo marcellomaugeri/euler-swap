@@ -42,7 +42,7 @@ contract EulerSwapHookTest is EulerSwapTestBase {
         assertNotEq(sqrtPriceX96, 0);
     }
 
-    function test_SwapExactIn() public {
+    function test_SwapExactIn_withLpFee() public {
         uint256 amountIn = 1e18;
         uint256 amountOut =
             periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), amountIn);
@@ -63,24 +63,7 @@ contract EulerSwapHookTest is EulerSwapTestBase {
         assertEq(zeroForOne ? uint256(int256(result.amount1())) : uint256(int256(result.amount0())), amountOut);
     }
 
-    /// @dev swapping with an amount that exceeds PoolManager's ERC20 token balance will revert
-    /// if the router does not pre-pay the input
-    function test_swapExactIn_revertWithoutTokenLiquidity() public {
-        uint256 amountIn = 1e18; // input amount exceeds PoolManager balance
-
-        assetTST.mint(anyone, amountIn);
-
-        vm.startPrank(anyone);
-        assetTST.approve(address(swapRouter), amountIn);
-
-        bool zeroForOne = address(assetTST) < address(assetTST2);
-        PoolKey memory poolKey = eulerSwap.poolKey();
-        vm.expectRevert();
-        _swap(poolKey, zeroForOne, true, amountIn);
-        vm.stopPrank();
-    }
-
-    function test_SwapExactOut() public {
+    function test_SwapExactOut_withLpFee() public {
         uint256 amountOut = 1e18;
         uint256 amountIn =
             periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), amountOut);
@@ -99,24 +82,6 @@ contract EulerSwapHookTest is EulerSwapTestBase {
 
         assertEq(zeroForOne ? uint256(-int256(result.amount0())) : uint256(-int256(result.amount1())), amountIn);
         assertEq(zeroForOne ? uint256(int256(result.amount1())) : uint256(int256(result.amount0())), amountOut);
-    }
-
-    /// @dev swapping with an amount that exceeds PoolManager's ERC20 token balance will revert
-    /// if the router does not pre-pay the input
-    function test_SwapExactOut_revertWithoutTokenLiquidity() public {
-        uint256 amountOut = 1e18;
-        uint256 amountIn =
-            periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), amountOut);
-
-        assetTST.mint(anyone, amountIn);
-
-        vm.startPrank(anyone);
-        assetTST.approve(address(swapRouter), amountIn);
-        bool zeroForOne = address(assetTST) < address(assetTST2);
-        PoolKey memory poolKey = eulerSwap.poolKey();
-        vm.expectRevert();
-        _swap(poolKey, zeroForOne, false, amountOut);
-        vm.stopPrank();
     }
 
     function _swap(PoolKey memory key, bool zeroForOne, bool exactInput, uint256 amount) internal {
