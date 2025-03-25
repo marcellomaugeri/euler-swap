@@ -59,15 +59,15 @@ contract EulerSwapHook is EulerSwap, BaseHook {
 
         {
             (Currency inputCurrency, Currency outputCurrency) =
-                params.zeroForOne ? (key.currency0, key.currency1) : (key.currency1, key.currency0);
+                zeroForOne ? (key.currency0, key.currency1) : (key.currency1, key.currency0);
 
             uint256 amountIn;
             bool isExactInput = params.amountSpecified < 0;
             if (isExactInput) {
                 amountIn = uint256(-params.amountSpecified);
-                amountOut = computeQuote(params.zeroForOne, uint256(-params.amountSpecified), true);
+                amountOut = computeQuote(zeroForOne, uint256(-params.amountSpecified), true);
             } else {
-                amountIn = computeQuote(params.zeroForOne, uint256(params.amountSpecified), false);
+                amountIn = computeQuote(zeroForOne, uint256(params.amountSpecified), false);
                 amountOut = uint256(params.amountSpecified);
             }
 
