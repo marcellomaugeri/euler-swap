@@ -119,13 +119,4 @@ contract EulerSwapHookTest is EulerSwapTestBase {
 
         assertGt(getHolderNAV(), origNav + int256(amountIn - amountInWithoutFee));
     }
-
-    function _swap(PoolKey memory key, bool zeroForOne, bool exactInput, uint256 amount) internal {
-        IPoolManager.SwapParams memory swapParams = IPoolManager.SwapParams({
-            zeroForOne: zeroForOne,
-            amountSpecified: exactInput ? -int256(amount) : int256(amount),
-            sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1
-        });
-        swapRouter.swap(key, swapParams, settings, "");
-    }
 }
