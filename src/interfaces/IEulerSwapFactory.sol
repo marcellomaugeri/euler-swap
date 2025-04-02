@@ -22,7 +22,15 @@ interface IEulerSwapFactory {
         external
         returns (address);
 
+    /// @notice Retrieves the state information for a given Euler account
+    /// @dev Returns the current pool address, index in allPools array, and index in poolMap array
+    ///      for the specified Euler account
+    /// @param eulerAccount The address of the Euler account to query
+    /// @return pool The address of the current pool associated with the Euler account
+    /// @return allPoolsIndex The index of the pool in the allPools array
+    /// @return poolMapIndex The index of the pool in the poolMap array for its asset pair
     function getEulerAccountState(address eulerAccount) external view returns (address, uint48, uint48);
+
     /// @notice Compute the address of a new EulerSwap pool with the given parameters
     /// @dev The pool address is deterministically generated using CREATE2 with a salt derived from
     ///      the euler account address and provided salt parameter. This allows the pool address to be

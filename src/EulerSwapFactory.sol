@@ -114,6 +114,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
         return allPools.length;
     }
 
+    /// @inheritdoc IEulerSwapFactory
     function getEulerAccountState(address eulerAccount) external view returns (address, uint48, uint48) {
         return (
             eulerAccountState[eulerAccount].pool,
@@ -184,19 +185,36 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
         }
     }
 
+    /// @notice Updates an element at a specific index in an array
+    /// @dev Directly modifies the array element at the given index with a new value
+    /// @param arr The storage array to update
+    /// @param index The index of the element to update
+    /// @param _newValue The new value to set at the specified index
     function _updateInArray(address[] storage arr, uint256 index, address _newValue) internal {
         arr[index] = _newValue;
     }
 
+    /// @notice Adds a new element to the end of an array
+    /// @dev Uses the push operation to append a new value to the array
+    /// @param arr The storage array to append to
+    /// @param _newValue The new value to append to the array
     function _pushInArray(address[] storage arr, address _newValue) internal {
         arr.push(_newValue);
     }
 
+    /// @notice Removes an element from an array at a specific index
+    /// @dev Uses the swap-and-pop pattern to remove an element while maintaining array order
+    /// @param arr The storage array to remove from
+    /// @param index The index of the element to remove
     function _removeFromArray(address[] storage arr, uint256 index) internal {
         arr[index] = arr[arr.length - 1];
         arr.pop();
     }
 
+    /// @notice Retrieves the asset addresses for a given pool
+    /// @dev Calls the pool contract to get its asset0 and asset1 addresses
+    /// @param pool The address of the pool to query
+    /// @return The addresses of asset0 and asset1 in the pool
     function _getAssets(address pool) internal view returns (address, address) {
         return (EulerSwap(pool).asset0(), EulerSwap(pool).asset1());
     }
