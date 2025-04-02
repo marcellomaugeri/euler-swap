@@ -14,6 +14,8 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
 
         vm.prank(creator);
         eulerSwapFactory = new EulerSwapFactory(address(evc), address(factory));
+
+        assertEq(eulerSwapFactory.EVC(), address(evc));
     }
 
     function testDeployPool() public {
@@ -157,9 +159,37 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
         assertEq(pool, predictedAddress);
     }
 
-    function testInvalidPoolsSliceQuery() public {
+    function testInvalidPoolsSliceOutOfBounds() public {
         vm.expectRevert(EulerSwapFactory.SliceOutOfBounds.selector);
         eulerSwapFactory.poolsSlice(1, 0);
+    }
+
+    function testDeployWithInvalidVaultImplementation() public {
+        bytes32 salt = bytes32(uint256(1234));
+        IEulerSwap.Params memory poolParams =
+            IEulerSwap.Params(address(eTST), address(eTST2), holder, 1e18, 1e18, 1e18, 1e18, 0);
+        IEulerSwap.CurveParams memory curveParams = IEulerSwap.CurveParams(0.4e18, 0.85e18, 1e18, 1e18);
+
+        // Create a fake vault that's not deployed by the factory
+        address fakeVault = address(0x1234);
+        poolParams.vault0 = fakeVault;
+        poolParams.vault1 = address(eTST2);
+
+        vm.prank(holder);
+        vm.expectRevert(EulerSwapFactory.InvalidVaultImplementation.selector);
+        eulerSwapFactory.deployPool(poolParams, curveParams, salt);
+    }
+
+    function testDeployWithUnauthorizedCaller() public {
+        bytes32 salt = bytes32(uint256(1234));
+        IEulerSwap.Params memory poolParams =
+            IEulerSwap.Params(address(eTST), address(eTST2), holder, 1e18, 1e18, 1e18, 1e18, 0);
+        IEulerSwap.CurveParams memory curveParams = IEulerSwap.CurveParams(0.4e18, 0.85e18, 1e18, 1e18);
+
+        // Call from a different address than the euler account
+        vm.prank(address(0x1234));
+        vm.expectRevert(EulerSwapFactory.Unauthorized.selector);
+        eulerSwapFactory.deployPool(poolParams, curveParams, salt);
     }
 
     function testDeployWithAssetsOutOfOrderOrEqual() public {
@@ -182,6 +212,61 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
         vm.prank(holder);
         vm.expectRevert(EulerSwap.BadParam.selector);
         eulerSwapFactory.deployPool(poolParams, curveParams, salt);
+    }
+
+    function testPoolsByPair() public {
+        // First deploy a pool
+        bytes32 salt = bytes32(uint256(1234));
+        IEulerSwap.Params memory poolParams =
+            IEulerSwap.Params(address(eTST), address(eTST2), holder, 1e18, 1e18, 1e18, 1e18, 0);
+        IEulerSwap.CurveParams memory curveParams = IEulerSwap.CurveParams(0.4e18, 0.85e18, 1e18, 1e18);
+
+        address predictedAddress = predictPoolAddress(address(eulerSwapFactory), poolParams, curveParams, salt);
+
+        IEVC.BatchItem[] memory items = new IEVC.BatchItem[](2);
+        items[0] = IEVC.BatchItem({
+            onBehalfOfAccount: address(0),
+            targetContract: address(evc),
+            value: 0,
+            data: abi.encodeCall(evc.setAccountOperator, (holder, predictedAddress, true))
+        });
+        items[1] = IEVC.BatchItem({
+            onBehalfOfAccount: holder,
+            targetContract: address(eulerSwapFactory),
+            value: 0,
+            data: abi.encodeCall(EulerSwapFactory.deployPool, (poolParams, curveParams, salt))
+        });
+
+        vm.prank(holder);
+        evc.batch(items);
+
+        // Get the deployed pool and its assets
+        address pool = eulerSwapFactory.poolByHolder(holder);
+        address asset0 = EulerSwap(pool).asset0();
+        address asset1 = EulerSwap(pool).asset1();
+
+        // Test poolsByPairLength
+        assertEq(eulerSwapFactory.poolsByPairLength(asset0, asset1), 1);
+
+        // Test poolsByPairSlice
+        address[] memory slice = eulerSwapFactory.poolsByPairSlice(asset0, asset1, 0, 1);
+        assertEq(slice.length, 1);
+        assertEq(slice[0], predictedAddress);
+
+        // Test poolsByPair
+        address[] memory pools = eulerSwapFactory.poolsByPair(asset0, asset1);
+        assertEq(pools.length, 1);
+        assertEq(pools[0], predictedAddress);
+    }
+
+    function testComputePoolAddress() public view {
+        bytes32 salt = bytes32(uint256(1234));
+        IEulerSwap.Params memory poolParams =
+            IEulerSwap.Params(address(eTST), address(eTST2), holder, 1e18, 1e18, 1e18, 1e18, 0);
+        IEulerSwap.CurveParams memory curveParams = IEulerSwap.CurveParams(0.4e18, 0.85e18, 1e18, 1e18);
+
+        address predictedAddress = eulerSwapFactory.computePoolAddress(poolParams, curveParams, salt);
+        assertEq(predictedAddress, predictPoolAddress(address(eulerSwapFactory), poolParams, curveParams, salt));
     }
 
     function predictPoolAddress(

@@ -66,7 +66,10 @@ interface IEulerSwapFactory {
     /// @param start The starting index of the slice (inclusive)
     /// @param end The ending index of the slice (exclusive)
     /// @return An array containing the requested slice of pool addresses for the asset pair
-    function poolsByPairSlice(address asset0, address asset1, uint256 start, uint256 end) external view returns (address[] memory);
+    function poolsByPairSlice(address asset0, address asset1, uint256 start, uint256 end)
+        external
+        view
+        returns (address[] memory);
 
     /// @notice Returns all pools for a specific asset pair
     /// @dev Returns the complete array of pool addresses for the given asset pair
