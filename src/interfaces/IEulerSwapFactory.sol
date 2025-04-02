@@ -22,15 +22,6 @@ interface IEulerSwapFactory {
         external
         returns (address);
 
-    /// @notice Retrieves the state information for a given Euler account
-    /// @dev Returns the current pool address, index in allPools array, and index in poolMap array
-    ///      for the specified Euler account
-    /// @param eulerAccount The address of the Euler account to query
-    /// @return pool The address of the current pool associated with the Euler account
-    /// @return allPoolsIndex The index of the pool in the allPools array
-    /// @return poolMapIndex The index of the pool in the poolMap array for its asset pair
-    function getEulerAccountState(address eulerAccount) external view returns (address, uint48, uint48);
-
     /// @notice Compute the address of a new EulerSwap pool with the given parameters
     /// @dev The pool address is deterministically generated using CREATE2 with a salt derived from
     ///      the euler account address and provided salt parameter. This allows the pool address to be
@@ -44,17 +35,54 @@ interface IEulerSwapFactory {
         IEulerSwap.CurveParams memory curveParams,
         bytes32 salt
     ) external view returns (address);
+
+    /// @notice Returns the address of the Ethereum Vault Connector (EVC) contract
+    /// @return The address of the EVC contract
     function EVC() external view returns (address);
-    /// @notice Get the length of `allPools` array.
-    /// @return `allPools` length.
-    function allPoolsLength() external view returns (uint256);
-    /// @notice Get the address of the pool at the given index in the `allPools` array.
-    /// @param index The index of the pool to retrieve.
-    /// @return The address of the pool at the given index.
-    function allPools(uint256 index) external view returns (address);
-    /// @notice Get a slice of the deployed pools array.
-    /// @param start Start index of the slice.
-    /// @param end End index of the slice.
-    /// @return An array containing the slice of the deployed pools.
-    function getAllPoolsListSlice(uint256 start, uint256 end) external view returns (address[] memory);
+
+    /// @notice Returns a slice of all deployed pools
+    /// @dev Returns a subset of the pools array from start to end index
+    /// @param start The starting index of the slice (inclusive)
+    /// @param end The ending index of the slice (exclusive)
+    /// @return An array containing the requested slice of pool addresses
+    function poolsSlice(uint256 start, uint256 end) external view returns (address[] memory);
+
+    /// @notice Returns all deployed pools
+    /// @dev Returns the complete array of all pool addresses
+    /// @return An array containing all pool addresses
+    function pools() external view returns (address[] memory);
+
+    /// @notice Returns the number of pools for a specific asset pair
+    /// @dev Returns the length of the pool array for the given asset pair
+    /// @param asset0 The address of the first asset
+    /// @param asset1 The address of the second asset
+    /// @return The number of pools for the specified asset pair
+    function poolsByPairLength(address asset0, address asset1) external view returns (uint256);
+
+    /// @notice Returns a slice of pools for a specific asset pair
+    /// @dev Returns a subset of the pools array for the given asset pair from start to end index
+    /// @param asset0 The address of the first asset
+    /// @param asset1 The address of the second asset
+    /// @param start The starting index of the slice (inclusive)
+    /// @param end The ending index of the slice (exclusive)
+    /// @return An array containing the requested slice of pool addresses for the asset pair
+    function poolsByPairSlice(address asset0, address asset1, uint256 start, uint256 end) external view returns (address[] memory);
+
+    /// @notice Returns all pools for a specific asset pair
+    /// @dev Returns the complete array of pool addresses for the given asset pair
+    /// @param asset0 The address of the first asset
+    /// @param asset1 The address of the second asset
+    /// @return An array containing all pool addresses for the specified asset pair
+    function poolsByPair(address asset0, address asset1) external view returns (address[] memory);
+
+    /// @notice Returns the pool address associated with a specific holder
+    /// @dev Returns the pool address from the EulerAccountState mapping for the given holder
+    /// @param who The address of the holder to query
+    /// @return The address of the pool associated with the holder
+    function poolByHolder(address who) external view returns (address);
+
+    /// @notice Returns the total number of deployed pools
+    /// @dev Returns the length of the allPools array
+    /// @return The total number of pools deployed through the factory
+    function poolsLength() external view returns (uint256);
 }

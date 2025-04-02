@@ -10,10 +10,10 @@ import {GenericFactory} from "evk/GenericFactory/GenericFactory.sol";
 /// @custom:security-contact security@euler.xyz
 /// @author Euler Labs (https://www.eulerlabs.com/)
 contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
+    /// @dev An array to store all pools addresses.
+    address[] private allPools;
     /// @dev Vaults must be deployed by this factory
     address public immutable evkFactory;
-    /// @dev An array to store all pools addresses.
-    address[] public allPools;
     /// @dev Mapping between euler account and EulerAccountState
     mapping(address eulerAccount => EulerAccountState state) private eulerAccountState;
     mapping(address asset0 => mapping(address asset1 => address[])) private poolMap;
@@ -40,6 +40,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     error OldOperatorStillInstalled();
     error OperatorNotInstalled();
     error InvalidVaultImplementation();
+    error SliceOutOfBounds();
 
     constructor(address evc, address evkFactory_) EVCUtil(evc) {
         evkFactory = evkFactory_;
@@ -105,36 +106,48 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
         );
     }
 
+    /// @inheritdoc IEulerSwapFactory
     function EVC() external view override(EVCUtil, IEulerSwapFactory) returns (address) {
         return address(evc);
     }
 
     /// @inheritdoc IEulerSwapFactory
-    function allPoolsLength() external view returns (uint256) {
+    function poolByHolder(address who) external view returns (address) {
+        return eulerAccountState[who].pool;
+    }
+
+    /// @inheritdoc IEulerSwapFactory
+    function poolsLength() external view returns (uint256) {
         return allPools.length;
     }
 
     /// @inheritdoc IEulerSwapFactory
-    function getEulerAccountState(address eulerAccount) external view returns (address, uint48, uint48) {
-        return (
-            eulerAccountState[eulerAccount].pool,
-            eulerAccountState[eulerAccount].allPoolsIndex,
-            eulerAccountState[eulerAccount].poolMapIndex
-        );
+    function poolsSlice(uint256 start, uint256 end) external view returns (address[] memory) {
+        return _getSlice(allPools, start, end);
     }
 
     /// @inheritdoc IEulerSwapFactory
-    function getAllPoolsListSlice(uint256 _start, uint256 _end) external view returns (address[] memory) {
-        uint256 length = allPools.length;
-        if (_end == type(uint256).max) _end = length;
-        if (_end < _start || _end > length) revert InvalidQuery();
+    function pools() external view returns (address[] memory) {
+        return _getSlice(allPools, 0, type(uint256).max);
+    }
 
-        address[] memory allPoolsList = new address[](_end - _start);
-        for (uint256 i; i < _end - _start; ++i) {
-            allPoolsList[i] = allPools[_start + i];
-        }
+    /// @inheritdoc IEulerSwapFactory
+    function poolsByPairLength(address asset0, address asset1) external view returns (uint256) {
+        return poolMap[asset0][asset1].length;
+    }
 
-        return allPoolsList;
+    /// @inheritdoc IEulerSwapFactory
+    function poolsByPairSlice(address asset0, address asset1, uint256 start, uint256 end)
+        external
+        view
+        returns (address[] memory)
+    {
+        return _getSlice(poolMap[asset0][asset1], start, end);
+    }
+
+    /// @inheritdoc IEulerSwapFactory
+    function poolsByPair(address asset0, address asset1) external view returns (address[] memory) {
+        return _getSlice(poolMap[asset0][asset1], 0, type(uint256).max);
     }
 
     /// @notice Validates operator authorization for euler account and update the relevant EulerAccountState.
@@ -217,5 +230,25 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     /// @return The addresses of asset0 and asset1 in the pool
     function _getAssets(address pool) internal view returns (address, address) {
         return (EulerSwap(pool).asset0(), EulerSwap(pool).asset1());
+    }
+
+    /// @notice Returns a slice of an array of addresses
+    /// @dev Creates a new memory array containing elements from start to end index
+    ///      If end is type(uint256).max, it will return all elements from start to the end of the array
+    /// @param arr The storage array to slice
+    /// @param start The starting index of the slice (inclusive)
+    /// @param end The ending index of the slice (exclusive)
+    /// @return A new memory array containing the requested slice of addresses
+    function _getSlice(address[] storage arr, uint256 start, uint256 end) internal view returns (address[] memory) {
+        uint256 length = arr.length;
+        if (end == type(uint256).max) end = length;
+        if (end < start || end > length) revert SliceOutOfBounds();
+
+        address[] memory slice = new address[](end - start);
+        for (uint256 i; i < end - start; ++i) {
+            slice[i] = arr[start + i];
+        }
+
+        return slice;
     }
 }

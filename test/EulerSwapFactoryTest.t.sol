@@ -17,7 +17,7 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
     }
 
     function testDeployPool() public {
-        uint256 allPoolsLengthBefore = eulerSwapFactory.allPoolsLength();
+        uint256 allPoolsLengthBefore = eulerSwapFactory.poolsLength();
 
         // test when new pool not set as operator
 
@@ -61,15 +61,15 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
         vm.prank(holder);
         evc.batch(items);
 
-        (address eulerSwap,,) = eulerSwapFactory.getEulerAccountState(holder);
+        address eulerSwap = eulerSwapFactory.poolByHolder(holder);
 
-        uint256 allPoolsLengthAfter = eulerSwapFactory.allPoolsLength();
+        uint256 allPoolsLengthAfter = eulerSwapFactory.poolsLength();
         assertEq(allPoolsLengthAfter - allPoolsLengthBefore, 1);
 
-        address[] memory poolsList = eulerSwapFactory.getAllPoolsListSlice(0, type(uint256).max);
+        address[] memory poolsList = eulerSwapFactory.pools();
         assertEq(poolsList.length, 1);
         assertEq(poolsList[0], eulerSwap);
-        assertEq(eulerSwapFactory.allPools(0), address(eulerSwap));
+        assertEq(poolsList[0], address(eulerSwap));
 
         // test when deploying second pool while old pool is still set as operator
 
@@ -93,7 +93,7 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
         evc.batch(items);
 
         // test deploying new pool for same assets pair as old one
-        (address oldPool,,) = eulerSwapFactory.getEulerAccountState(holder);
+        address oldPool = eulerSwapFactory.poolByHolder(holder);
         salt = bytes32(uint256(123456));
         predictedAddress = predictPoolAddress(address(eulerSwapFactory), poolParams, curveParams, salt);
 
@@ -120,11 +120,11 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
         vm.prank(holder);
         evc.batch(items);
 
-        (address pool,,) = eulerSwapFactory.getEulerAccountState(holder);
+        address pool = eulerSwapFactory.poolByHolder(holder);
         assertEq(pool, predictedAddress);
 
         // test deploying new pool for different assets pair as old one
-        (oldPool,,) = eulerSwapFactory.getEulerAccountState(holder);
+        oldPool = eulerSwapFactory.poolByHolder(holder);
         poolParams = IEulerSwap.Params(address(eTST), address(eTST3), holder, 1e18, 1e18, 1e18, 1e18, 0);
 
         salt = bytes32(uint256(1234567));
@@ -153,13 +153,13 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
         vm.prank(holder);
         evc.batch(items);
 
-        (pool,,) = eulerSwapFactory.getEulerAccountState(holder);
+        pool = eulerSwapFactory.poolByHolder(holder);
         assertEq(pool, predictedAddress);
     }
 
-    function testInvalidGetAllPoolsListSliceQuery() public {
-        vm.expectRevert(EulerSwapFactory.InvalidQuery.selector);
-        eulerSwapFactory.getAllPoolsListSlice(1, 0);
+    function testInvalidPoolsSliceQuery() public {
+        vm.expectRevert(EulerSwapFactory.SliceOutOfBounds.selector);
+        eulerSwapFactory.poolsSlice(1, 0);
     }
 
     function testDeployWithAssetsOutOfOrderOrEqual() public {
