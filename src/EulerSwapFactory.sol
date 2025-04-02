@@ -10,12 +10,13 @@ import {GenericFactory} from "evk/GenericFactory/GenericFactory.sol";
 /// @custom:security-contact security@euler.xyz
 /// @author Euler Labs (https://www.eulerlabs.com/)
 contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
-    /// @dev An array to store all pools addresses.
-    address[] public allPools;
-    /// @dev Mapping between euler account and deployed pool that is currently set as operator
-    mapping(address eulerAccount => address operator) public eulerAccountToPool;
     /// @dev Vaults must be deployed by this factory
     address public immutable evkFactory;
+    /// @dev An array to store all pools addresses.
+    address[] public allPools;
+    /// @dev Mapping between euler account and EulerAccountState
+    mapping(address eulerAccount => EulerAccountState state) private eulerAccountState;
+    mapping(address asset0 => mapping(address asset1 => address[])) private poolMap;
 
     event PoolDeployed(
         address indexed asset0,
@@ -32,6 +33,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
         uint256 concentrationY,
         address pool
     );
+    event PoolUninstalled(address indexed asset0, address indexed asset1, address indexed eulerAccount, address pool);
 
     error InvalidQuery();
     error Unauthorized();
@@ -56,9 +58,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
 
         EulerSwap pool = new EulerSwap{salt: keccak256(abi.encode(params.eulerAccount, salt))}(params, curveParams);
 
-        checkEulerAccountOperators(params.eulerAccount, address(pool));
-
-        allPools.push(address(pool));
+        checkAndUpdateEulerAccountState(params.eulerAccount, address(pool));
 
         EulerSwap(pool).activate();
 
@@ -114,6 +114,14 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
         return allPools.length;
     }
 
+    function getEulerAccountState(address eulerAccount) external view returns (address, uint48, uint48) {
+        return (
+            eulerAccountState[eulerAccount].pool,
+            eulerAccountState[eulerAccount].allPoolsIndex,
+            eulerAccountState[eulerAccount].poolMapIndex
+        );
+    }
+
     /// @inheritdoc IEulerSwapFactory
     function getAllPoolsListSlice(uint256 _start, uint256 _end) external view returns (address[] memory) {
         uint256 length = allPools.length;
@@ -128,20 +136,68 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
         return allPoolsList;
     }
 
-    /// @notice Validates operator authorization for euler account. First checks if the account has an existing operator
-    /// and ensures it is deauthorized. Then verifies the new pool is authorized as an operator. Finally, updates the
-    /// mapping to track the new pool as the account's operator.
+    /// @notice Validates operator authorization for euler account and update the relevant EulerAccountState.
     /// @param eulerAccount The address of the euler account.
-    /// @param newPool The address of the new pool.
-    function checkEulerAccountOperators(address eulerAccount, address newPool) internal {
-        address operator = eulerAccountToPool[eulerAccount];
+    /// @param newOperator The address of the new pool.
+    function checkAndUpdateEulerAccountState(address eulerAccount, address newOperator) internal {
+        require(evc.isAccountOperatorAuthorized(eulerAccount, newOperator), OperatorNotInstalled());
 
-        if (operator != address(0)) {
-            require(!evc.isAccountOperatorAuthorized(eulerAccount, operator), OldOperatorStillInstalled());
+        (address newOpAsset0, address newOpAsset1) = _getAssets(newOperator);
+        address oldOperator = eulerAccountState[eulerAccount].pool;
+
+        if (oldOperator != address(0)) {
+            require(!evc.isAccountOperatorAuthorized(eulerAccount, oldOperator), OldOperatorStillInstalled());
+
+            // replace pool address in allPools array
+            _updateInArray(allPools, eulerAccountState[eulerAccount].allPoolsIndex, newOperator);
+
+            eulerAccountState[eulerAccount].pool = newOperator;
+
+            (address oldOpAsset0, address oldOpAsset1) = _getAssets(oldOperator);
+
+            // if deploying new pool for same assets pair, just update poolMap without pop()
+            // else, we need to go the traditional path, reduce the array size, update eulerAccount poolMapIndex and push new one
+            if (oldOpAsset0 == newOpAsset0 && oldOpAsset1 == newOpAsset1) {
+                _updateInArray(
+                    poolMap[newOpAsset0][newOpAsset1], eulerAccountState[eulerAccount].poolMapIndex, newOperator
+                );
+            } else {
+                _removeFromArray(poolMap[oldOpAsset0][oldOpAsset1], eulerAccountState[eulerAccount].poolMapIndex);
+
+                eulerAccountState[eulerAccount].poolMapIndex = uint48(poolMap[newOpAsset0][newOpAsset1].length);
+
+                _pushInArray(poolMap[newOpAsset0][newOpAsset1], newOperator);
+            }
+
+            emit PoolUninstalled(oldOpAsset0, oldOpAsset1, eulerAccount, oldOperator);
+        } else {
+            address[] storage poolMapArray = poolMap[newOpAsset0][newOpAsset1];
+
+            eulerAccountState[eulerAccount] = EulerAccountState({
+                pool: newOperator,
+                allPoolsIndex: uint48(allPools.length),
+                poolMapIndex: uint48(poolMapArray.length)
+            });
+
+            _pushInArray(allPools, newOperator);
+            _pushInArray(poolMapArray, newOperator);
         }
+    }
 
-        require(evc.isAccountOperatorAuthorized(eulerAccount, newPool), OperatorNotInstalled());
+    function _updateInArray(address[] storage arr, uint256 index, address _newValue) internal {
+        arr[index] = _newValue;
+    }
 
-        eulerAccountToPool[eulerAccount] = newPool;
+    function _pushInArray(address[] storage arr, address _newValue) internal {
+        arr.push(_newValue);
+    }
+
+    function _removeFromArray(address[] storage arr, uint256 index) internal {
+        arr[index] = arr[arr.length - 1];
+        arr.pop();
+    }
+
+    function _getAssets(address pool) internal view returns (address, address) {
+        return (EulerSwap(pool).asset0(), EulerSwap(pool).asset1());
     }
 }

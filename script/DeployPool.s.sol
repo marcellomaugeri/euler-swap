@@ -57,7 +57,7 @@ contract DeployPool is ScriptUtil {
         evc.batch(items);
         vm.stopBroadcast();
 
-        address pool = factory.eulerAccountToPool(eulerAccount);
+        (address pool,,) = factory.getEulerAccountState(eulerAccount);
 
         string memory outputScriptFileName = "DeployPool_output.json";
 

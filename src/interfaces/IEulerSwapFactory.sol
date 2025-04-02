@@ -4,6 +4,12 @@ pragma solidity >=0.8.0;
 import {IEulerSwap} from "./IEulerSwap.sol";
 
 interface IEulerSwapFactory {
+    struct EulerAccountState {
+        address pool;
+        uint48 allPoolsIndex;
+        uint48 poolMapIndex;
+    }
+
     /// @notice Deploy a new EulerSwap pool with the given parameters
     /// @dev The pool address is deterministically generated using CREATE2 with a salt derived from
     ///      the euler account address and provided salt parameter. This allows the pool address to be
@@ -16,6 +22,7 @@ interface IEulerSwapFactory {
         external
         returns (address);
 
+    function getEulerAccountState(address eulerAccount) external view returns (address, uint48, uint48);
     /// @notice Compute the address of a new EulerSwap pool with the given parameters
     /// @dev The pool address is deterministically generated using CREATE2 with a salt derived from
     ///      the euler account address and provided salt parameter. This allows the pool address to be
