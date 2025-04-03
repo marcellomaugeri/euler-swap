@@ -221,7 +221,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     /// @param pool The address of the pool to query
     /// @return The addresses of asset0 and asset1 in the pool
     function _getAssets(address pool) internal view returns (address, address) {
-        return (EulerSwap(pool).asset0(), EulerSwap(pool).asset1());
+        return (IEulerSwap(pool).asset0(), IEulerSwap(pool).asset1());
     }
 
     /// @notice Returns a slice of an array of addresses

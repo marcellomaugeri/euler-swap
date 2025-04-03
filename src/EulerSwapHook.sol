@@ -86,7 +86,7 @@ contract EulerSwapHook is EulerSwap, BaseHook {
             // the debt will be paid by the swapper via the swap router
             // TODO: can we optimize the transfer by pulling from PoolManager directly to Euler?
             poolManager.take(inputCurrency, address(this), amountIn);
-            amountInWithoutFee = depositAssets(zeroForOne ? vault0 : vault1, amountIn) * feeMultiplier / 1e18;
+            amountInWithoutFee = depositAssets(zeroForOne ? asset0 : asset1, zeroForOne ? vault0 : vault1);
 
             // pay the output token, to the PoolManager from an Euler vault
             // the credit will be forwarded to the swap router, which then forwards it to the swapper
@@ -120,8 +120,8 @@ contract EulerSwapHook is EulerSwap, BaseHook {
         require(evc.isAccountOperatorAuthorized(eulerAccount, address(this)), OperatorNotInstalled());
         require(amount <= type(uint112).max, SwapLimitExceeded());
 
-        // exactIn: decrease received amountIn, rounding down
-        if (exactIn) amount = amount * feeMultiplier / 1e18;
+        // exactIn: decrease effective amountIn
+        if (exactIn) amount = amount - (amount * fee / 1e18);
 
         (uint256 inLimit, uint256 outLimit) = calcLimits(asset0IsInput);
 
@@ -135,8 +135,8 @@ contract EulerSwapHook is EulerSwap, BaseHook {
             require(amount <= outLimit && quote <= inLimit, SwapLimitExceeded());
         }
 
-        // exactOut: increase required quote(amountIn), rounding up
-        if (!exactIn) quote = (quote * 1e18 + (feeMultiplier - 1)) / feeMultiplier;
+        // exactOut: inflate required amountIn
+        if (!exactIn) quote = (quote * 1e18) / (1e18 - fee);
 
         return quote;
     }

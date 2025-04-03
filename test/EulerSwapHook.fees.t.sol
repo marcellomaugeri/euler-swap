@@ -47,7 +47,7 @@ contract EulerSwapHookTest is EulerSwapTestBase {
         (uint112 r0, uint112 r1,) = eulerSwap.getReserves();
 
         uint256 amountIn = 1e18;
-        uint256 amountInWithoutFee = amountIn * eulerSwap.feeMultiplier() / 1e18;
+        uint256 amountInWithoutFee = amountIn - (amountIn * eulerSwap.fee() / 1e18);
         uint256 amountOut =
             periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), amountIn);
 
@@ -89,7 +89,7 @@ contract EulerSwapHookTest is EulerSwapTestBase {
             periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), amountOut);
 
         // inverse of the fee math in Periphery
-        uint256 amountInWithoutFee = (amountIn * eulerSwap.feeMultiplier() - eulerSwap.feeMultiplier()) / 1e18;
+        uint256 amountInWithoutFee = amountIn * (1e18 - eulerSwap.fee()) / 1e18;
 
         assetTST.mint(anyone, amountIn);
 
