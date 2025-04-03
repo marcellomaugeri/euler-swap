@@ -57,9 +57,11 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
             InvalidVaultImplementation()
         );
 
+        uninstall(params.eulerAccount);
+
         EulerSwap pool = new EulerSwap{salt: keccak256(abi.encode(params.eulerAccount, salt))}(params, curveParams);
 
-        checkAndUpdateEulerAccountState(params.eulerAccount, address(pool));
+        updateEulerAccountState(params.eulerAccount, address(pool));
 
         EulerSwap(pool).activate();
 
@@ -80,6 +82,11 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
         );
 
         return address(pool);
+    }
+
+    /// @inheritdoc IEulerSwapFactory
+    function uninstallPool() external {
+        uninstall(_msgSender());
     }
 
     /// @inheritdoc IEulerSwapFactory
@@ -112,7 +119,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     }
 
     /// @inheritdoc IEulerSwapFactory
-    function poolByHolder(address who) external view returns (address) {
+    function poolByEulerAccount(address who) external view returns (address) {
         return eulerAccountState[who].pool;
     }
 
@@ -153,73 +160,51 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     /// @notice Validates operator authorization for euler account and update the relevant EulerAccountState.
     /// @param eulerAccount The address of the euler account.
     /// @param newOperator The address of the new pool.
-    function checkAndUpdateEulerAccountState(address eulerAccount, address newOperator) internal {
+    function updateEulerAccountState(address eulerAccount, address newOperator) internal {
         require(evc.isAccountOperatorAuthorized(eulerAccount, newOperator), OperatorNotInstalled());
 
-        (address newOpAsset0, address newOpAsset1) = _getAssets(newOperator);
-        address oldOperator = eulerAccountState[eulerAccount].pool;
+        (address asset0, address asset1) = _getAssets(newOperator);
 
-        if (oldOperator != address(0)) {
-            require(!evc.isAccountOperatorAuthorized(eulerAccount, oldOperator), OldOperatorStillInstalled());
+        address[] storage poolMapArray = poolMap[asset0][asset1];
 
-            // replace pool address in allPools array
-            _updateInArray(allPools, eulerAccountState[eulerAccount].allPoolsIndex, newOperator);
+        eulerAccountState[eulerAccount] = EulerAccountState({
+            pool: newOperator,
+            allPoolsIndex: uint48(allPools.length),
+            poolMapIndex: uint48(poolMapArray.length)
+        });
 
-            eulerAccountState[eulerAccount].pool = newOperator;
-
-            (address oldOpAsset0, address oldOpAsset1) = _getAssets(oldOperator);
-
-            // if deploying new pool for same assets pair, just update poolMap without pop()
-            // else, we need to go the traditional path, reduce the array size, update eulerAccount poolMapIndex and push new one
-            if (oldOpAsset0 == newOpAsset0 && oldOpAsset1 == newOpAsset1) {
-                _updateInArray(
-                    poolMap[newOpAsset0][newOpAsset1], eulerAccountState[eulerAccount].poolMapIndex, newOperator
-                );
-            } else {
-                _removeFromArray(poolMap[oldOpAsset0][oldOpAsset1], eulerAccountState[eulerAccount].poolMapIndex);
-
-                eulerAccountState[eulerAccount].poolMapIndex = uint48(poolMap[newOpAsset0][newOpAsset1].length);
-
-                _pushInArray(poolMap[newOpAsset0][newOpAsset1], newOperator);
-            }
-
-            emit PoolUninstalled(oldOpAsset0, oldOpAsset1, eulerAccount, oldOperator);
-        } else {
-            address[] storage poolMapArray = poolMap[newOpAsset0][newOpAsset1];
-
-            eulerAccountState[eulerAccount] = EulerAccountState({
-                pool: newOperator,
-                allPoolsIndex: uint48(allPools.length),
-                poolMapIndex: uint48(poolMapArray.length)
-            });
-
-            _pushInArray(allPools, newOperator);
-            _pushInArray(poolMapArray, newOperator);
-        }
+        allPools.push(newOperator);
+        poolMapArray.push(newOperator);
     }
 
-    /// @notice Updates an element at a specific index in an array
-    /// @dev Directly modifies the array element at the given index with a new value
-    /// @param arr The storage array to update
-    /// @param index The index of the element to update
-    /// @param _newValue The new value to set at the specified index
-    function _updateInArray(address[] storage arr, uint256 index, address _newValue) internal {
-        arr[index] = _newValue;
+    /// @notice Uninstalls the pool associated with the given Euler account
+    /// @dev This function removes the pool from the factory's tracking and emits a PoolUninstalled event
+    /// @dev The function checks if the operator is still installed and reverts if it is
+    /// @dev If no pool exists for the account, the function returns without any action
+    /// @param eulerAccount The address of the Euler account whose pool should be uninstalled
+    function uninstall(address eulerAccount) internal {
+        address pool = eulerAccountState[eulerAccount].pool;
+
+        if (pool == address(0)) return;
+
+        require(!evc.isAccountOperatorAuthorized(eulerAccount, pool), OldOperatorStillInstalled());
+
+        (address asset0, address asset1) = _getAssets(pool);
+
+        address[] storage poolMapArr = poolMap[asset0][asset1];
+
+        swapAndPop(allPools, eulerAccountState[eulerAccount].allPoolsIndex);
+        swapAndPop(poolMapArr, eulerAccountState[eulerAccount].poolMapIndex);
+
+        delete eulerAccountState[eulerAccount];
+
+        emit PoolUninstalled(asset0, asset1, eulerAccount, pool);
     }
 
-    /// @notice Adds a new element to the end of an array
-    /// @dev Uses the push operation to append a new value to the array
-    /// @param arr The storage array to append to
-    /// @param _newValue The new value to append to the array
-    function _pushInArray(address[] storage arr, address _newValue) internal {
-        arr.push(_newValue);
-    }
-
-    /// @notice Removes an element from an array at a specific index
-    /// @dev Uses the swap-and-pop pattern to remove an element while maintaining array order
-    /// @param arr The storage array to remove from
+    /// @notice Swaps the element at the given index with the last element and removes the last element
+    /// @param arr The storage array to modify
     /// @param index The index of the element to remove
-    function _removeFromArray(address[] storage arr, uint256 index) internal {
+    function swapAndPop(address[] storage arr, uint256 index) internal {
         arr[index] = arr[arr.length - 1];
         arr.pop();
     }

@@ -63,7 +63,7 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
         vm.prank(holder);
         evc.batch(items);
 
-        address eulerSwap = eulerSwapFactory.poolByHolder(holder);
+        address eulerSwap = eulerSwapFactory.poolByEulerAccount(holder);
 
         uint256 allPoolsLengthAfter = eulerSwapFactory.poolsLength();
         assertEq(allPoolsLengthAfter - allPoolsLengthBefore, 1);
@@ -95,7 +95,7 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
         evc.batch(items);
 
         // test deploying new pool for same assets pair as old one
-        address oldPool = eulerSwapFactory.poolByHolder(holder);
+        address oldPool = eulerSwapFactory.poolByEulerAccount(holder);
         salt = bytes32(uint256(123456));
         predictedAddress = predictPoolAddress(address(eulerSwapFactory), poolParams, curveParams, salt);
 
@@ -122,11 +122,11 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
         vm.prank(holder);
         evc.batch(items);
 
-        address pool = eulerSwapFactory.poolByHolder(holder);
+        address pool = eulerSwapFactory.poolByEulerAccount(holder);
         assertEq(pool, predictedAddress);
 
         // test deploying new pool for different assets pair as old one
-        oldPool = eulerSwapFactory.poolByHolder(holder);
+        oldPool = eulerSwapFactory.poolByEulerAccount(holder);
         poolParams = IEulerSwap.Params(address(eTST), address(eTST3), holder, 1e18, 1e18, 1e18, 1e18, 0);
 
         salt = bytes32(uint256(1234567));
@@ -155,7 +155,7 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
         vm.prank(holder);
         evc.batch(items);
 
-        pool = eulerSwapFactory.poolByHolder(holder);
+        pool = eulerSwapFactory.poolByEulerAccount(holder);
         assertEq(pool, predictedAddress);
     }
 
@@ -241,7 +241,7 @@ contract EulerSwapFactoryTest is EulerSwapTestBase {
         evc.batch(items);
 
         // Get the deployed pool and its assets
-        address pool = eulerSwapFactory.poolByHolder(holder);
+        address pool = eulerSwapFactory.poolByEulerAccount(holder);
         address asset0 = EulerSwap(pool).asset0();
         address asset1 = EulerSwap(pool).asset1();
 

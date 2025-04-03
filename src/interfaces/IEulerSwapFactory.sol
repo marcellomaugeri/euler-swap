@@ -22,6 +22,12 @@ interface IEulerSwapFactory {
         external
         returns (address);
 
+    /// @notice Uninstalls the pool associated with the Euler account
+    /// @dev This function removes the pool from the factory's tracking and emits a PoolUninstalled event
+    /// @dev The function can only be called by the Euler account that owns the pool
+    /// @dev If no pool is installed for the caller, the function returns without any action
+    function uninstallPool() external;
+
     /// @notice Compute the address of a new EulerSwap pool with the given parameters
     /// @dev The pool address is deterministically generated using CREATE2 with a salt derived from
     ///      the euler account address and provided salt parameter. This allows the pool address to be
@@ -82,7 +88,7 @@ interface IEulerSwapFactory {
     /// @dev Returns the pool address from the EulerAccountState mapping for the given holder
     /// @param who The address of the holder to query
     /// @return The address of the pool associated with the holder
-    function poolByHolder(address who) external view returns (address);
+    function poolByEulerAccount(address who) external view returns (address);
 
     /// @notice Returns the total number of deployed pools
     /// @dev Returns the length of the allPools array
