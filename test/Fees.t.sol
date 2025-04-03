@@ -58,8 +58,10 @@ contract FeesTest is EulerSwapTestBase {
 
         // Holder's NAV increased by fee amount, plus slightly extra because we are not at curve equilibrium point
 
-        assertGt(getHolderNAV(), origNav + int256(amountIn - amountInNoFees));
-        assertEq(eTST.balanceOf(address(holder)), 10e18 + amountIn);
+        uint256 protocolFeesCollected = assetTST.balanceOf(address(0));
+
+        assertGt(getHolderNAV() + int256(protocolFeesCollected), origNav + int256(amountIn - amountInNoFees));
+        assertEq(eTST.balanceOf(address(holder)), 10e18 + amountIn - protocolFeesCollected);
         assertEq(eTST2.balanceOf(address(holder)), 10e18 - amountOut);
     }
 
@@ -107,8 +109,10 @@ contract FeesTest is EulerSwapTestBase {
 
         // Holder's NAV increased by fee amount, plus slightly extra because we are not at curve equilibrium point
 
-        assertGt(getHolderNAV(), origNav + int256(amountIn - amountInNoFees));
-        assertEq(eTST.balanceOf(address(holder)), 10e18 + amountIn);
+        uint256 protocolFeesCollected = assetTST.balanceOf(address(0));
+
+        assertGt(getHolderNAV() + int256(protocolFeesCollected), origNav + int256(amountIn - amountInNoFees));
+        assertEq(eTST.balanceOf(address(holder)), 10e18 + amountIn - protocolFeesCollected);
         assertEq(eTST2.balanceOf(address(holder)), 10e18 - amountOut);
     }
 }
