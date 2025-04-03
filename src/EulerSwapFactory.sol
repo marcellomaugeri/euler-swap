@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.27;
 
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {IEulerSwapFactory, IEulerSwap} from "./interfaces/IEulerSwapFactory.sol";
-import {EulerSwap} from "./EulerSwap.sol";
+import {EulerSwapHook} from "./EulerSwapHook.sol";
 import {EVCUtil} from "ethereum-vault-connector/utils/EVCUtil.sol";
 import {GenericFactory} from "evk/GenericFactory/GenericFactory.sol";
 
@@ -17,6 +18,8 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     /// @dev Mapping between euler account and EulerAccountState
     mapping(address eulerAccount => EulerAccountState state) private eulerAccountState;
     mapping(address asset0 => mapping(address asset1 => address[])) private poolMap;
+
+    IPoolManager immutable poolManager;
 
     event PoolDeployed(
         address indexed asset0,
@@ -42,7 +45,8 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     error InvalidVaultImplementation();
     error SliceOutOfBounds();
 
-    constructor(address evc, address evkFactory_) EVCUtil(evc) {
+    constructor(IPoolManager _manager, address evc, address evkFactory_) EVCUtil(evc) {
+        poolManager = _manager;
         evkFactory = evkFactory_;
     }
 
@@ -59,11 +63,12 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
 
         uninstall(params.eulerAccount);
 
-        EulerSwap pool = new EulerSwap{salt: keccak256(abi.encode(params.eulerAccount, salt))}(params, curveParams);
+        EulerSwapHook pool =
+            new EulerSwapHook{salt: keccak256(abi.encode(params.eulerAccount, salt))}(poolManager, params, curveParams);
 
         updateEulerAccountState(params.eulerAccount, address(pool));
 
-        EulerSwap(pool).activate();
+        pool.activate();
 
         emit PoolDeployed(
             pool.asset0(),
@@ -104,7 +109,9 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
                             address(this),
                             keccak256(abi.encode(address(poolParams.eulerAccount), salt)),
                             keccak256(
-                                abi.encodePacked(type(EulerSwap).creationCode, abi.encode(poolParams, curveParams))
+                                abi.encodePacked(
+                                    type(EulerSwapHook).creationCode, abi.encode(poolManager, poolParams, curveParams)
+                                )
                             )
                         )
                     )
@@ -214,7 +221,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     /// @param pool The address of the pool to query
     /// @return The addresses of asset0 and asset1 in the pool
     function _getAssets(address pool) internal view returns (address, address) {
-        return (EulerSwap(pool).asset0(), EulerSwap(pool).asset1());
+        return (IEulerSwap(pool).asset0(), IEulerSwap(pool).asset1());
     }
 
     /// @notice Returns a slice of an array of addresses
