@@ -119,8 +119,8 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     }
 
     /// @inheritdoc IEulerSwapFactory
-    function poolByEulerAccount(address who) external view returns (address) {
-        return eulerAccountState[who].pool;
+    function poolByEulerAccount(address eulerAccount) external view returns (address) {
+        return eulerAccountState[eulerAccount].pool;
     }
 
     /// @inheritdoc IEulerSwapFactory
