@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {EulerSwapTestBase, EulerSwap, EulerSwapPeriphery, IEulerSwap} from "./EulerSwapTestBase.t.sol";
 import {TestERC20} from "evk-test/unit/evault/EVaultTestBase.t.sol";
-import {EulerSwapHook} from "../src/EulerSwapHook.sol";
+import {EulerSwap} from "../src/EulerSwap.sol";
 
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {IPoolManager, PoolManagerDeployer} from "./utils/PoolManagerDeployer.sol";
@@ -14,10 +14,10 @@ import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 
-contract EulerSwapHookTest is EulerSwapTestBase {
+contract HookSwapsTest is EulerSwapTestBase {
     using StateLibrary for IPoolManager;
 
-    EulerSwapHook public eulerSwap;
+    EulerSwap public eulerSwap;
 
     IPoolManager public poolManager;
     PoolSwapTest public swapRouter;
@@ -32,9 +32,9 @@ contract EulerSwapHookTest is EulerSwapTestBase {
         swapRouter = new PoolSwapTest(poolManager);
         minimalRouter = new MinimalRouter(poolManager);
 
-        // set swap fee to 10 bips
-        eulerSwap = createEulerSwapHook(poolManager, 60e18, 60e18, 0.001e18, 1e18, 1e18, 0.4e18, 0.85e18);
-        eulerSwap.activate();
+        deployEulerSwap(address(poolManager));
+
+        eulerSwap = createEulerSwapHook(60e18, 60e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
 
         // confirm pool was created
         assertFalse(eulerSwap.poolKey().currency1 == CurrencyLibrary.ADDRESS_ZERO);
@@ -42,12 +42,8 @@ contract EulerSwapHookTest is EulerSwapTestBase {
         assertNotEq(sqrtPriceX96, 0);
     }
 
-    function test_SwapExactIn_withLpFee() public {
-        int256 origNav = getHolderNAV();
-        (uint112 r0, uint112 r1,) = eulerSwap.getReserves();
-
+    function test_SwapExactIn() public {
         uint256 amountIn = 1e18;
-        uint256 amountInWithoutFee = amountIn - (amountIn * eulerSwap.fee() / 1e18);
         uint256 amountOut =
             periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), amountIn);
 
@@ -65,31 +61,29 @@ contract EulerSwapHookTest is EulerSwapTestBase {
 
         assertEq(zeroForOne ? uint256(-int256(result.amount0())) : uint256(-int256(result.amount1())), amountIn);
         assertEq(zeroForOne ? uint256(int256(result.amount1())) : uint256(int256(result.amount0())), amountOut);
-
-        // assert fees were not added to the reserves
-        (uint112 r0New, uint112 r1New,) = eulerSwap.getReserves();
-        if (zeroForOne) {
-            assertEq(r0New, r0 + amountInWithoutFee);
-            assertEq(r1New, r1 - amountOut);
-        } else {
-            // oneForZero, so the curve received asset1
-            assertEq(r0New, r0 - amountOut);
-            assertEq(r1New, r1 + amountInWithoutFee);
-        }
-
-        assertGt(getHolderNAV(), origNav + int256(amountIn - amountInWithoutFee));
     }
 
-    function test_SwapExactOut_withLpFee() public {
-        int256 origNav = getHolderNAV();
-        (uint112 r0, uint112 r1,) = eulerSwap.getReserves();
+    /// @dev swapping with an amount that exceeds PoolManager's ERC20 token balance will revert
+    /// if the router does not pre-pay the input
+    function test_swapExactIn_revertWithoutTokenLiquidity() public {
+        uint256 amountIn = 1e18; // input amount exceeds PoolManager balance
 
+        assetTST.mint(anyone, amountIn);
+
+        vm.startPrank(anyone);
+        assetTST.approve(address(swapRouter), amountIn);
+
+        bool zeroForOne = address(assetTST) < address(assetTST2);
+        PoolKey memory poolKey = eulerSwap.poolKey();
+        vm.expectRevert();
+        _swap(poolKey, zeroForOne, true, amountIn);
+        vm.stopPrank();
+    }
+
+    function test_SwapExactOut() public {
         uint256 amountOut = 1e18;
         uint256 amountIn =
             periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), amountOut);
-
-        // inverse of the fee math in Periphery
-        uint256 amountInWithoutFee = amountIn * (1e18 - eulerSwap.fee()) / 1e18;
 
         assetTST.mint(anyone, amountIn);
 
@@ -105,18 +99,32 @@ contract EulerSwapHookTest is EulerSwapTestBase {
 
         assertEq(zeroForOne ? uint256(-int256(result.amount0())) : uint256(-int256(result.amount1())), amountIn);
         assertEq(zeroForOne ? uint256(int256(result.amount1())) : uint256(int256(result.amount0())), amountOut);
+    }
 
-        // assert fees were not added to the reserves
-        (uint112 r0New, uint112 r1New,) = eulerSwap.getReserves();
-        if (zeroForOne) {
-            assertEq(r0New, r0 + amountInWithoutFee + 1); // 1 wei of imprecision
-            assertEq(r1New, r1 - amountOut);
-        } else {
-            // oneForZero, so the curve received asset1
-            assertEq(r0New, r0 - amountOut);
-            assertEq(r1New, r1 + amountInWithoutFee);
-        }
+    /// @dev swapping with an amount that exceeds PoolManager's ERC20 token balance will revert
+    /// if the router does not pre-pay the input
+    function test_SwapExactOut_revertWithoutTokenLiquidity() public {
+        uint256 amountOut = 1e18;
+        uint256 amountIn =
+            periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), amountOut);
 
-        assertGt(getHolderNAV(), origNav + int256(amountIn - amountInWithoutFee));
+        assetTST.mint(anyone, amountIn);
+
+        vm.startPrank(anyone);
+        assetTST.approve(address(swapRouter), amountIn);
+        bool zeroForOne = address(assetTST) < address(assetTST2);
+        PoolKey memory poolKey = eulerSwap.poolKey();
+        vm.expectRevert();
+        _swap(poolKey, zeroForOne, false, amountOut);
+        vm.stopPrank();
+    }
+
+    function _swap(PoolKey memory key, bool zeroForOne, bool exactInput, uint256 amount) internal {
+        IPoolManager.SwapParams memory swapParams = IPoolManager.SwapParams({
+            zeroForOne: zeroForOne,
+            amountSpecified: exactInput ? -int256(amount) : int256(amount),
+            sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1
+        });
+        swapRouter.swap(key, swapParams, settings, "");
     }
 }

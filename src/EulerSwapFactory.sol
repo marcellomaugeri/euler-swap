@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.27;
 
-import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {IEulerSwapFactory, IEulerSwap} from "./interfaces/IEulerSwapFactory.sol";
-import {EulerSwapHook} from "./EulerSwapHook.sol";
 import {EVCUtil} from "ethereum-vault-connector/utils/EVCUtil.sol";
 import {GenericFactory} from "evk/GenericFactory/GenericFactory.sol";
+
+import {EulerSwap} from "./EulerSwap.sol";
+import {MetaProxyDeployer} from "./MetaProxyDeployer.sol";
 
 /// @title EulerSwapFactory contract
 /// @custom:security-contact security@euler.xyz
@@ -15,27 +16,14 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     address[] private allPools;
     /// @dev Vaults must be deployed by this factory
     address public immutable evkFactory;
+    /// @dev The EulerSwap code instance that will be proxied to
+    address public immutable eulerSwapImpl;
     /// @dev Mapping between euler account and EulerAccountState
     mapping(address eulerAccount => EulerAccountState state) private eulerAccountState;
     mapping(address asset0 => mapping(address asset1 => address[])) private poolMap;
 
-    IPoolManager immutable poolManager;
-
-    event PoolDeployed(
-        address indexed asset0,
-        address indexed asset1,
-        address vault0,
-        address vault1,
-        uint256 indexed fee,
-        address eulerAccount,
-        uint256 reserve0,
-        uint256 reserve1,
-        uint256 priceX,
-        uint256 priceY,
-        uint256 concentrationX,
-        uint256 concentrationY,
-        address pool
-    );
+    event PoolDeployed(address indexed asset0, address indexed asset1, address indexed eulerAccount, address pool);
+    event PoolConfig(address indexed pool, IEulerSwap.Params params, IEulerSwap.InitialState initialState);
     event PoolUninstalled(address indexed asset0, address indexed asset1, address indexed eulerAccount, address pool);
 
     error InvalidQuery();
@@ -45,13 +33,13 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     error InvalidVaultImplementation();
     error SliceOutOfBounds();
 
-    constructor(IPoolManager _manager, address evc, address evkFactory_) EVCUtil(evc) {
-        poolManager = _manager;
+    constructor(address evc, address evkFactory_, address eulerSwapImpl_) EVCUtil(evc) {
         evkFactory = evkFactory_;
+        eulerSwapImpl = eulerSwapImpl_;
     }
 
     /// @inheritdoc IEulerSwapFactory
-    function deployPool(IEulerSwap.Params memory params, IEulerSwap.CurveParams memory curveParams, bytes32 salt)
+    function deployPool(IEulerSwap.Params memory params, IEulerSwap.InitialState memory initialState, bytes32 salt)
         external
         returns (address)
     {
@@ -63,28 +51,19 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
 
         uninstall(params.eulerAccount);
 
-        EulerSwapHook pool =
-            new EulerSwapHook{salt: keccak256(abi.encode(params.eulerAccount, salt))}(poolManager, params, curveParams);
+        EulerSwap pool = EulerSwap(
+            MetaProxyDeployer.deployMetaProxy(
+                eulerSwapImpl, abi.encode(params), keccak256(abi.encode(params.eulerAccount, salt))
+            )
+        );
 
         updateEulerAccountState(params.eulerAccount, address(pool));
 
-        pool.activate();
+        pool.activate(initialState);
 
-        emit PoolDeployed(
-            pool.asset0(),
-            pool.asset1(),
-            params.vault0,
-            params.vault1,
-            pool.fee(),
-            params.eulerAccount,
-            params.currReserve0,
-            params.currReserve1,
-            curveParams.priceX,
-            curveParams.priceY,
-            curveParams.concentrationX,
-            curveParams.concentrationY,
-            address(pool)
-        );
+        (address asset0, address asset1) = pool.getAssets();
+        emit PoolDeployed(asset0, asset1, params.eulerAccount, address(pool));
+        emit PoolConfig(address(pool), params, initialState);
 
         return address(pool);
     }
@@ -95,11 +74,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     }
 
     /// @inheritdoc IEulerSwapFactory
-    function computePoolAddress(
-        IEulerSwap.Params memory poolParams,
-        IEulerSwap.CurveParams memory curveParams,
-        bytes32 salt
-    ) external view returns (address) {
+    function computePoolAddress(IEulerSwap.Params memory poolParams, bytes32 salt) external view returns (address) {
         return address(
             uint160(
                 uint256(
@@ -108,21 +83,12 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
                             bytes1(0xff),
                             address(this),
                             keccak256(abi.encode(address(poolParams.eulerAccount), salt)),
-                            keccak256(
-                                abi.encodePacked(
-                                    type(EulerSwapHook).creationCode, abi.encode(poolManager, poolParams, curveParams)
-                                )
-                            )
+                            keccak256(MetaProxyDeployer.creationCodeMetaProxy(eulerSwapImpl, abi.encode(poolParams)))
                         )
                     )
                 )
             )
         );
-    }
-
-    /// @inheritdoc IEulerSwapFactory
-    function EVC() external view override(EVCUtil, IEulerSwapFactory) returns (address) {
-        return address(evc);
     }
 
     /// @inheritdoc IEulerSwapFactory
@@ -221,7 +187,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     /// @param pool The address of the pool to query
     /// @return The addresses of asset0 and asset1 in the pool
     function _getAssets(address pool) internal view returns (address, address) {
-        return (IEulerSwap(pool).asset0(), IEulerSwap(pool).asset1());
+        return IEulerSwap(pool).getAssets();
     }
 
     /// @notice Returns a slice of an array of addresses

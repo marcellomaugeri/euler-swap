@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {IEVault, IEulerSwap, EulerSwapTestBase, EulerSwap, TestERC20} from "./EulerSwapTestBase.t.sol";
 
-contract EulerSwapTest is EulerSwapTestBase {
+contract Basic is EulerSwapTestBase {
     EulerSwap public eulerSwap;
 
     function setUp() public virtual override {

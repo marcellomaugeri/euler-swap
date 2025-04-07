@@ -2,22 +2,14 @@
 pragma solidity ^0.8.24;
 
 import {EulerSwapTestBase, EulerSwap, EulerSwapPeriphery, IEulerSwap} from "./EulerSwapTestBase.t.sol";
-import {EulerSwapHarness} from "./harness/EulerSwapHarness.sol";
 
-contract EulerSwapPeripheryTest is EulerSwapTestBase {
+contract PeripheryTest is EulerSwapTestBase {
     EulerSwap public eulerSwap;
-    EulerSwapHarness public eulerSwapHarness;
 
     function setUp() public virtual override {
         super.setUp();
 
         eulerSwap = createEulerSwap(60e18, 60e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
-
-        IEulerSwap.Params memory params = getEulerSwapParams(50e18, 50e18, 0.4e18);
-        IEulerSwap.CurveParams memory curveParams =
-            IEulerSwap.CurveParams({priceX: 1e18, priceY: 1e18, concentrationX: 0.85e18, concentrationY: 0.85e18});
-
-        eulerSwapHarness = new EulerSwapHarness(params, curveParams); // Use the mock EulerSwap contract with a public f() function
     }
 
     function test_SwapExactIn() public {
@@ -29,7 +21,7 @@ contract EulerSwapPeripheryTest is EulerSwapTestBase {
 
         vm.startPrank(anyone);
         assetTST.approve(address(periphery), amountIn);
-        periphery.swapExactIn(address(eulerSwap), address(assetTST), address(assetTST2), amountIn, amountOut);
+        periphery.swapExactIn(address(eulerSwap), address(assetTST), address(assetTST2), amountIn, anyone, amountOut, 0);
         vm.stopPrank();
 
         assertEq(assetTST2.balanceOf(anyone), amountOut);
@@ -45,7 +37,9 @@ contract EulerSwapPeripheryTest is EulerSwapTestBase {
         vm.startPrank(anyone);
         assetTST.approve(address(periphery), amountIn);
         vm.expectRevert(EulerSwapPeriphery.AmountOutLessThanMin.selector);
-        periphery.swapExactIn(address(eulerSwap), address(assetTST), address(assetTST2), amountIn, amountOut + 1);
+        periphery.swapExactIn(
+            address(eulerSwap), address(assetTST), address(assetTST2), amountIn, anyone, amountOut + 1, 0
+        );
         vm.stopPrank();
     }
 
@@ -58,7 +52,9 @@ contract EulerSwapPeripheryTest is EulerSwapTestBase {
 
         vm.startPrank(anyone);
         assetTST.approve(address(periphery), amountIn);
-        periphery.swapExactOut(address(eulerSwap), address(assetTST), address(assetTST2), amountOut, amountIn);
+        periphery.swapExactOut(
+            address(eulerSwap), address(assetTST), address(assetTST2), amountOut, anyone, amountIn, 0
+        );
         vm.stopPrank();
 
         assertEq(assetTST2.balanceOf(anyone), amountOut);
@@ -74,7 +70,54 @@ contract EulerSwapPeripheryTest is EulerSwapTestBase {
         vm.startPrank(anyone);
         assetTST.approve(address(periphery), amountIn);
         vm.expectRevert(EulerSwapPeriphery.AmountInMoreThanMax.selector);
-        periphery.swapExactOut(address(eulerSwap), address(assetTST), address(assetTST2), amountOut * 2, amountIn);
+        periphery.swapExactOut(
+            address(eulerSwap), address(assetTST), address(assetTST2), amountOut * 2, anyone, amountIn, 0
+        );
         vm.stopPrank();
+    }
+
+    function test_SwapAltReceiver() public {
+        address altReceiver = address(1234);
+
+        uint256 amountIn = 1e18;
+        uint256 amountOut =
+            periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), amountIn);
+
+        assetTST.mint(anyone, amountIn);
+
+        vm.startPrank(anyone);
+        assetTST.approve(address(periphery), amountIn);
+        periphery.swapExactIn(
+            address(eulerSwap), address(assetTST), address(assetTST2), amountIn, altReceiver, amountOut, 0
+        );
+        vm.stopPrank();
+
+        assertEq(assetTST2.balanceOf(anyone), 0);
+        assertEq(assetTST2.balanceOf(altReceiver), amountOut);
+    }
+
+    function test_SwapDeadline() public {
+        skip(1000);
+
+        uint256 amountIn = 1e18;
+        uint256 amountOut =
+            periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), amountIn);
+
+        assetTST.mint(anyone, amountIn);
+
+        vm.startPrank(anyone);
+        assetTST.approve(address(periphery), amountIn);
+
+        vm.expectRevert(EulerSwapPeriphery.DeadlineExpired.selector);
+        periphery.swapExactIn(
+            address(eulerSwap), address(assetTST), address(assetTST2), amountIn, anyone, amountOut, block.timestamp - 1
+        );
+
+        periphery.swapExactIn(
+            address(eulerSwap), address(assetTST), address(assetTST2), amountIn, anyone, amountOut, block.timestamp + 1
+        );
+        vm.stopPrank();
+
+        assertEq(assetTST2.balanceOf(anyone), amountOut);
     }
 }

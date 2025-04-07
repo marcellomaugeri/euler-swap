@@ -5,17 +5,17 @@ import {Test, console} from "forge-std/Test.sol";
 import {EVaultTestBase, TestERC20, IRMTestDefault} from "evk-test/unit/evault/EVaultTestBase.t.sol";
 import {IEVault} from "evk/EVault/IEVault.sol";
 import {IEulerSwap, IEVC, EulerSwap} from "../src/EulerSwap.sol";
+import {EulerSwapFactory} from "../src/EulerSwapFactory.sol";
 import {EulerSwapPeriphery} from "../src/EulerSwapPeriphery.sol";
-import {EulerSwapHook} from "../src/EulerSwapHook.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
-import {HookMiner} from "v4-periphery/src/utils/HookMiner.sol";
+import {HookMiner} from "./utils/HookMiner.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
+import {MetaProxyDeployer} from "../src/MetaProxyDeployer.sol";
 
 contract EulerSwapTestBase is EVaultTestBase {
     uint256 public constant MAX_QUOTE_ERROR = 4;
 
     address public depositor = makeAddr("depositor");
-    address public creator = makeAddr("creator");
     address public holder = makeAddr("holder");
     address public recipient = makeAddr("recipient");
     address public anyone = makeAddr("anyone");
@@ -23,7 +23,12 @@ contract EulerSwapTestBase is EVaultTestBase {
     TestERC20 assetTST3;
     IEVault public eTST3;
 
+    address public eulerSwapImpl;
+    EulerSwapFactory public eulerSwapFactory;
     EulerSwapPeriphery public periphery;
+
+    uint256 currSalt = 0;
+    address installedOperator;
 
     modifier monotonicHolderNAV() {
         int256 orig = getHolderNAV();
@@ -31,10 +36,25 @@ contract EulerSwapTestBase is EVaultTestBase {
         assertGe(getHolderNAV(), orig);
     }
 
+    function deployEulerSwap(address poolManager_) public {
+        eulerSwapImpl = address(new EulerSwap(address(evc), poolManager_));
+        eulerSwapFactory = new EulerSwapFactory(address(evc), address(factory), eulerSwapImpl);
+        periphery = new EulerSwapPeriphery();
+    }
+
+    function removeInstalledOperator() public {
+        if (installedOperator == address(0)) return;
+
+        vm.prank(holder);
+        evc.setAccountOperator(holder, installedOperator, false);
+
+        installedOperator = address(0);
+    }
+
     function setUp() public virtual override {
         super.setUp();
 
-        periphery = new EulerSwapPeriphery();
+        deployEulerSwap(address(0)); // Default is no poolManager
 
         // deploy more vaults
         assetTST3 = new TestERC20("Test Token 3", "TST3", 18, false);
@@ -102,56 +122,65 @@ contract EulerSwapTestBase is EVaultTestBase {
     }
 
     function createEulerSwap(
-        uint112 debtLimitA,
-        uint112 debtLimitB,
+        uint112 reserve0,
+        uint112 reserve1,
         uint256 fee,
         uint256 px,
         uint256 py,
         uint256 cx,
         uint256 cy
     ) internal returns (EulerSwap) {
-        vm.prank(creator);
-        EulerSwap eulerSwap = new EulerSwap(
-            getEulerSwapParams(debtLimitA, debtLimitB, fee),
-            IEulerSwap.CurveParams({priceX: px, priceY: py, concentrationX: cx, concentrationY: cy})
-        );
+        removeInstalledOperator();
+
+        IEulerSwap.Params memory params = getEulerSwapParams(reserve0, reserve1, px, py, cx, cy, fee);
+        IEulerSwap.InitialState memory initialState =
+            IEulerSwap.InitialState({currReserve0: reserve0, currReserve1: reserve1});
+
+        bytes32 salt = bytes32(currSalt++);
+
+        address predictedAddr = eulerSwapFactory.computePoolAddress(params, salt);
 
         vm.prank(holder);
-        evc.setAccountOperator(holder, address(eulerSwap), true);
+        evc.setAccountOperator(holder, predictedAddr, true);
+        installedOperator = predictedAddr;
+
+        vm.prank(holder);
+        EulerSwap eulerSwap = EulerSwap(eulerSwapFactory.deployPool(params, initialState, salt));
 
         return eulerSwap;
     }
 
     function createEulerSwapHook(
-        IPoolManager _poolManager,
-        uint112 debtLimitA,
-        uint112 debtLimitB,
+        uint112 reserve0,
+        uint112 reserve1,
         uint256 fee,
         uint256 px,
         uint256 py,
         uint256 cx,
         uint256 cy
-    ) internal returns (EulerSwapHook) {
-        IEulerSwap.Params memory poolParams = getEulerSwapParams(debtLimitA, debtLimitB, fee);
-        IEulerSwap.CurveParams memory curveParams =
-            IEulerSwap.CurveParams({priceX: px, priceY: py, concentrationX: cx, concentrationY: cy});
+    ) internal returns (EulerSwap) {
+        removeInstalledOperator();
 
-        bytes memory constructorArgs = abi.encode(_poolManager, poolParams, curveParams);
-        (address hookAddress, bytes32 salt) = HookMiner.find(
-            creator,
+        IEulerSwap.Params memory params = getEulerSwapParams(reserve0, reserve1, px, py, cx, cy, fee);
+        IEulerSwap.InitialState memory initialState =
+            IEulerSwap.InitialState({currReserve0: reserve0, currReserve1: reserve1});
+
+        bytes memory creationCode = MetaProxyDeployer.creationCodeMetaProxy(eulerSwapImpl, abi.encode(params));
+        (address predictedAddr, bytes32 salt) = HookMiner.find(
+            address(eulerSwapFactory),
+            holder,
             uint160(Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG),
-            type(EulerSwapHook).creationCode,
-            constructorArgs
+            creationCode
         );
 
-        vm.prank(creator);
-        EulerSwapHook eulerSwapHook = new EulerSwapHook{salt: salt}(_poolManager, poolParams, curveParams);
-        assertEq(address(eulerSwapHook), hookAddress);
+        vm.prank(holder);
+        evc.setAccountOperator(holder, predictedAddr, true);
+        installedOperator = predictedAddr;
 
         vm.prank(holder);
-        evc.setAccountOperator(holder, address(eulerSwapHook), true);
+        EulerSwap eulerSwap = EulerSwap(eulerSwapFactory.deployPool(params, initialState, salt));
 
-        return eulerSwapHook;
+        return eulerSwap;
     }
 
     function mintAndDeposit(address who, IEVault vault, uint256 amount) internal {
@@ -199,20 +228,28 @@ contract EulerSwapTestBase is EVaultTestBase {
         return skimmed;
     }
 
-    function getEulerSwapParams(uint112 reserve0, uint112 reserve1, uint256 fee)
-        internal
-        view
-        returns (EulerSwap.Params memory)
-    {
+    function getEulerSwapParams(
+        uint112 reserve0,
+        uint112 reserve1,
+        uint256 px,
+        uint256 py,
+        uint256 cx,
+        uint256 cy,
+        uint256 fee
+    ) internal view returns (EulerSwap.Params memory) {
         return IEulerSwap.Params({
             vault0: address(eTST),
             vault1: address(eTST2),
             eulerAccount: holder,
             equilibriumReserve0: reserve0,
             equilibriumReserve1: reserve1,
-            currReserve0: reserve0,
-            currReserve1: reserve1,
-            fee: fee
+            priceX: px,
+            priceY: py,
+            concentrationX: cx,
+            concentrationY: cy,
+            fee: fee,
+            protocolFee: 0,
+            protocolFeeRecipient: address(0)
         });
     }
 
