@@ -114,7 +114,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         bool asset0IsInput = checkTokens(eulerSwap, tokenIn, tokenOut);
         (uint256 inLimit, uint256 outLimit) = calcLimits(eulerSwap, asset0IsInput);
 
-        uint256 quote = binarySearch(eulerSwap, reserve0, reserve1, amount, exactIn, asset0IsInput);
+        uint256 quote = search(eulerSwap, reserve0, reserve1, amount, exactIn, asset0IsInput);
 
         if (exactIn) {
             // if `exactIn`, `quote` is the amount of assets to buy from the AMM
@@ -128,70 +128,6 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         if (!exactIn) quote = (quote * 1e18) / (1e18 - fee);
 
         return quote;
-    }
-
-    /// @notice Binary searches for the output amount along a swap curve given input parameters
-    /// @dev General-purpose routine for binary searching swapping curves.
-    /// Although some curves may have more efficient closed-form solutions,
-    /// this works with any monotonic curve.
-    /// @param eulerSwap The EulerSwap contract to search the curve for
-    /// @param reserve0 Current reserve of asset0 in the pool
-    /// @param reserve1 Current reserve of asset1 in the pool
-    /// @param amount The input or output amount depending on exactIn
-    /// @param exactIn True if amount is input amount, false if amount is output amount
-    /// @param asset0IsInput True if asset0 is being input, false if asset1 is being input
-    /// @return output The calculated output amount from the binary search
-    function binarySearch(
-        IEulerSwap eulerSwap,
-        uint112 reserve0,
-        uint112 reserve1,
-        uint256 amount,
-        bool exactIn,
-        bool asset0IsInput
-    ) internal view returns (uint256 output) {
-        int256 dx;
-        int256 dy;
-
-        if (exactIn) {
-            if (asset0IsInput) dx = int256(amount);
-            else dy = int256(amount);
-        } else {
-            if (asset0IsInput) dy = -int256(amount);
-            else dx = -int256(amount);
-        }
-
-        unchecked {
-            int256 reserve0New = int256(uint256(reserve0)) + dx;
-            int256 reserve1New = int256(uint256(reserve1)) + dy;
-            require(reserve0New > 0 && reserve1New > 0, SwapLimitExceeded());
-
-            uint256 low;
-            uint256 high = type(uint112).max;
-
-            while (low < high) {
-                uint256 mid = (low + high) / 2;
-                require(mid > 0, SwapLimitExceeded());
-                (uint256 a, uint256 b) = dy == 0 ? (uint256(reserve0New), mid) : (mid, uint256(reserve1New));
-                if (eulerSwap.verify(a, b)) {
-                    high = mid;
-                } else {
-                    low = mid + 1;
-                }
-            }
-
-            require(high < type(uint112).max, SwapLimitExceeded()); // at least one point verified
-
-            if (dx != 0) dy = int256(low) - reserve1New;
-            else dx = int256(low) - reserve0New;
-        }
-
-        if (exactIn) {
-            if (asset0IsInput) output = uint256(-dy);
-            else output = uint256(-dx);
-        } else {
-            if (asset0IsInput) output = dx >= 0 ? uint256(dx) : 0;
-            else output = dy >= 0 ? uint256(dy) : 0;
-        }
     }
 
     /**
@@ -287,5 +223,167 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
         if (tokenIn == asset0 && tokenOut == asset1) asset0IsInput = true;
         else if (tokenIn == asset1 && tokenOut == asset0) asset0IsInput = false;
         else revert UnsupportedPair();
+    }
+
+
+
+
+    //////////////////////////////
+
+
+    // Exact version starts here.
+    // Strategy is to re-calculate everything using f() and fInverse() and see where things break.
+    function search(
+        IEulerSwap eulerSwap,
+        uint112 reserve0,
+        uint112 reserve1,
+        uint256 amount,
+        bool exactIn,
+        bool asset0IsInput
+    ) internal view returns (uint256 output) {
+        uint256 px = eulerSwap.priceX();
+        uint256 py = eulerSwap.priceY();
+        uint256 x0 = eulerSwap.equilibriumReserve0();
+        uint256 y0 = eulerSwap.equilibriumReserve1();
+        uint256 cx = eulerSwap.concentrationX();
+        uint256 cy = eulerSwap.concentrationY();
+
+        uint256 xNew;
+        uint256 yNew;
+
+        if (exactIn) {
+            // exact in
+            if (asset0IsInput) {
+                // swap X in and Y out
+                xNew = reserve0 + amount;
+                if (xNew < x0) {
+                    // remain on f()
+                    yNew = f(xNew, px, py, x0, y0, cx);
+                } else {
+                    // move to g()
+                    yNew = fInverse(xNew, py, px, y0, x0, cy);
+                }
+                output = reserve1 > yNew ? reserve1 - yNew : 0;
+            } else {
+                // swap Y in and X out
+                yNew = reserve1 + amount;
+                if (yNew < y0) {
+                    // remain on g()
+                    xNew = f(yNew, py, px, y0, x0, cy);
+                } else {
+                    // move to f()
+                    xNew = fInverse(yNew, px, py, x0, y0, cx);
+                }
+                output = reserve0 > xNew ? reserve0 - xNew : 0;
+            }
+        } else {
+            // exact out
+            if (asset0IsInput) {
+                // swap Y out and X in
+                yNew = reserve1 - amount;
+                if (yNew < y0) {
+                    // remain on g()
+                    xNew = f(yNew, py, px, y0, x0, cy);
+                } else {
+                    // move to f()
+                    xNew = fInverse(yNew, px, py, x0, y0, cx);
+                }
+                output = xNew > reserve0 ? xNew - reserve0 : 0;
+            } else {
+                // swap X out and Y in
+                xNew = reserve0 - amount;
+                if (xNew < x0) {
+                    // remain on f()
+                    yNew = f(xNew, py, px, y0, x0, cx);
+                } else {
+                    // move to g()
+                    yNew = fInverse(xNew, py, px, y0, x0, cy);
+                }
+                output = yNew > reserve1 ? yNew - reserve1 : 0;
+            }
+        }
+    }
+
+    /// @dev EulerSwap curve definition
+    /// Pre-conditions: x <= x0, 1 <= {px,py} <= 1e36, {x0,y0} <= type(uint112).max, c <= 1e18
+    function f(uint256 x, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c) internal pure returns (uint256) {
+        unchecked {
+            uint256 v = Math.mulDiv(px * (x0 - x), c * x + (1e18 - c) * x0, x * 1e18, Math.Rounding.Ceil);
+            require(v <= type(uint248).max, "HELP");
+            return y0 + (v + (py - 1)) / py;
+        }
+    }
+
+    function fInverse(uint256 y, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c)
+        internal
+        pure
+        returns (uint256)
+    {
+        // components of quadratic equation
+        int256 B = int256((py * (y - y0) + (px - 1)) / px) - (2 * int256(c) - int256(1e18)) * int256(x0) / 1e18;
+        uint256 C;
+        uint256 fourAC;
+        if (x0 < 1e18) {
+            C = ((1e18 - c) * x0 * x0 + (1e18 - 1)) / 1e18; // upper bound of 1e28 for x0 means this is safe
+            fourAC = Math.mulDiv(4 * c, C, 1e18, Math.Rounding.Ceil);
+        } else {
+            C = Math.mulDiv((1e18 - c), x0 * x0, 1e36, Math.Rounding.Ceil); // upper bound of 1e28 for x0 means this is safe
+            fourAC = Math.mulDiv(4 * c, C, 1, Math.Rounding.Ceil);
+        }
+
+        // solve for the square root
+        uint256 absB = abs(B);
+        uint256 squaredB;
+        uint256 discriminant;
+        uint256 sqrt;
+        if (absB > 1e33) {
+            uint256 scale = computeScale(absB);
+            squaredB = Math.mulDiv(absB / scale, absB, scale, Math.Rounding.Ceil);
+            discriminant = squaredB + fourAC / (scale * scale);
+            sqrt = Math.sqrt(discriminant);
+            sqrt = (sqrt * sqrt < discriminant) ? sqrt + 1 : sqrt;
+            sqrt = sqrt * scale;
+        } else {
+            squaredB = Math.mulDiv(absB, absB, 1, Math.Rounding.Ceil);
+            discriminant = squaredB + fourAC; // keep in 1e36 scale for increased precision ahead of sqrt
+            sqrt = Math.sqrt(discriminant); // drop back to 1e18 scale
+            sqrt = (sqrt * sqrt < discriminant) ? sqrt + 1 : sqrt;
+        }
+
+        uint256 x;
+        if (B <= 0) {
+            x = Math.mulDiv(absB + sqrt, 1e18, 2 * c, Math.Rounding.Ceil) + 3;
+        } else {
+            x = Math.mulDiv(2 * C, 1e18, absB + sqrt, Math.Rounding.Ceil) + 3;
+        }
+
+        if (x >= x0) {
+            return x0;
+        } else {
+            return x;
+        }
+    }
+
+    function computeScale(uint256 x) internal pure returns (uint256 scale) {
+        uint256 bits = 0;
+        uint256 tmp = x;
+
+        while (tmp > 0) {
+            tmp >>= 1;
+            bits++;
+        }
+
+        // absB * absB must be <= 2^256 ⇒ bits(B) ≤ 128
+        if (bits > 128) {
+            uint256 excessBits = bits - 128;
+            // 2^excessBits is how much we need to scale down to prevent overflow
+            scale = 1 << excessBits;
+        } else {
+            scale = 1;
+        }
+    }
+
+    function abs(int256 x) internal pure returns (uint256) {
+        return uint256(x >= 0 ? x : -x);
     }
 }
