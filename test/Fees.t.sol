@@ -41,7 +41,7 @@ contract FeesTest is EulerSwapTestBase {
         // Pulling out one extra reverts...
 
         vm.expectRevert(EulerSwap.CurveViolation.selector);
-        eulerSwap.swap(0, amountOut + 1, address(this), "");
+        eulerSwap.swap(0, amountOut + MAX_QUOTE_ERROR + 1, address(this), "");
 
         // Just right:
 
@@ -92,7 +92,7 @@ contract FeesTest is EulerSwapTestBase {
         // Pulling out one extra reverts...
 
         vm.expectRevert(EulerSwap.CurveViolation.selector);
-        eulerSwap.swap(0, amountOut + 1, address(this), "");
+        eulerSwap.swap(0, amountOut + MAX_QUOTE_ERROR + 1, address(this), "");
 
         // Just right:
 

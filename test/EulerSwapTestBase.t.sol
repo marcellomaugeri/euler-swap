@@ -12,6 +12,8 @@ import {HookMiner} from "v4-periphery/src/utils/HookMiner.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 
 contract EulerSwapTestBase is EVaultTestBase {
+    uint256 public constant MAX_QUOTE_ERROR = 4;
+
     address public depositor = makeAddr("depositor");
     address public creator = makeAddr("creator");
     address public holder = makeAddr("holder");

@@ -47,7 +47,7 @@ contract PreserveNav is EulerSwapTestBase {
             t1.transfer(address(eulerSwap), amount1);
 
             {
-                uint256 qPlus = q + 1;
+                uint256 qPlus = q + MAX_QUOTE_ERROR + 1;
                 vm.expectRevert();
                 if (dir1) eulerSwap.swap(0, qPlus, address(this), "");
                 else eulerSwap.swap(qPlus, 0, address(this), "");
@@ -71,7 +71,7 @@ contract PreserveNav is EulerSwapTestBase {
             t1.transfer(address(eulerSwap), amount2);
 
             {
-                uint256 qPlus = q + 1;
+                uint256 qPlus = q + MAX_QUOTE_ERROR + 1;
                 vm.expectRevert();
                 if (dir2) eulerSwap.swap(0, qPlus, address(this), "");
                 else eulerSwap.swap(qPlus, 0, address(this), "");

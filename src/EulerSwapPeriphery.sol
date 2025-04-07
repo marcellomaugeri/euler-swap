@@ -15,6 +15,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
     error SwapLimitExceeded();
     error AmountOutLessThanMin();
     error AmountInMoreThanMax();
+    error Overflow();
 
     /// @inheritdoc IEulerSwapPeriphery
     function swapExactIn(address eulerSwap, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOutMin)
@@ -230,9 +231,6 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
 
     //////////////////////////////
 
-
-    // Exact version starts here.
-    // Strategy is to re-calculate everything using f() and fInverse() and see where things break.
     function search(
         IEulerSwap eulerSwap,
         uint112 reserve0,
@@ -280,6 +278,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
             // exact out
             if (asset0IsInput) {
                 // swap Y out and X in
+                require(reserve1 > amount, SwapLimitExceeded());
                 yNew = reserve1 - amount;
                 if (yNew < y0) {
                     // remain on g()
@@ -291,6 +290,7 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
                 output = xNew > reserve0 ? xNew - reserve0 : 0;
             } else {
                 // swap X out and Y in
+                require(reserve0 > amount, SwapLimitExceeded());
                 xNew = reserve0 - amount;
                 if (xNew < x0) {
                     // remain on f()
@@ -305,11 +305,11 @@ contract EulerSwapPeriphery is IEulerSwapPeriphery {
     }
 
     /// @dev EulerSwap curve definition
-    /// Pre-conditions: x <= x0, 1 <= {px,py} <= 1e36, {x0,y0} <= type(uint112).max, c <= 1e18
+    /// Pre-conditions: 0 < x <= x0, 1 <= {px,py} <= 1e36, {x0,y0} <= type(uint112).max, c <= 1e18
     function f(uint256 x, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c) internal pure returns (uint256) {
         unchecked {
             uint256 v = Math.mulDiv(px * (x0 - x), c * x + (1e18 - c) * x0, x * 1e18, Math.Rounding.Ceil);
-            require(v <= type(uint248).max, "HELP");
+            require(v <= type(uint248).max, Overflow());
             return y0 + (v + (py - 1)) / py;
         }
     }

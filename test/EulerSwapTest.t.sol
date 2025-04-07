@@ -159,7 +159,7 @@ contract EulerSwapTest is EulerSwapTestBase {
             t1.transfer(address(eulerSwap), amount);
 
             {
-                uint256 qPlus = q + 1;
+                uint256 qPlus = q + MAX_QUOTE_ERROR + 1;
                 vm.expectRevert();
                 if (dir) eulerSwap.swap(0, qPlus, address(this), "");
                 else eulerSwap.swap(qPlus, 0, address(this), "");
