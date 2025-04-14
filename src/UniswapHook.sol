@@ -27,6 +27,8 @@ contract UniswapHook is BaseHook {
 
     PoolKey internal _poolKey;
 
+    error NativeConcentratedLiquidityUnsupported();
+
     constructor(address evc_, address _poolManager) BaseHook(IPoolManager(_poolManager)) {
         evc = evc_;
     }
@@ -116,11 +118,20 @@ contract UniswapHook is BaseHook {
         return (BaseHook.beforeSwap.selector, returnDelta, 0);
     }
 
+    function _beforeAddLiquidity(address, PoolKey calldata, IPoolManager.ModifyLiquidityParams calldata, bytes calldata)
+        internal
+        pure
+        override
+        returns (bytes4)
+    {
+        revert NativeConcentratedLiquidityUnsupported();
+    }
+
     function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
         return Hooks.Permissions({
             beforeInitialize: false,
             afterInitialize: false,
-            beforeAddLiquidity: false,
+            beforeAddLiquidity: true,
             afterAddLiquidity: false,
             beforeRemoveLiquidity: false,
             afterRemoveLiquidity: false,
