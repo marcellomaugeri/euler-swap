@@ -3,7 +3,6 @@
   ! document that periphery depends on non-malicious eulerSwap instances
   ! limitations of getLimits
 * update deploy scripts
-* TODOs in UniswapHook.sol
 * small cleanups in CurveLib
 ? tighten up getLimits bounds
 
