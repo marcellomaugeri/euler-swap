@@ -42,7 +42,7 @@ contract UniswapHook is BaseHook {
             currency0: Currency.wrap(asset0Addr),
             currency1: Currency.wrap(asset1Addr),
             fee: fee,
-            tickSpacing: 60, // TODO: fix arbitrary tick spacing
+            tickSpacing: 1, // hard-coded tick spacing, as its unused
             hooks: IHooks(address(this))
         });
 
