@@ -116,7 +116,22 @@ contract UniswapHook is BaseHook {
         return (BaseHook.beforeSwap.selector, returnDelta, 0);
     }
 
-    // TODO: fix salt mining & verification for the hook
-    function getHookPermissions() public pure override returns (Hooks.Permissions memory) {}
-    function validateHookAddress(BaseHook) internal pure override {}
+    function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
+        return Hooks.Permissions({
+            beforeInitialize: false,
+            afterInitialize: false,
+            beforeAddLiquidity: false,
+            afterAddLiquidity: false,
+            beforeRemoveLiquidity: false,
+            afterRemoveLiquidity: false,
+            beforeSwap: true,
+            afterSwap: false,
+            beforeDonate: false,
+            afterDonate: false,
+            beforeSwapReturnDelta: true,
+            afterSwapReturnDelta: false,
+            afterAddLiquidityReturnDelta: false,
+            afterRemoveLiquidityReturnDelta: false
+        });
+    }
 }

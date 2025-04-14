@@ -9,6 +9,7 @@ import {EulerSwapFactory} from "../src/EulerSwapFactory.sol";
 import {EulerSwapPeriphery} from "../src/EulerSwapPeriphery.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {HookMiner} from "./utils/HookMiner.sol";
+import {HookMiner as v4HookMiner} from "v4-periphery/src/utils/HookMiner.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 import {MetaProxyDeployer} from "../src/MetaProxyDeployer.sol";
 
@@ -37,7 +38,15 @@ contract EulerSwapTestBase is EVaultTestBase {
     }
 
     function deployEulerSwap(address poolManager_) public {
-        eulerSwapImpl = address(new EulerSwap(address(evc), poolManager_));
+        // use the canonical miner to find a valid 'implementation' address
+        (, bytes32 salt) = v4HookMiner.find(
+            address(this),
+            uint160(Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG),
+            type(EulerSwap).creationCode,
+            abi.encode(address(evc), poolManager_)
+        );
+
+        eulerSwapImpl = address(new EulerSwap{salt: salt}(address(evc), poolManager_));
         eulerSwapFactory = new EulerSwapFactory(address(evc), address(factory), eulerSwapImpl);
         periphery = new EulerSwapPeriphery();
     }
