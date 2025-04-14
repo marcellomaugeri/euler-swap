@@ -90,7 +90,6 @@ contract UniswapHook is BaseHook {
 
             // take the input token, from the PoolManager to the Euler vault
             // the debt will be paid by the swapper via the swap router
-            // TODO: can we optimize the transfer by pulling from PoolManager directly to Euler?
             poolManager.take(params.zeroForOne ? key.currency0 : key.currency1, address(this), amountIn);
             amountInWithoutFee = FundsLib.depositAssets(evc, p, params.zeroForOne ? p.vault0 : p.vault1);
 
