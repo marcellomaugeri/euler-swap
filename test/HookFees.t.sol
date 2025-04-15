@@ -169,6 +169,9 @@ contract HookFeesTest is EulerSwapTestBase {
             assertEq(r1New, r1 + amountInWithoutFee);
         }
 
-        assertGt(getHolderNAV(), origNav + int256(amountIn - amountInWithoutFee));
+        uint256 protocolFeeCollected = assetTST.balanceOf(protocolFeeRecipient);
+        assertGt(protocolFeeCollected, 0);
+
+        assertGt(getHolderNAV(), origNav + int256(amountIn - amountInWithoutFee) - int256(protocolFeeCollected));
     }
 }
