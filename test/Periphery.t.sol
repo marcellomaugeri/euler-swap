@@ -120,4 +120,12 @@ contract PeripheryTest is EulerSwapTestBase {
 
         assertEq(assetTST2.balanceOf(anyone), amountOut);
     }
+
+    function test_SwapZeroAmounts() public view {
+        assertEq(periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), 0), 0);
+        assertEq(periphery.quoteExactInput(address(eulerSwap), address(assetTST2), address(assetTST), 0), 0);
+
+        assertEq(periphery.quoteExactOutput(address(eulerSwap), address(assetTST), address(assetTST2), 0), 0);
+        assertEq(periphery.quoteExactOutput(address(eulerSwap), address(assetTST2), address(assetTST), 0), 0);
+    }
 }
