@@ -2,7 +2,7 @@
 
 Through a new partnership between Euler Labs and Uniswap Foundation, the teams intend to expose EulerSwap's core logic and mechanisms via a Uniswap v4 Hook interface.
 
-This is primarily done by inheriting `EulerSwap.sol:EulerSwap`, i.e. `EulerSwapHook is EulerSwap, BaseHook`, and implementing a "custom curve" via `beforeSwap`. The implementation will allow integrators, interfaces, and aggregators, to trade on EulerSwap as-if it is any other Uniswap v4 Pool
+This is primarily done by inheriting `UniswapHook.sol:UniswapHook`, i.e. `EulerSwap is UniswapHook, ...`, and implementing a "custom curve" via `beforeSwap`. The implementation will allow integrators, interfaces, and aggregators, to trade on EulerSwap as-if it is any other Uniswap v4 Pool
 
 ```solidity
 // assuming the EulerSwapHook was instantiated via EulerSwapFactory
@@ -10,7 +10,7 @@ PoolKey memory poolKey = PoolKey({
     currency0: currency0,
     currency1: currency1,
     fee: fee,
-    tickSpacing: 60,
+    tickSpacing: 1,
     hooks: IHooks(address(eulerSwapHook))
 });
 
@@ -20,22 +20,29 @@ minimalRouter.swap(poolKey, zeroForOne, amountIn, 0);
 
 ## Audit Scope
 
-The scope of audit involves the code-diff introduced by [PR #48](https://github.com/euler-xyz/euler-swap/pull/48/files). **As of Apr 1st, 2025, the diff is subject to change but will be code-complete by the audit start time.**
-
-Major Changes will include:
-
-* Replacing `binarySearch` quoting algorithm with a closed-form formula
-* Implementing a protocol fee, as a percentage of LP fees, enacted by governance
-
-As for the files in scope, only files from `src/` should be considered:
+The scope of audit involves a re-audit of EulerSwap, primarily `src/`:
 
 ```
 ├── src
+│   ├── CtxLib.sol
+│   ├── CurveLib.sol
+│   ├── EulerSwap.sol
 │   ├── EulerSwapFactory.sol
-│   ├── EulerSwapHook.sol
-│   └── utils
-│       └── HookMiner.sol
+│   ├── EulerSwapPeriphery.sol
+│   ├── FundsLib.sol
+│   ├── MetaProxyDeployer.sol
+│   ├── QuoteLib.sol
+│   ├── UniswapHook.sol
 ```
+
+> The interfaces are out of scope
+
+## Notable Changes since the prior audit:
+
+* Introduction of Uniswap v4 Hook logic
+* Addition of a protocol fee
+* Refactoring EulerSwap instances to delegate call into an implementation contract
+* Replaced binary-search quoting, with a closed formula `fInverse()`
 
 ## Known Caveats
 
