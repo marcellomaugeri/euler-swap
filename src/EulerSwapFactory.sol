@@ -6,12 +6,13 @@ import {EVCUtil} from "ethereum-vault-connector/utils/EVCUtil.sol";
 import {GenericFactory} from "evk/GenericFactory/GenericFactory.sol";
 
 import {EulerSwap} from "./EulerSwap.sol";
+import {ProtocolFee} from "./utils/ProtocolFee.sol";
 import {MetaProxyDeployer} from "./MetaProxyDeployer.sol";
 
 /// @title EulerSwapFactory contract
 /// @custom:security-contact security@euler.xyz
 /// @author Euler Labs (https://www.eulerlabs.com/)
-contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
+contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
     /// @dev An array to store all pools addresses.
     address[] private allPools;
     /// @dev Vaults must be deployed by this factory
@@ -33,7 +34,10 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
     error InvalidVaultImplementation();
     error SliceOutOfBounds();
 
-    constructor(address evc, address evkFactory_, address eulerSwapImpl_) EVCUtil(evc) {
+    constructor(address evc, address evkFactory_, address eulerSwapImpl_, address feeOwner_)
+        EVCUtil(evc)
+        ProtocolFee(feeOwner_)
+    {
         evkFactory = evkFactory_;
         eulerSwapImpl = eulerSwapImpl_;
     }
@@ -50,6 +54,10 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil {
         );
 
         uninstall(params.eulerAccount);
+
+        // set protocol fee
+        params.protocolFee = protocolFee;
+        params.protocolFeeRecipient = protocolFeeRecipient;
 
         EulerSwap pool = EulerSwap(
             MetaProxyDeployer.deployMetaProxy(
