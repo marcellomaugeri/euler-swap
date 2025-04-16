@@ -51,3 +51,11 @@ The scope of audit involves a re-audit of EulerSwap, primarily `src/`:
 Due to technical requirements, EulerSwapHook must take the input token from PoolManager and deposit it into Euler Vaults. It will appear that EulerSwapHook can only support input sizes of `IERC20.balanceOf(PoolManager)`. However swap routers can pre-emptively send input tokens (from user wallet to PoolManager) prior to calling `poolManager.swap` to get around this limitation.
 
 An example `test/utils/MinimalRouter.sol` is provided as an example.
+
+### Invalidated Salts
+
+Uniswap v4 Hooks encode their behaviors within the address, requiring deployers to mine salts for a particular address pattern. Because constructor arguments influence the precomputed address during the salt-finding process, governance may accidentally invalidate a discovered salt by updating the protocol fee.
+
+The EulerSwapFactory passes a protocol fee and protocol fee recipient to a EulerSwap instance (hook). If governance were modify either values between salt-discovery and EulerSwap deployment, the deployment would fail.
+
+This scenario is unlikely to happen as we do not expect protocol fee parameters to change; as well, governance can pre-emptively warn deployers of the parameter change.

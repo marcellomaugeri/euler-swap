@@ -17,6 +17,8 @@ import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 contract HookFeesTest is EulerSwapTestBase {
     using StateLibrary for IPoolManager;
 
+    address protocolFeeRecipient = makeAddr("protocolFeeRecipient");
+
     EulerSwap public eulerSwap;
 
     IPoolManager public poolManager;
@@ -119,5 +121,57 @@ contract HookFeesTest is EulerSwapTestBase {
         }
 
         assertGt(getHolderNAV(), origNav + int256(amountIn - amountInWithoutFee));
+    }
+
+    function test_protocolFee() public {
+        // set protocol fee to 10% of the LP fee
+        uint256 protocolFee = 0.1e18;
+
+        eulerSwapFactory.setProtocolFee(protocolFee);
+        eulerSwapFactory.setProtocolFeeRecipient(protocolFeeRecipient);
+
+        // set swap fee to 10 bips and activate the pool
+        eulerSwap = createEulerSwapHookFull(
+            60e18, 60e18, 0.001e18, 1e18, 1e18, 0.4e18, 0.85e18, protocolFee, protocolFeeRecipient
+        );
+
+        int256 origNav = getHolderNAV();
+        (uint112 r0, uint112 r1,) = eulerSwap.getReserves();
+
+        uint256 amountIn = 1e18;
+        uint256 amountInWithoutFee = amountIn - (amountIn * eulerSwap.getParams().fee / 1e18);
+        uint256 amountOut =
+            periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), amountIn);
+
+        assetTST.mint(anyone, amountIn);
+
+        vm.startPrank(anyone);
+        assetTST.approve(address(minimalRouter), amountIn);
+
+        bool zeroForOne = address(assetTST) < address(assetTST2);
+        BalanceDelta result = minimalRouter.swap(eulerSwap.poolKey(), zeroForOne, amountIn, 0, "");
+        vm.stopPrank();
+
+        assertEq(assetTST.balanceOf(anyone), 0);
+        assertEq(assetTST2.balanceOf(anyone), amountOut);
+
+        assertEq(zeroForOne ? uint256(-int256(result.amount0())) : uint256(-int256(result.amount1())), amountIn);
+        assertEq(zeroForOne ? uint256(int256(result.amount1())) : uint256(int256(result.amount0())), amountOut);
+
+        // assert fees were not added to the reserves
+        (uint112 r0New, uint112 r1New,) = eulerSwap.getReserves();
+        if (zeroForOne) {
+            assertEq(r0New, r0 + amountInWithoutFee);
+            assertEq(r1New, r1 - amountOut);
+        } else {
+            // oneForZero, so the curve received asset1
+            assertEq(r0New, r0 - amountOut);
+            assertEq(r1New, r1 + amountInWithoutFee);
+        }
+
+        uint256 protocolFeeCollected = assetTST.balanceOf(protocolFeeRecipient);
+        assertGt(protocolFeeCollected, 0);
+
+        assertGt(getHolderNAV(), origNav + int256(amountIn - amountInWithoutFee) - int256(protocolFeeCollected));
     }
 }

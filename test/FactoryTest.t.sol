@@ -28,7 +28,7 @@ contract FactoryTest is EulerSwapTestBase {
         view
         returns (IEulerSwap.Params memory poolParams, IEulerSwap.InitialState memory initialState)
     {
-        poolParams = getEulerSwapParams(1e18, 1e18, 1e18, 1e18, 0.4e18, 0.85e18, 0);
+        poolParams = getEulerSwapParams(1e18, 1e18, 1e18, 1e18, 0.4e18, 0.85e18, 0, 0, address(0));
         initialState = IEulerSwap.InitialState({currReserve0: 1e18, currReserve1: 1e18});
     }
 
