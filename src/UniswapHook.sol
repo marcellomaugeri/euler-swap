@@ -27,6 +27,8 @@ contract UniswapHook is BaseHook {
 
     PoolKey internal _poolKey;
 
+    error NativeConcentratedLiquidityUnsupported();
+
     constructor(address evc_, address _poolManager) BaseHook(IPoolManager(_poolManager)) {
         evc = evc_;
     }
@@ -42,7 +44,7 @@ contract UniswapHook is BaseHook {
             currency0: Currency.wrap(asset0Addr),
             currency1: Currency.wrap(asset1Addr),
             fee: fee,
-            tickSpacing: 60, // TODO: fix arbitrary tick spacing
+            tickSpacing: 1, // hard-coded tick spacing, as its unused
             hooks: IHooks(address(this))
         });
 
@@ -90,7 +92,6 @@ contract UniswapHook is BaseHook {
 
             // take the input token, from the PoolManager to the Euler vault
             // the debt will be paid by the swapper via the swap router
-            // TODO: can we optimize the transfer by pulling from PoolManager directly to Euler?
             poolManager.take(params.zeroForOne ? key.currency0 : key.currency1, address(this), amountIn);
             amountInWithoutFee = FundsLib.depositAssets(evc, p, params.zeroForOne ? p.vault0 : p.vault1);
 
@@ -117,7 +118,31 @@ contract UniswapHook is BaseHook {
         return (BaseHook.beforeSwap.selector, returnDelta, 0);
     }
 
-    // TODO: fix salt mining & verification for the hook
-    function getHookPermissions() public pure override returns (Hooks.Permissions memory) {}
-    function validateHookAddress(BaseHook) internal pure override {}
+    function _beforeAddLiquidity(address, PoolKey calldata, IPoolManager.ModifyLiquidityParams calldata, bytes calldata)
+        internal
+        pure
+        override
+        returns (bytes4)
+    {
+        revert NativeConcentratedLiquidityUnsupported();
+    }
+
+    function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
+        return Hooks.Permissions({
+            beforeInitialize: false,
+            afterInitialize: false,
+            beforeAddLiquidity: true,
+            afterAddLiquidity: false,
+            beforeRemoveLiquidity: false,
+            afterRemoveLiquidity: false,
+            beforeSwap: true,
+            afterSwap: false,
+            beforeDonate: false,
+            afterDonate: false,
+            beforeSwapReturnDelta: true,
+            afterSwapReturnDelta: false,
+            afterAddLiquidityReturnDelta: false,
+            afterRemoveLiquidityReturnDelta: false
+        });
+    }
 }

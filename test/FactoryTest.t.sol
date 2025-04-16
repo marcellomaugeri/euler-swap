@@ -33,7 +33,8 @@ contract FactoryTest is EulerSwapTestBase {
     }
 
     function mineSalt(IEulerSwap.Params memory poolParams) internal view returns (address hookAddress, bytes32 salt) {
-        uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG);
+        uint160 flags =
+            uint160(Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG | Hooks.BEFORE_ADD_LIQUIDITY_FLAG);
         bytes memory creationCode = MetaProxyDeployer.creationCodeMetaProxy(eulerSwapImpl, abi.encode(poolParams));
         (hookAddress, salt) = HookMiner.find(address(eulerSwapFactory), holder, flags, creationCode);
     }

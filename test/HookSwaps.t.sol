@@ -4,15 +4,20 @@ pragma solidity ^0.8.24;
 import {EulerSwapTestBase, EulerSwap, EulerSwapPeriphery, IEulerSwap} from "./EulerSwapTestBase.t.sol";
 import {TestERC20} from "evk-test/unit/evault/EVaultTestBase.t.sol";
 import {EulerSwap} from "../src/EulerSwap.sol";
+import {UniswapHook} from "../src/UniswapHook.sol";
 
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {IPoolManager, PoolManagerDeployer} from "./utils/PoolManagerDeployer.sol";
 import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
 import {MinimalRouter} from "./utils/MinimalRouter.sol";
+import {PoolModifyLiquidityTest} from "@uniswap/v4-core/src/test/PoolModifyLiquidityTest.sol";
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {CustomRevert} from "@uniswap/v4-core/src/libraries/CustomRevert.sol";
+import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 
 contract HookSwapsTest is EulerSwapTestBase {
     using StateLibrary for IPoolManager;
@@ -22,6 +27,7 @@ contract HookSwapsTest is EulerSwapTestBase {
     IPoolManager public poolManager;
     PoolSwapTest public swapRouter;
     MinimalRouter public minimalRouter;
+    PoolModifyLiquidityTest public liquidityManager;
 
     PoolSwapTest.TestSettings public settings = PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
 
@@ -31,6 +37,7 @@ contract HookSwapsTest is EulerSwapTestBase {
         poolManager = PoolManagerDeployer.deploy(address(this));
         swapRouter = new PoolSwapTest(poolManager);
         minimalRouter = new MinimalRouter(poolManager);
+        liquidityManager = new PoolModifyLiquidityTest(poolManager);
 
         deployEulerSwap(address(poolManager));
 
@@ -116,6 +123,35 @@ contract HookSwapsTest is EulerSwapTestBase {
         PoolKey memory poolKey = eulerSwap.poolKey();
         vm.expectRevert();
         _swap(poolKey, zeroForOne, false, amountOut);
+        vm.stopPrank();
+    }
+
+    /// @dev adding liquidity as a concentrated liquidity position will revert
+    function test_revertAddConcentratedLiquidity() public {
+        assetTST.mint(anyone, 10000e18);
+        assetTST2.mint(anyone, 10000e18);
+
+        vm.startPrank(anyone);
+        assetTST.approve(address(liquidityManager), 1e18);
+        assetTST2.approve(address(liquidityManager), 1e18);
+
+        PoolKey memory poolKey = eulerSwap.poolKey();
+
+        // hook intentionally reverts to prevent v3-CLAMM positions
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CustomRevert.WrappedError.selector,
+                address(eulerSwap),
+                IHooks.beforeAddLiquidity.selector,
+                abi.encodeWithSelector(UniswapHook.NativeConcentratedLiquidityUnsupported.selector),
+                abi.encodeWithSelector(Hooks.HookCallFailed.selector)
+            )
+        );
+        liquidityManager.modifyLiquidity(
+            poolKey,
+            IPoolManager.ModifyLiquidityParams({tickLower: -10, tickUpper: 10, liquidityDelta: 1000, salt: bytes32(0)}),
+            ""
+        );
         vm.stopPrank();
     }
 
