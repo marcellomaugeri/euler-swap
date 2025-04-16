@@ -8,7 +8,7 @@ import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
 import {IEVault, IBorrowing, IERC4626, IRiskManager} from "evk/EVault/IEVault.sol";
 import {Errors as EVKErrors} from "evk/EVault/shared/Errors.sol";
 
-import {IEulerSwap} from "./interfaces/IEulerSwap.sol";
+import {IEulerSwap} from "../interfaces/IEulerSwap.sol";
 
 library FundsLib {
     using SafeERC20 for IERC20;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.27;
 
-import {IEulerSwap} from "./interfaces/IEulerSwap.sol";
+import {IEulerSwap} from "../interfaces/IEulerSwap.sol";
 
 library CtxLib {
     struct Storage {

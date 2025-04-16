@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
 import {IEVault, IEulerSwap, EulerSwapTestBase, EulerSwap, TestERC20} from "./EulerSwapTestBase.t.sol";
-import {CurveLib} from "../src/CurveLib.sol";
+import {CurveLib} from "../src/libraries/CurveLib.sol";
 
 contract FeesTest is EulerSwapTestBase {
     EulerSwap public eulerSwap;

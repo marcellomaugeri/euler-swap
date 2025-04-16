@@ -11,7 +11,7 @@ import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {HookMiner} from "./utils/HookMiner.sol";
 import {HookMiner as v4HookMiner} from "v4-periphery/src/utils/HookMiner.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
-import {MetaProxyDeployer} from "../src/MetaProxyDeployer.sol";
+import {MetaProxyDeployer} from "../src/utils/MetaProxyDeployer.sol";
 
 contract EulerSwapTestBase is EVaultTestBase {
     uint256 public constant MAX_QUOTE_ERROR = 4;

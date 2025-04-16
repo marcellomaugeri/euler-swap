@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {EulerSwapTestBase, IEulerSwap} from "./EulerSwapTestBase.t.sol";
-import {CtxLib} from "../src/CtxLib.sol";
+import {CtxLib} from "../src/libraries/CtxLib.sol";
 
 contract CtxTest is EulerSwapTestBase {
     function setUp() public virtual override {

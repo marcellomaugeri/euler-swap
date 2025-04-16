@@ -7,7 +7,7 @@ import {GenericFactory} from "evk/GenericFactory/GenericFactory.sol";
 
 import {EulerSwap} from "./EulerSwap.sol";
 import {ProtocolFee} from "./utils/ProtocolFee.sol";
-import {MetaProxyDeployer} from "./MetaProxyDeployer.sol";
+import {MetaProxyDeployer} from "./utils/MetaProxyDeployer.sol";
 
 /// @title EulerSwapFactory contract
 /// @custom:security-contact security@euler.xyz

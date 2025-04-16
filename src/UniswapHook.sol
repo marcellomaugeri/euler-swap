@@ -15,10 +15,10 @@ import {
 import {IEVault} from "evk/EVault/IEVault.sol";
 
 import {IEulerSwap} from "./interfaces/IEulerSwap.sol";
-import {CtxLib} from "./CtxLib.sol";
-import {QuoteLib} from "./QuoteLib.sol";
-import {CurveLib} from "./CurveLib.sol";
-import {FundsLib} from "./FundsLib.sol";
+import {CtxLib} from "./libraries/CtxLib.sol";
+import {QuoteLib} from "./libraries/QuoteLib.sol";
+import {CurveLib} from "./libraries/CurveLib.sol";
+import {FundsLib} from "./libraries/FundsLib.sol";
 
 contract UniswapHook is BaseHook {
     using SafeCast for uint256;

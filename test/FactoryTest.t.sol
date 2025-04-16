@@ -8,7 +8,7 @@ import {HookMiner} from "./utils/HookMiner.sol";
 import {EulerSwapTestBase, IEulerSwap, IEVC, EulerSwap} from "./EulerSwapTestBase.t.sol";
 import {EulerSwapFactory, IEulerSwapFactory} from "../src/EulerSwapFactory.sol";
 import {EulerSwap} from "../src/EulerSwap.sol";
-import {MetaProxyDeployer} from "../src/MetaProxyDeployer.sol";
+import {MetaProxyDeployer} from "../src/utils/MetaProxyDeployer.sol";
 
 contract FactoryTest is EulerSwapTestBase {
     IPoolManager public poolManager;

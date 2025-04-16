@@ -9,10 +9,10 @@ import {IEVault} from "evk/EVault/IEVault.sol";
 
 import {IEulerSwap} from "./interfaces/IEulerSwap.sol";
 import {UniswapHook} from "./UniswapHook.sol";
-import {CtxLib} from "./CtxLib.sol";
-import {FundsLib} from "./FundsLib.sol";
-import {CurveLib} from "./CurveLib.sol";
-import {QuoteLib} from "./QuoteLib.sol";
+import {CtxLib} from "./libraries/CtxLib.sol";
+import {FundsLib} from "./libraries/FundsLib.sol";
+import {CurveLib} from "./libraries/CurveLib.sol";
+import {QuoteLib} from "./libraries/QuoteLib.sol";
 
 contract EulerSwap is IEulerSwap, EVCUtil, UniswapHook {
     bytes32 public constant curve = bytes32("EulerSwap v1");

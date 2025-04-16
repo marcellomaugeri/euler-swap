@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {EulerSwapTestBase, EulerSwap, EulerSwapPeriphery, IEulerSwap} from "./EulerSwapTestBase.t.sol";
-import {QuoteLib} from "../src/QuoteLib.sol";
+import {QuoteLib} from "../src/libraries/QuoteLib.sol";
 
 contract LimitsTest is EulerSwapTestBase {
     EulerSwap public eulerSwap;
