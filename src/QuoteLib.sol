@@ -29,6 +29,8 @@ library QuoteLib {
         view
         returns (uint256)
     {
+        if (amount == 0) return 0;
+
         require(IEVC(evc).isAccountOperatorAuthorized(p.eulerAccount, address(this)), OperatorNotInstalled());
         require(amount <= type(uint112).max, SwapLimitExceeded());
 
