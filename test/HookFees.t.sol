@@ -131,7 +131,9 @@ contract HookFeesTest is EulerSwapTestBase {
         eulerSwapFactory.setProtocolFeeRecipient(protocolFeeRecipient);
 
         // set swap fee to 10 bips and activate the pool
-        eulerSwap = createEulerSwapHookFull(60e18, 60e18, 0.001e18, 1e18, 1e18, 0.4e18, 0.85e18, protocolFee, protocolFeeRecipient);
+        eulerSwap = createEulerSwapHookFull(
+            60e18, 60e18, 0.001e18, 1e18, 1e18, 0.4e18, 0.85e18, protocolFee, protocolFeeRecipient
+        );
 
         int256 origNav = getHolderNAV();
         (uint112 r0, uint112 r1,) = eulerSwap.getReserves();

@@ -146,7 +146,8 @@ contract EulerSwapTestBase is EVaultTestBase {
     ) internal returns (EulerSwap) {
         removeInstalledOperator();
 
-        IEulerSwap.Params memory params = getEulerSwapParams(reserve0, reserve1, px, py, cx, cy, fee, protocolFee, protcoolFeeRecipient);
+        IEulerSwap.Params memory params =
+            getEulerSwapParams(reserve0, reserve1, px, py, cx, cy, fee, protocolFee, protcoolFeeRecipient);
         IEulerSwap.InitialState memory initialState =
             IEulerSwap.InitialState({currReserve0: reserve0, currReserve1: reserve1});
 
@@ -189,7 +190,8 @@ contract EulerSwapTestBase is EVaultTestBase {
     ) internal returns (EulerSwap) {
         removeInstalledOperator();
 
-        IEulerSwap.Params memory params = getEulerSwapParams(reserve0, reserve1, px, py, cx, cy, fee, protocolFee, protocolFeeRecipient);
+        IEulerSwap.Params memory params =
+            getEulerSwapParams(reserve0, reserve1, px, py, cx, cy, fee, protocolFee, protocolFeeRecipient);
         IEulerSwap.InitialState memory initialState =
             IEulerSwap.InitialState({currReserve0: reserve0, currReserve1: reserve1});
 
