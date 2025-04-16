@@ -124,16 +124,14 @@ contract HookFeesTest is EulerSwapTestBase {
     }
 
     function test_protocolFee() public {
-        IEulerSwap.Params memory params = eulerSwap.getParams();
-        vm.prank(params.eulerAccount);
-        eulerSwapFactory.uninstallPool();
-
         // set protocol fee to 10% of the LP fee
-        eulerSwapFactory.setProtocolFee(0.1e18);
+        uint256 protocolFee = 0.1e18;
+
+        eulerSwapFactory.setProtocolFee(protocolFee);
         eulerSwapFactory.setProtocolFeeRecipient(protocolFeeRecipient);
 
         // set swap fee to 10 bips and activate the pool
-        eulerSwap = createEulerSwapHook(60e18, 60e18, 0.001e18, 1e18, 1e18, 0.4e18, 0.85e18);
+        eulerSwap = createEulerSwapHookFull(60e18, 60e18, 0.001e18, 1e18, 1e18, 0.4e18, 0.85e18, protocolFee, protocolFeeRecipient);
 
         int256 origNav = getHolderNAV();
         (uint112 r0, uint112 r1,) = eulerSwap.getReserves();

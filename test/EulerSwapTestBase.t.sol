@@ -130,9 +130,23 @@ contract EulerSwapTestBase is EVaultTestBase {
         uint256 cx,
         uint256 cy
     ) internal returns (EulerSwap) {
+        return createEulerSwapFull(reserve0, reserve1, fee, px, py, cx, cy, 0, address(0));
+    }
+
+    function createEulerSwapFull(
+        uint112 reserve0,
+        uint112 reserve1,
+        uint256 fee,
+        uint256 px,
+        uint256 py,
+        uint256 cx,
+        uint256 cy,
+        uint256 protocolFee,
+        address protcoolFeeRecipient
+    ) internal returns (EulerSwap) {
         removeInstalledOperator();
 
-        IEulerSwap.Params memory params = getEulerSwapParams(reserve0, reserve1, px, py, cx, cy, fee);
+        IEulerSwap.Params memory params = getEulerSwapParams(reserve0, reserve1, px, py, cx, cy, fee, protocolFee, protcoolFeeRecipient);
         IEulerSwap.InitialState memory initialState =
             IEulerSwap.InitialState({currReserve0: reserve0, currReserve1: reserve1});
 
@@ -159,9 +173,23 @@ contract EulerSwapTestBase is EVaultTestBase {
         uint256 cx,
         uint256 cy
     ) internal returns (EulerSwap) {
+        return createEulerSwapHookFull(reserve0, reserve1, fee, px, py, cx, cy, 0, address(0));
+    }
+
+    function createEulerSwapHookFull(
+        uint112 reserve0,
+        uint112 reserve1,
+        uint256 fee,
+        uint256 px,
+        uint256 py,
+        uint256 cx,
+        uint256 cy,
+        uint256 protocolFee,
+        address protocolFeeRecipient
+    ) internal returns (EulerSwap) {
         removeInstalledOperator();
 
-        IEulerSwap.Params memory params = getEulerSwapParams(reserve0, reserve1, px, py, cx, cy, fee);
+        IEulerSwap.Params memory params = getEulerSwapParams(reserve0, reserve1, px, py, cx, cy, fee, protocolFee, protocolFeeRecipient);
         IEulerSwap.InitialState memory initialState =
             IEulerSwap.InitialState({currReserve0: reserve0, currReserve1: reserve1});
 
@@ -235,7 +263,9 @@ contract EulerSwapTestBase is EVaultTestBase {
         uint256 py,
         uint256 cx,
         uint256 cy,
-        uint256 fee
+        uint256 fee,
+        uint256 protocolFee,
+        address protocolFeeRecipient
     ) internal view returns (EulerSwap.Params memory) {
         return IEulerSwap.Params({
             vault0: address(eTST),
@@ -248,8 +278,8 @@ contract EulerSwapTestBase is EVaultTestBase {
             concentrationX: cx,
             concentrationY: cy,
             fee: fee,
-            protocolFee: 0,
-            protocolFeeRecipient: address(0)
+            protocolFee: protocolFee,
+            protocolFeeRecipient: protocolFeeRecipient
         });
     }
 
