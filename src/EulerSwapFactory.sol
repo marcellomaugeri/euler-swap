@@ -33,6 +33,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
     error OperatorNotInstalled();
     error InvalidVaultImplementation();
     error SliceOutOfBounds();
+    error InvalidProtocolFee();
 
     constructor(address evc, address evkFactory_, address eulerSwapImpl_, address feeOwner_)
         EVCUtil(evc)
@@ -52,12 +53,12 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
             GenericFactory(evkFactory).isProxy(params.vault0) && GenericFactory(evkFactory).isProxy(params.vault1),
             InvalidVaultImplementation()
         );
+        require(
+            params.protocolFee == protocolFee && params.protocolFeeRecipient == protocolFeeRecipient,
+            InvalidProtocolFee()
+        );
 
         uninstall(params.eulerAccount);
-
-        // set protocol fee
-        params.protocolFee = protocolFee;
-        params.protocolFeeRecipient = protocolFeeRecipient;
 
         EulerSwap pool = EulerSwap(
             MetaProxyDeployer.deployMetaProxy(
