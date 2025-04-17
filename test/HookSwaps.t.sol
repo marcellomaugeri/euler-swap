@@ -155,6 +155,25 @@ contract HookSwapsTest is EulerSwapTestBase {
         vm.stopPrank();
     }
 
+    /// @dev initializing a new pool on an existing eulerswap instance will revert
+    function test_revertSubsequentInitialize() public {
+        PoolKey memory poolKey = eulerSwap.poolKey();
+        PoolKey memory newPoolKey = eulerSwap.poolKey();
+        newPoolKey.currency0 = CurrencyLibrary.ADDRESS_ZERO;
+
+        // hook intentionally reverts to prevent subsequent initializations
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CustomRevert.WrappedError.selector,
+                address(eulerSwap),
+                IHooks.beforeInitialize.selector,
+                abi.encodeWithSelector(UniswapHook.AlreadyInitialized.selector),
+                abi.encodeWithSelector(Hooks.HookCallFailed.selector)
+            )
+        );
+        poolManager.initialize(newPoolKey, 79228162514264337593543950336);
+    }
+
     function _swap(PoolKey memory key, bool zeroForOne, bool exactInput, uint256 amount) internal {
         IPoolManager.SwapParams memory swapParams = IPoolManager.SwapParams({
             zeroForOne: zeroForOne,
