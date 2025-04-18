@@ -41,7 +41,10 @@ contract EulerSwapTestBase is EVaultTestBase {
         // use the canonical miner to find a valid 'implementation' address
         (, bytes32 salt) = v4HookMiner.find(
             address(this),
-            uint160(Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG | Hooks.BEFORE_ADD_LIQUIDITY_FLAG),
+            uint160(
+                Hooks.BEFORE_INITIALIZE_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG
+                    | Hooks.BEFORE_ADD_LIQUIDITY_FLAG
+            ),
             type(EulerSwap).creationCode,
             abi.encode(address(evc), poolManager_)
         );
@@ -208,7 +211,10 @@ contract EulerSwapTestBase is EVaultTestBase {
         (address predictedAddr, bytes32 salt) = HookMiner.find(
             address(eulerSwapFactory),
             holder,
-            uint160(Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG | Hooks.BEFORE_ADD_LIQUIDITY_FLAG),
+            uint160(
+                Hooks.BEFORE_INITIALIZE_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG
+                    | Hooks.BEFORE_ADD_LIQUIDITY_FLAG
+            ),
             creationCode
         );
 

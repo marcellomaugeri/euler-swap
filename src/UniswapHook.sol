@@ -27,6 +27,7 @@ contract UniswapHook is BaseHook {
 
     PoolKey internal _poolKey;
 
+    error AlreadyInitialized();
     error NativeConcentratedLiquidityUnsupported();
 
     constructor(address evc_, address _poolManager) BaseHook(IPoolManager(_poolManager)) {
@@ -118,6 +119,15 @@ contract UniswapHook is BaseHook {
         return (BaseHook.beforeSwap.selector, returnDelta, 0);
     }
 
+    /// @dev Each deployed hook only services one pair and prevent subsequent initializations
+    function _beforeInitialize(address, PoolKey calldata, uint160) internal view override returns (bytes4) {
+        // when the hook is deployed for the first time, the internal _poolKey is empty
+        // upon activation, the internal _poolKey is initialized and set
+        // once the hook contract is activated, do not allow subsequent initializations
+        require(_poolKey.tickSpacing == 0, AlreadyInitialized());
+        return BaseHook.beforeInitialize.selector;
+    }
+
     function _beforeAddLiquidity(address, PoolKey calldata, IPoolManager.ModifyLiquidityParams calldata, bytes calldata)
         internal
         pure
@@ -129,7 +139,7 @@ contract UniswapHook is BaseHook {
 
     function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
         return Hooks.Permissions({
-            beforeInitialize: false,
+            beforeInitialize: true,
             afterInitialize: false,
             beforeAddLiquidity: true,
             afterAddLiquidity: false,
