@@ -41,6 +41,18 @@ contract FactoryTest is EulerSwapTestBase {
         (hookAddress, salt) = HookMiner.find(address(eulerSwapFactory), holder, flags, creationCode);
     }
 
+    function mineBadSalt(IEulerSwap.Params memory poolParams)
+        internal
+        view
+        returns (address hookAddress, bytes32 salt)
+    {
+        // missing BEFORE_ADD_LIQUIDITY_FLAG
+        uint160 flags =
+            uint160(Hooks.BEFORE_INITIALIZE_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG);
+        bytes memory creationCode = MetaProxyDeployer.creationCodeMetaProxy(eulerSwapImpl, abi.encode(poolParams));
+        (hookAddress, salt) = HookMiner.find(address(eulerSwapFactory), holder, flags, creationCode);
+    }
+
     function testDeployPool() public {
         uint256 allPoolsLengthBefore = eulerSwapFactory.poolsLength();
 
@@ -115,6 +127,18 @@ contract FactoryTest is EulerSwapTestBase {
         vm.prank(holder);
         vm.expectRevert(EulerSwapFactory.OldOperatorStillInstalled.selector);
         evc.batch(items);
+    }
+
+    function testBadSalt() public {
+        (IEulerSwap.Params memory poolParams, IEulerSwap.InitialState memory initialState) = getBasicParams();
+        (address hookAddress, bytes32 salt) = mineBadSalt(poolParams);
+
+        vm.prank(holder);
+        evc.setAccountOperator(holder, hookAddress, true);
+
+        vm.expectRevert(abi.encodeWithSelector(Hooks.HookAddressNotValid.selector, hookAddress));
+        vm.prank(holder);
+        eulerSwapFactory.deployPool(poolParams, initialState, salt);
     }
 
     function testInvalidPoolsSliceOutOfBounds() public {

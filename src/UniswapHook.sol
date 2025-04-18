@@ -35,6 +35,8 @@ contract UniswapHook is BaseHook {
     }
 
     function activateHook(IEulerSwap.Params memory p) internal {
+        Hooks.validateHookPermissions(this, getHookPermissions());
+
         address asset0Addr = IEVault(p.vault0).asset();
         address asset1Addr = IEVault(p.vault1).asset();
 
@@ -57,6 +59,11 @@ contract UniswapHook is BaseHook {
     function poolKey() external view returns (PoolKey memory) {
         return _poolKey;
     }
+
+    /// @dev Prevent hook address validation in constructor, which is not needed
+    /// because hook instances are proxies. Instead, the address is validated
+    /// in activateHook().
+    function validateHookAddress(BaseHook _this) internal pure override {}
 
     function _beforeSwap(address, PoolKey calldata key, IPoolManager.SwapParams calldata params, bytes calldata)
         internal
