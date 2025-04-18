@@ -157,7 +157,6 @@ contract HookSwapsTest is EulerSwapTestBase {
 
     /// @dev initializing a new pool on an existing eulerswap instance will revert
     function test_revertSubsequentInitialize() public {
-        PoolKey memory poolKey = eulerSwap.poolKey();
         PoolKey memory newPoolKey = eulerSwap.poolKey();
         newPoolKey.currency0 = CurrencyLibrary.ADDRESS_ZERO;
 
