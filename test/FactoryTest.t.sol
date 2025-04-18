@@ -88,6 +88,8 @@ contract FactoryTest is EulerSwapTestBase {
 
         address eulerSwap = eulerSwapFactory.poolByEulerAccount(holder);
 
+        assertEq(address(EulerSwap(eulerSwap).poolManager()), address(poolManager));
+
         uint256 allPoolsLengthAfter = eulerSwapFactory.poolsLength();
         assertEq(allPoolsLengthAfter - allPoolsLengthBefore, 1);
 
