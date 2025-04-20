@@ -111,4 +111,32 @@ library CurveLib {
     function abs(int256 x) internal pure returns (uint256) {
         return uint256(x >= 0 ? x : -x);
     }
+
+    function binarySearch(
+        uint256 y,
+        uint256 px,
+        uint256 py,
+        uint256 x0,
+        uint256 y0,
+        uint256 c,
+        uint256 xMin,
+        uint256 xMax
+    ) internal pure returns (uint256) {
+        if (xMin < 1) {
+            xMin = 1;
+        }
+        while (xMin < xMax) {
+            uint256 xMid = (xMin + xMax) / 2;
+            uint256 fxMid = f(xMid, px, py, x0, y0, c);
+            if (y >= fxMid) {
+                xMax = xMid;
+            } else {
+                xMin = xMid + 1;
+            }
+        }
+        if (y < f(xMin, px, py, x0, y0, c)) {
+            xMin += 1;
+        }
+        return xMin;
+    }
 }
