@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import {EulerSwapTestBase, EulerSwap, TestERC20} from "./EulerSwapTestBase.t.sol";
+import {IEulerSwap} from "../src/interfaces/IEulerSwap.sol";
 import {CurveLib} from "../src/CurveLib.sol";
 
 contract CurveLibTest is EulerSwapTestBase {
@@ -15,9 +16,8 @@ contract CurveLibTest is EulerSwapTestBase {
 
     function test_fuzzfInverse(uint256 x, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 cx, uint256 cy)
         public
-        pure
+        view
     {
-        
         // Params
         px = 1e18;
         py = bound(py, 1, 1e36);
@@ -32,6 +32,21 @@ contract CurveLibTest is EulerSwapTestBase {
         console.log("cx", cx);
         console.log("cy", cy);
 
+        IEulerSwap.Params memory p = IEulerSwap.Params({
+            vault0: address(0),
+            vault1: address(0),
+            eulerAccount: address(0),
+            equilibriumReserve0: uint112(x0),
+            equilibriumReserve1: uint112(y0),
+            priceX: px,
+            priceY: py,
+            concentrationX: cx,
+            concentrationY: cy,
+            fee: 0,
+            protocolFee: 0,
+            protocolFeeRecipient: address(0)
+        });
+
         // Note without -2 in the max bound, f() sometimes fails when x gets too close to centre.
         // Note small x values lead to large y-values, which causes problems for both f() and fInverse(), so we cap it here
         x = bound(x, 1e2 - 3, x0 - 3);
@@ -41,7 +56,7 @@ contract CurveLibTest is EulerSwapTestBase {
         uint256 xCalc = CurveLib.fInverse(y, px, py, x0, y0, cx);
         console.log("xCalc", xCalc);
         uint256 yCalc = CurveLib.f(xCalc, px, py, x0, y0, cx);
-        uint256 xBin = binarySearch(y, px, py, x0, y0, cx, 1, x0);
+        uint256 xBin = CurveLib.binarySearch(p, y, 1, x0);
         uint256 yBin = CurveLib.f(xBin, px, py, x0, y0, cx);
         console.log("x    ", x);
         console.log("xCalc", xCalc);
@@ -51,9 +66,8 @@ contract CurveLibTest is EulerSwapTestBase {
         console.log("yBin ", yBin);
 
         if (x < type(uint112).max && y < type(uint112).max) {
-            assert(CurveLib.verify(xCalc, y, x0, y0, px, py, cx, cy));
+            assert(CurveLib.verify(p, xCalc, y));
             assert(int256(xCalc) - int256(xBin) <= 3 || int256(yCalc) - int256(yBin) <= 3); // suspect this is 2 wei error in fInverse() + 1 wei error in f()
         }
     }
-
 }

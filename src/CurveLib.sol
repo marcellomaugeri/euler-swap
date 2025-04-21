@@ -113,12 +113,14 @@ library CurveLib {
     }
 
     function binarySearch(
-        uint256 y,
-        uint256 px,
-        uint256 py,
-        uint256 x0,
-        uint256 y0,
-        uint256 c,
+        IEulerSwap.Params memory p,
+        uint256 newReserve1,
+        // uint256 y,
+        // uint256 px,
+        // uint256 py,
+        // uint256 x0,
+        // uint256 y0,
+        // uint256 c,
         uint256 xMin,
         uint256 xMax
     ) internal pure returns (uint256) {
@@ -127,14 +129,14 @@ library CurveLib {
         }
         while (xMin < xMax) {
             uint256 xMid = (xMin + xMax) / 2;
-            uint256 fxMid = f(xMid, px, py, x0, y0, c);
-            if (y >= fxMid) {
+            uint256 fxMid = f(xMid, p.priceX, p.priceY, p.equilibriumReserve0, p.equilibriumReserve1, p.concentrationX);
+            if (newReserve1 >= fxMid) {
                 xMax = xMid;
             } else {
                 xMin = xMid + 1;
             }
         }
-        if (y < f(xMin, px, py, x0, y0, c)) {
+        if (newReserve1 < f(xMin, p.priceX, p.priceY, p.equilibriumReserve0, p.equilibriumReserve1, p.concentrationX)) {
             xMin += 1;
         }
         return xMin;
