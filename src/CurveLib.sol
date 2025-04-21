@@ -39,40 +39,50 @@ library CurveLib {
         }
     }
 
+    /// @dev EulerSwap inverse function definition
+    /// Pre-conditions: 0 < x <= x0, 1 <= {px,py} <= 1e36, {x0,y0} <= type(uint112).max, c <= 1e18
     function fInverse(uint256 y, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c)
         internal
         pure
         returns (uint256)
     {
         // components of quadratic equation
-        int256 B = int256((py * (y - y0) + (px - 1)) / px) - (2 * int256(c) - int256(1e18)) * int256(x0) / 1e18;
+        int256 B;
         uint256 C;
         uint256 fourAC;
-        if (x0 < 1e18) {
-            C = ((1e18 - c) * x0 * x0 + (1e18 - 1)) / 1e18; // upper bound of 1e28 for x0 means this is safe
-            fourAC = Math.mulDiv(4 * c, C, 1e18, Math.Rounding.Ceil);
-        } else {
-            C = Math.mulDiv((1e18 - c), x0 * x0, 1e36, Math.Rounding.Ceil); // upper bound of 1e28 for x0 means this is safe
-            fourAC = Math.mulDiv(4 * c, C, 1, Math.Rounding.Ceil);
+        unchecked {
+            B = int256((py * (y - y0) + (px - 1)) / px) - (2 * int256(c) - int256(1e18)) * int256(x0) / 1e18;            
+            if (x0 >= 1e18) {
+                // if x0 >= 1, scale as normal
+                C = Math.mulDiv((1e18 - c), x0 * x0, 1e36, Math.Rounding.Ceil);
+                fourAC = 4 * c * C;
+            } else {
+                // if x0 < 1, then numbers get very small, so decrease scale to 1e18 to increase precision later
+                C = ((1e18 - c) * x0 * x0 + (1e18 - 1)) / 1e18;
+                fourAC = Math.mulDiv(4 * c, C, 1e18, Math.Rounding.Ceil);
+            }
         }
-
-        // solve for the square root
-        uint256 absB = abs(B);
+        
+        uint256 absB = uint256(B >= 0 ? B : -B);
         uint256 squaredB;
         uint256 discriminant;
         uint256 sqrt;
-        if (absB > 1e33) {
+        if (absB < 1e36) {
+            // safe to use naive squaring
+            unchecked {
+                squaredB = absB * absB;
+                discriminant = squaredB + fourAC; // keep in 1e36 scale for increased precision ahead of sqrt
+                sqrt = Math.sqrt(discriminant); // drop back to 1e18 scale
+                sqrt = (sqrt * sqrt < discriminant) ? sqrt + 1 : sqrt;
+            }                    
+        } else {
+            // use scaled, overflow-safe path
             uint256 scale = computeScale(absB);
             squaredB = Math.mulDiv(absB / scale, absB, scale, Math.Rounding.Ceil);
             discriminant = squaredB + fourAC / (scale * scale);
             sqrt = Math.sqrt(discriminant);
             sqrt = (sqrt * sqrt < discriminant) ? sqrt + 1 : sqrt;
             sqrt = sqrt * scale;
-        } else {
-            squaredB = Math.mulDiv(absB, absB, 1, Math.Rounding.Ceil);
-            discriminant = squaredB + fourAC; // keep in 1e36 scale for increased precision ahead of sqrt
-            sqrt = Math.sqrt(discriminant); // drop back to 1e18 scale
-            sqrt = (sqrt * sqrt < discriminant) ? sqrt + 1 : sqrt;
         }
 
         uint256 x;
@@ -90,40 +100,27 @@ library CurveLib {
     }
 
     function computeScale(uint256 x) internal pure returns (uint256 scale) {
+        // calculate number of bits in x
         uint256 bits = 0;
-        uint256 tmp = x;
-
-        while (tmp > 0) {
-            tmp >>= 1;
+        while (x > 0) {
+            x >>= 1;
             bits++;
         }
 
-        // absB * absB must be <= 2^256 ⇒ bits(B) ≤ 128
+        // 2^excessBits is how much we need to scale down to prevent overflow when squaring x
         if (bits > 128) {
-            uint256 excessBits = bits - 128;
-            // 2^excessBits is how much we need to scale down to prevent overflow
+            uint256 excessBits = bits - 128;            
             scale = 1 << excessBits;
         } else {
             scale = 1;
         }
     }
 
-    function abs(int256 x) internal pure returns (uint256) {
-        return uint256(x >= 0 ? x : -x);
-    }
-
-    function binarySearch(
-        IEulerSwap.Params memory p,
-        uint256 newReserve1,
-        // uint256 y,
-        // uint256 px,
-        // uint256 py,
-        // uint256 x0,
-        // uint256 y0,
-        // uint256 c,
-        uint256 xMin,
-        uint256 xMax
-    ) internal pure returns (uint256) {
+    function binarySearch(IEulerSwap.Params memory p, uint256 newReserve1, uint256 xMin, uint256 xMax)
+        internal
+        pure
+        returns (uint256)
+    {
         if (xMin < 1) {
             xMin = 1;
         }

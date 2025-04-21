@@ -14,6 +14,22 @@ contract CurveLibTest is EulerSwapTestBase {
         super.setUp();
     }
 
+    function testGas_fInverse() public pure {
+        // Set representative values within valid bounds
+        uint256 px = 1e18;
+        uint256 py = 1e18;
+        uint256 x0 = 1e14;
+        uint256 y0 = 1e14;
+        uint256 c = 1e18;
+
+        // Use CurveLib.f to get a valid y
+        uint256 x = 1e12;
+        uint256 y = CurveLib.f(x, px, py, x0, y0, c);
+
+        // Measure gas of fInverse
+        CurveLib.fInverse(y, px, py, x0, y0, c);
+    }
+
     function test_fuzzfInverse(uint256 x, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 cx, uint256 cy)
         public
         view
