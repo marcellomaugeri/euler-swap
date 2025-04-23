@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import {EulerSwapTestBase, EulerSwap, TestERC20} from "./EulerSwapTestBase.t.sol";
 import {IEulerSwap} from "../src/interfaces/IEulerSwap.sol";
-import {CurveLib} from "../src/CurveLib.sol";
+import {CurveLib} from "../src/libraries/CurveLib.sol";
 
 contract CurveLibTest is EulerSwapTestBase {
     EulerSwap public eulerSwap;
