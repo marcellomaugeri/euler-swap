@@ -51,7 +51,7 @@ library CurveLib {
         uint256 C;
         uint256 fourAC;
         unchecked {
-            B = int256((py * (y - y0) + (px - 1)) / px) - (2 * int256(c) - int256(1e18)) * int256(x0) / 1e18;            
+            B = int256((py * (y - y0) + (px - 1)) / px) - (2 * int256(c) - int256(1e18)) * int256(x0) / 1e18;
             if (x0 >= 1e18) {
                 // if x0 >= 1, scale as normal
                 C = Math.mulDiv((1e18 - c), x0 * x0, 1e36, Math.Rounding.Ceil);
@@ -62,7 +62,7 @@ library CurveLib {
                 fourAC = Math.mulDiv(4 * c, C, 1e18, Math.Rounding.Ceil);
             }
         }
-        
+
         uint256 absB = uint256(B >= 0 ? B : -B);
         uint256 squaredB;
         uint256 discriminant;
@@ -74,7 +74,7 @@ library CurveLib {
                 discriminant = squaredB + fourAC; // keep in 1e36 scale for increased precision ahead of sqrt
                 sqrt = Math.sqrt(discriminant); // drop back to 1e18 scale
                 sqrt = (sqrt * sqrt < discriminant) ? sqrt + 1 : sqrt;
-            }                    
+            }
         } else {
             // use scaled, overflow-safe path
             uint256 scale = computeScale(absB);
@@ -110,7 +110,7 @@ library CurveLib {
 
         // 2^excessBits is how much we need to scale down to prevent overflow when squaring x
         if (bits > 128) {
-            uint256 excessBits = bits - 128;            
+            uint256 excessBits = bits - 128;
             scale = 1 << excessBits;
         } else {
             scale = 1;
