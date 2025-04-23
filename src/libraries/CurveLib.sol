@@ -99,6 +99,7 @@ library CurveLib {
         }
     }
 
+    /// @dev Utility to derive optimal scale for computations in fInverse
     function computeScale(uint256 x) internal pure returns (uint256 scale) {
         // calculate number of bits in x
         uint256 bits = 0;
@@ -116,6 +117,7 @@ library CurveLib {
         }
     }
 
+    /// @dev Less efficient method to compute fInverse. Useful for testing.
     function binarySearch(IEulerSwap.Params memory p, uint256 newReserve1, uint256 xMin, uint256 xMax)
         internal
         pure
