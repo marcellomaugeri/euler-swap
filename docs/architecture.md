@@ -53,11 +53,11 @@ Traditional AMMs hold dedicated reserves of each of the supported tokens, which 
 
 Since EulerSwap does not have dedicated reserves, its swapping limits must be defined in another way. This is accomplished by having the EulerSwap operator define an abstract curve. The domain of this curve defines the swap limits, which can be considered the virtual reserves.
 
-The abstract curve is centred on an *equilibrium point*. This is parameterised by two equilibrium reserves values. These specify the magnitude of the virtual reserves, and function as hard limits on the supported swap sizes. They are often equal, but do not necessarily have to be (for instance, if the two vaults have asymmetric LTVs).
+The abstract curve is centred on an *equilibrium point*. This is parameterised by two equilibrium reserves values. These specify the magnitude of the virtual reserves, and are effectively hard limits on the supported swap sizes. They are often equal, but do not necessarily have to be (for instance, if the two vaults have asymmetric LTVs).
 
 At the equilibrium point, the marginal swap price is defined by the ratio of two parameters `priceX` and `priceY`. Generally operators will choose the price ratio at equilibrium to be the asset's pegged price, or the wider market price. The prices should also compensate for a difference in token decimals, if any.
 
-The curve is also parameterised by two **concentration factors** between `0` and `1`. These control the shape of each side of the curve (to the left of the equilibrium point, and to the right). The curve shape is essentially a blend of constant product and constant sum. The closer to `0` the more the curve resembles constant product, and the closer to `1`, constant sum.
+Finally, the curve is parameterised by two **concentration factors** between `0` and `1`. Each corresponds to the portion of the curve to the left or right of the equilibrium point. These factors control the shape of each side of the curve (to the left of the equilibrium point, and to the right). These parameters change the curve shape according to a blend of constant product and constant sum. The closer to `0` the more the curve resembles a constant product, and the closer to `1`, constant sum.
 
 In most cases (except with concentration factor of `1`), virtual reserves can never be fully depleted. The limits can only be approached asymptotically.
 
@@ -76,7 +76,9 @@ Note that there may be a race condition when removing one swap operator and inst
 
 ## Fees
 
-Swapping fees are charged by requiring the swapper to pay slightly more of the input token than is proscribed by the curve parameters. This extra amount is simply directly deposited into the vaults on behalf of the EulerSwap account. This means that it has the effect of increasing the account's NAV, but does not change the shape of the curve itself. The curve is always static, per EulerSwap instance.
+Swapping fees are charged by requiring the swapper to pay slightly more of the input token than is required by the curve parameters. This extra amount is simply directly deposited into the vaults on behalf of the EulerSwap account. This means that it has the effect of increasing the account's NAV, but does not change the shape of the curve itself. The curve is always static, per EulerSwap instance.
+
+When an EulerSwap instance is created, a **protocol fee** parameter may be installed by the factory. This portion of the collected fees are routed to a protocol fee recipient. An administrator of the factory can change the the protocol fee and recipient for future created EulerSwap instances, although previously created instances will not be updated retroactively.
 
 
 ## Reserve desynchronisation
@@ -90,7 +92,7 @@ While these reserves track the state of the world as influenced by swaps, they c
 * The account could be liquidated.
 * The account owner could manually add or remove funds, repay loans, etc.
 
-In order to correct these desynchronisations, the EulerSwap operator should be uninstalled and a new, updated one installed instead.
+In order to correct any desynchronisation, the EulerSwap operator should be uninstalled and a new, updated one installed instead.
 
 
 ## getLimits
@@ -101,7 +103,7 @@ Although the virtual reserves specify a hard limit for swaps, there may be other
 * The vaults have supply and/or borrow caps
 * The operator may have been uninstalled
 
-There is a function `getLimits` that can take these into account. This function itself is an upper-bound and the values it returns may not be swappable either, in particular if the curve shape does not allow it. However, it makes a best effort and this function can be used to rapidly exclude pools that are currently unable to service a given size swap.
+There is a function `getLimits` that can take these into account. This function itself is an upper-bound and the values it returns may not be swappable either, in particular if the curve shape does not allow it. However, it makes a best effort and this function can be used to rapidly exclude pools that are definitely unable to service a given size swap.
 
 
 ## Swapper Security
