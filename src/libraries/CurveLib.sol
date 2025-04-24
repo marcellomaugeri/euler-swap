@@ -116,39 +116,4 @@ library CurveLib {
             scale = 1;
         }
     }
-
-    /// @dev Less efficient method to compute fInverse. Useful for testing.
-    function binarySearch(IEulerSwap.Params memory p, uint256 newReserve1, uint256 xMin, uint256 xMax)
-        internal
-        pure
-        returns (uint256)
-    {
-        if (xMin < 1) {
-            xMin = 1;
-        }
-        while (xMin < xMax) {
-            uint256 xMid = (xMin + xMax) / 2;
-            uint256 fxMid = f(xMid, p.priceX, p.priceY, p.equilibriumReserve0, p.equilibriumReserve1, p.concentrationX);
-            if (newReserve1 >= fxMid) {
-                xMax = xMid;
-            } else {
-                xMin = xMid + 1;
-            }
-        }
-        if (newReserve1 < f(xMin, p.priceX, p.priceY, p.equilibriumReserve0, p.equilibriumReserve1, p.concentrationX)) {
-            xMin += 1;
-        }
-        return xMin;
-    }
-
-    /// @dev EulerSwap derivative helper function to find the price after a swap
-    /// Pre-conditions: 0 < x <= x0, 1 <= {px,py} <= 1e36, {x0,y0} <= type(uint112).max, c <= 1e18
-    function df_dx(uint256 x, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c)
-        internal
-        pure
-        returns (int256)
-    {
-        uint256 r = Math.mulDiv(x0 * x0 / x, 1e18, x, Math.Rounding.Ceil);
-        return -int256(px * (c + (1e18 - c) * r / 1e18) / py);
-    }
 }

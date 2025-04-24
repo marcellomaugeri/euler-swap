@@ -32,7 +32,7 @@ contract CurveLibTest is EulerSwapTestBase {
 
     function test_fuzzfInverse(uint256 x, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 cx, uint256 cy)
         public
-        view
+        pure
     {
         // Params
         px = 1e18;
@@ -72,7 +72,7 @@ contract CurveLibTest is EulerSwapTestBase {
         uint256 xCalc = CurveLib.fInverse(y, px, py, x0, y0, cx);
         console.log("xCalc", xCalc);
         uint256 yCalc = CurveLib.f(xCalc, px, py, x0, y0, cx);
-        uint256 xBin = CurveLib.binarySearch(p, y, 1, x0);
+        uint256 xBin = binarySearch(p, y, 1, x0);
         uint256 yBin = CurveLib.f(xBin, px, py, x0, y0, cx);
         console.log("x    ", x);
         console.log("xCalc", xCalc);
@@ -85,5 +85,33 @@ contract CurveLibTest is EulerSwapTestBase {
             assert(CurveLib.verify(p, xCalc, y));
             assert(int256(xCalc) - int256(xBin) <= 3 || int256(yCalc) - int256(yBin) <= 3); // suspect this is 2 wei error in fInverse() + 1 wei error in f()
         }
+    }
+
+    /// @dev Less efficient method to compute fInverse. Useful for differential fuzzing.
+    function binarySearch(IEulerSwap.Params memory p, uint256 newReserve1, uint256 xMin, uint256 xMax)
+        internal
+        pure
+        returns (uint256)
+    {
+        if (xMin < 1) {
+            xMin = 1;
+        }
+        while (xMin < xMax) {
+            uint256 xMid = (xMin + xMax) / 2;
+            uint256 fxMid =
+                CurveLib.f(xMid, p.priceX, p.priceY, p.equilibriumReserve0, p.equilibriumReserve1, p.concentrationX);
+            if (newReserve1 >= fxMid) {
+                xMax = xMid;
+            } else {
+                xMin = xMid + 1;
+            }
+        }
+        if (
+            newReserve1
+                < CurveLib.f(xMin, p.priceX, p.priceY, p.equilibriumReserve0, p.equilibriumReserve1, p.concentrationX)
+        ) {
+            xMin += 1;
+        }
+        return xMin;
     }
 }

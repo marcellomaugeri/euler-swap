@@ -25,6 +25,7 @@ The above contracts depend on libraries:
 * `FundsLib`: Moving tokens: approvals and transfers in/out
 * `CurveLib`: Mathematical routines for calculating the EulerSwap curve
 * `QuoteLib`: Computing quotes. This involves invoking the logic from `CurveLib`, as well as taking into account other limitations such as vault utilisation, supply caps, etc.
+* `CurveExtrasLib`: Extra utilities for curve computations. Not used in the EulerSwap itself, but potentially useful for integrators.
 
 And some utilities:
 
