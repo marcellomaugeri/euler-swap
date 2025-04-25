@@ -13,7 +13,7 @@ import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 import {MetaProxyDeployer} from "../src/utils/MetaProxyDeployer.sol";
 
 contract EulerSwapTestBase is EVaultTestBase {
-    uint256 public constant MAX_QUOTE_ERROR = 4;
+    uint256 public constant MAX_QUOTE_ERROR = 2;
 
     address public depositor = makeAddr("depositor");
     address public holder = makeAddr("holder");
