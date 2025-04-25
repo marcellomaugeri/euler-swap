@@ -50,34 +50,30 @@ library CurveLib {
         int256 B;
         uint256 C;
         uint256 fourAC;
+
         unchecked {
-            B = int256((py * (y - y0) + (px - 1)) / px) - (2 * int256(c) - int256(1e18)) * int256(x0) / 1e18;
-            if (x0 >= 1e18) {
-                // if x0 >= 1, scale as normal
-                C = Math.mulDiv((1e18 - c), x0 * x0, 1e36, Math.Rounding.Ceil);
-                fourAC = 4 * c * C;
-            } else {
-                // if x0 < 1, then numbers get very small, so decrease scale to 1e18 to increase precision later
-                C = ((1e18 - c) * x0 * x0 + (1e18 - 1)) / 1e18;
-                fourAC = Math.mulDiv(4 * c, C, 1e18, Math.Rounding.Ceil);
-            }
+            int256 term1 = int256(Math.mulDiv(py * 1e18, y - y0, px, Math.Rounding.Ceil)); // scale: 1e36
+            int256 term2 = (2 * int256(c) - int256(1e18)) * int256(x0); // scale: 1e36
+            B = (term1 - term2) / int256(1e18); // scale: 1e18           
+            C = Math.mulDiv((1e18 - c), x0 * x0, 1e18, Math.Rounding.Ceil); // scale: 1e36
+            fourAC = Math.mulDiv(4 * c, C, 1e18, Math.Rounding.Ceil); // scale: 1e36
         }
 
         uint256 absB = uint256(B >= 0 ? B : -B);
         uint256 squaredB;
         uint256 discriminant;
         uint256 sqrt;
-        if (absB < 1e36) {
-            // safe to use naive squaring
+        if (absB < 1e36) {            
+            // B^2 can be calculated directly at 1e18 scale without overflowing
             unchecked {
-                squaredB = absB * absB;
-                discriminant = squaredB + fourAC; // keep in 1e36 scale for increased precision ahead of sqrt
-                sqrt = Math.sqrt(discriminant); // drop back to 1e18 scale
+                squaredB = absB * absB; // scale: 1e36
+                discriminant = squaredB + fourAC; // scale: 1e36
+                sqrt = Math.sqrt(discriminant); // // scale: 1e18
                 sqrt = (sqrt * sqrt < discriminant) ? sqrt + 1 : sqrt;
             }
-        } else {
-            // use scaled, overflow-safe path
-            uint256 scale = computeScale(absB);
+        } else {            
+            // B^2 cannot be calculated directly at 1e18 scale without overflowing
+            uint256 scale = computeScale(absB); // calculate the scaling factor such that B^2 can be calculated without overflowing
             squaredB = Math.mulDiv(absB / scale, absB, scale, Math.Rounding.Ceil);
             discriminant = squaredB + fourAC / (scale * scale);
             sqrt = Math.sqrt(discriminant);
@@ -87,9 +83,11 @@ library CurveLib {
 
         uint256 x;
         if (B <= 0) {
-            x = Math.mulDiv(absB + sqrt, 1e18, 2 * c, Math.Rounding.Ceil) + 3;
+            // use the regular quadratic formula solution (-b + sqrt(b^2 - 4ac)) / 2a
+            x = Math.mulDiv(absB + sqrt, 1e18, 2 * c, Math.Rounding.Ceil) + 1;
         } else {
-            x = Math.mulDiv(2 * C, 1e18, absB + sqrt, Math.Rounding.Ceil) + 3;
+            // use the "citardauq" quadratic formula solution 2c / (-b + sqrt(b^2 - 4ac))
+            x = (2 * C + (absB + sqrt - 1)) / (absB + sqrt) + 1;
         }
 
         if (x >= x0) {
@@ -116,4 +114,29 @@ library CurveLib {
             scale = 1;
         }
     }
+
+    /// @dev Less efficient method to compute fInverse. Useful for testing.
+    function binarySearch(IEulerSwap.Params memory p, uint256 newReserve1, uint256 xMin, uint256 xMax)
+        internal
+        pure
+        returns (uint256)
+    {
+        if (xMin < 1) {
+            xMin = 1;
+        }
+        while (xMin < xMax) {
+            uint256 xMid = (xMin + xMax) / 2;
+            uint256 fxMid = f(xMid, p.priceX, p.priceY, p.equilibriumReserve0, p.equilibriumReserve1, p.concentrationX);
+            if (newReserve1 >= fxMid) {
+                xMax = xMid;
+            } else {
+                xMin = xMid + 1;
+            }
+        }
+        if (newReserve1 < f(xMin, p.priceX, p.priceY, p.equilibriumReserve0, p.equilibriumReserve1, p.concentrationX)) {
+            xMin += 1;
+        }
+        return xMin;
+    }
+
 }
