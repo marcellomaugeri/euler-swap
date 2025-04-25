@@ -54,7 +54,7 @@ library CurveLib {
         unchecked {
             int256 term1 = int256(Math.mulDiv(py * 1e18, y - y0, px, Math.Rounding.Ceil)); // scale: 1e36
             int256 term2 = (2 * int256(c) - int256(1e18)) * int256(x0); // scale: 1e36
-            B = (term1 - term2) / int256(1e18); // scale: 1e18           
+            B = (term1 - term2) / int256(1e18); // scale: 1e18
             C = Math.mulDiv((1e18 - c), x0 * x0, 1e18, Math.Rounding.Ceil); // scale: 1e36
             fourAC = Math.mulDiv(4 * c, C, 1e18, Math.Rounding.Ceil); // scale: 1e36
         }
@@ -63,7 +63,7 @@ library CurveLib {
         uint256 squaredB;
         uint256 discriminant;
         uint256 sqrt;
-        if (absB < 1e36) {            
+        if (absB < 1e36) {
             // B^2 can be calculated directly at 1e18 scale without overflowing
             unchecked {
                 squaredB = absB * absB; // scale: 1e36
@@ -71,7 +71,7 @@ library CurveLib {
                 sqrt = Math.sqrt(discriminant); // // scale: 1e18
                 sqrt = (sqrt * sqrt < discriminant) ? sqrt + 1 : sqrt;
             }
-        } else {            
+        } else {
             // B^2 cannot be calculated directly at 1e18 scale without overflowing
             uint256 scale = computeScale(absB); // calculate the scaling factor such that B^2 can be calculated without overflowing
             squaredB = Math.mulDiv(absB / scale, absB, scale, Math.Rounding.Ceil);
