@@ -114,29 +114,4 @@ library CurveLib {
             scale = 1;
         }
     }
-
-    /// @dev Less efficient method to compute fInverse. Useful for testing.
-    function binarySearch(IEulerSwap.Params memory p, uint256 newReserve1, uint256 xMin, uint256 xMax)
-        internal
-        pure
-        returns (uint256)
-    {
-        if (xMin < 1) {
-            xMin = 1;
-        }
-        while (xMin < xMax) {
-            uint256 xMid = (xMin + xMax) / 2;
-            uint256 fxMid = f(xMid, p.priceX, p.priceY, p.equilibriumReserve0, p.equilibriumReserve1, p.concentrationX);
-            if (newReserve1 >= fxMid) {
-                xMax = xMid;
-            } else {
-                xMin = xMid + 1;
-            }
-        }
-        if (newReserve1 < f(xMin, p.priceX, p.priceY, p.equilibriumReserve0, p.equilibriumReserve1, p.concentrationX)) {
-            xMin += 1;
-        }
-        return xMin;
-    }
-
 }
