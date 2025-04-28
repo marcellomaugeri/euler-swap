@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.24;
 
+import {stdError} from "forge-std/Test.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {PoolManagerDeployer} from "./utils/PoolManagerDeployer.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
@@ -246,5 +247,58 @@ contract FactoryTest is EulerSwapTestBase {
 
         vm.expectRevert(EulerSwap.Locked.selector);
         EulerSwap(eulerSwapImpl).getReserves();
+    }
+
+
+
+    address alice = makeAddr("alice");
+    address bob = makeAddr("bob");
+
+    function test_multipleUninstalls() public {
+        // Parameters for deployPool()
+        IEulerSwap.Params memory params = IEulerSwap.Params({
+            vault0: address(eTST),
+            vault1: address(eTST2),
+            eulerAccount: address(0),
+            equilibriumReserve0: 1e18,
+            equilibriumReserve1: 1e18,
+            priceX: 1e18,
+            priceY: 1e18,
+            concentrationX: 0,
+            concentrationY: 0,
+            fee: 0,
+            protocolFee: 0,
+            protocolFeeRecipient: address(0)
+        });
+        IEulerSwap.InitialState memory initialState = IEulerSwap.InitialState({
+            currReserve0: 1e18, 
+            currReserve1: 1e18
+        });
+        bytes32 salt = bytes32(0);
+
+        // Deploy pool for Alice
+        params.eulerAccount = alice;
+        address alicePool = eulerSwapFactory.computePoolAddress(params, salt);
+        vm.startPrank(alice);
+        evc.setAccountOperator(alice, alicePool, true);
+        eulerSwapFactory.deployPool(params, initialState, salt);
+
+        // Deploy pool for Bob
+        params.eulerAccount = bob;
+        address bobPool = eulerSwapFactory.computePoolAddress(params, salt);
+        vm.startPrank(bob);
+        evc.setAccountOperator(bob, bobPool, true);
+        eulerSwapFactory.deployPool(params, initialState, salt);
+
+        // Uninstall pool for Alice
+        vm.startPrank(alice);
+        evc.setAccountOperator(alice, alicePool, false);
+        eulerSwapFactory.uninstallPool();
+
+        // Uninstalling pool for Bob reverts due to an OOB access of the allPools array
+        vm.startPrank(bob);
+        evc.setAccountOperator(bob, bobPool, false);
+        vm.expectRevert(stdError.indexOOBError);
+        eulerSwapFactory.uninstallPool();
     }
 }
