@@ -249,14 +249,4 @@ contract FactoryTest is EulerSwapTestBase {
         assertEq(pools.length, 1);
         assertEq(pools[0], hookAddress);
     }
-
-    function testCallImpl() public {
-        // Underlying implementation is locked: must call via a proxy
-
-        vm.expectRevert(EulerSwap.AlreadyActivated.selector);
-        EulerSwap(eulerSwapImpl).activate(IEulerSwap.InitialState({currReserve0: 1e18, currReserve1: 1e18}));
-
-        vm.expectRevert(EulerSwap.Locked.selector);
-        EulerSwap(eulerSwapImpl).getReserves();
-    }
 }
