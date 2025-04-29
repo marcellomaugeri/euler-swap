@@ -126,6 +126,26 @@ contract HookSwapsTest is EulerSwapTestBase {
         vm.stopPrank();
     }
 
+    function test_hookPermissions() public view {
+        Hooks.Permissions memory perms = eulerSwap.getHookPermissions();
+
+        assertTrue(perms.beforeInitialize);
+        assertTrue(perms.beforeAddLiquidity);
+        assertTrue(perms.beforeSwap);
+        assertTrue(perms.beforeSwapReturnDelta);
+
+        assertFalse(perms.afterInitialize);
+        assertFalse(perms.afterAddLiquidity);
+        assertFalse(perms.beforeRemoveLiquidity);
+        assertFalse(perms.afterRemoveLiquidity);
+        assertFalse(perms.afterSwap);
+        assertFalse(perms.beforeDonate);
+        assertFalse(perms.afterDonate);
+        assertFalse(perms.afterSwapReturnDelta);
+        assertFalse(perms.afterAddLiquidityReturnDelta);
+        assertFalse(perms.afterRemoveLiquidityReturnDelta);
+    }
+
     /// @dev adding liquidity as a concentrated liquidity position will revert
     function test_revertAddConcentratedLiquidity() public {
         assetTST.mint(anyone, 10000e18);

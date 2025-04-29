@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {IEVault, IEulerSwap, EulerSwapTestBase, EulerSwap, TestERC20} from "./EulerSwapTestBase.t.sol";
+import {QuoteLib} from "../src/libraries/QuoteLib.sol";
 
 contract Basic is EulerSwapTestBase {
     EulerSwap public eulerSwap;
@@ -38,6 +39,14 @@ contract Basic is EulerSwapTestBase {
         eulerSwap.swap(0, amountOut, address(this), "");
 
         assertEq(assetTST2.balanceOf(address(this)), amountOut);
+    }
+
+    function test_badTokenAddrs() public {
+        vm.expectRevert(QuoteLib.UnsupportedPair.selector);
+        periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(1234), 0);
+
+        vm.expectRevert(QuoteLib.UnsupportedPair.selector);
+        periphery.quoteExactInput(address(eulerSwap), address(1234), address(assetTST), 0);
     }
 
     function test_altPrice() public {
