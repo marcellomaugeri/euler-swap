@@ -79,7 +79,7 @@ library FundsLib {
             uint256 protocolFeeAmount = feeAmount * p.protocolFee / 1e18;
 
             if (protocolFeeAmount != 0) {
-                IERC20(asset).transfer(p.protocolFeeRecipient, protocolFeeAmount);
+                IERC20(asset).safeTransfer(p.protocolFeeRecipient, protocolFeeAmount);
                 amount -= protocolFeeAmount;
                 feeAmount -= protocolFeeAmount;
             }
