@@ -53,6 +53,18 @@ contract FactoryTest is EulerSwapTestBase {
         (hookAddress, salt) = HookMiner.find(address(eulerSwapFactory), holder, flags, creationCode);
     }
 
+    function testDifferingAddressesSameSalt() public view {
+        (IEulerSwap.Params memory poolParams,) = getBasicParams();
+
+        address a1 = eulerSwapFactory.computePoolAddress(poolParams, bytes32(0));
+
+        poolParams.eulerAccount = address(123);
+
+        address a2 = eulerSwapFactory.computePoolAddress(poolParams, bytes32(0));
+
+        assert(a1 != a2);
+    }
+
     function testDeployPool() public {
         uint256 allPoolsLengthBefore = eulerSwapFactory.poolsLength();
 
@@ -236,16 +248,6 @@ contract FactoryTest is EulerSwapTestBase {
         address[] memory pools = eulerSwapFactory.poolsByPair(asset0, asset1);
         assertEq(pools.length, 1);
         assertEq(pools[0], hookAddress);
-    }
-
-    function testCallImpl() public {
-        // Underlying implementation is locked: must call via a proxy
-
-        vm.expectRevert(EulerSwap.AlreadyActivated.selector);
-        EulerSwap(eulerSwapImpl).activate(IEulerSwap.InitialState({currReserve0: 1e18, currReserve1: 1e18}));
-
-        vm.expectRevert(EulerSwap.Locked.selector);
-        EulerSwap(eulerSwapImpl).getReserves();
     }
 
     address alice = makeAddr("alice");

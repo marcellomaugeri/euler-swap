@@ -37,7 +37,7 @@ contract CurveLibTest is EulerSwapTestBase {
         // Params
         px = 1e18;
         py = bound(py, 1, 1e36);
-        x0 = bound(x0, 1e2, 1e28);
+        x0 = bound(x0, 1, 1e28);
         y0 = bound(y0, 0, 1e28);
         cx = bound(cx, 1, 1e18);
         cy = bound(cy, 1, 1e18);
@@ -63,9 +63,7 @@ contract CurveLibTest is EulerSwapTestBase {
             protocolFeeRecipient: address(0)
         });
 
-        // Note without -2 in the max bound, f() sometimes fails when x gets too close to centre.
-        // Note small x values lead to large y-values, which causes problems for both f() and fInverse(), so we cap it here
-        x = bound(x, 1e2 - 3, x0 - 3);
+        x = bound(x, 1, x0);
 
         uint256 y = CurveLib.f(x, px, py, x0, y0, cx);
         console.log("y    ", y);
@@ -83,7 +81,9 @@ contract CurveLibTest is EulerSwapTestBase {
 
         if (x < type(uint112).max && y < type(uint112).max) {
             assert(CurveLib.verify(p, xCalc, y));
-            assert(int256(xCalc) - int256(xBin) <= 3 || int256(yCalc) - int256(yBin) <= 3); // suspect this is 2 wei error in fInverse() + 1 wei error in f()
+            console.log("Invariant passed");
+            assert(xCalc - xBin <= 3 || y - yCalc <= 3); // suspect this is 2 wei error in fInverse() + 1 wei error in f()
+            console.log("Margin error passed");
         }
     }
 

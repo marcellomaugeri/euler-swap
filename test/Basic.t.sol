@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {IEVault, IEulerSwap, EulerSwapTestBase, EulerSwap, TestERC20} from "./EulerSwapTestBase.t.sol";
+import {QuoteLib} from "../src/libraries/QuoteLib.sol";
 
 contract Basic is EulerSwapTestBase {
     EulerSwap public eulerSwap;
@@ -38,6 +39,14 @@ contract Basic is EulerSwapTestBase {
         eulerSwap.swap(0, amountOut, address(this), "");
 
         assertEq(assetTST2.balanceOf(address(this)), amountOut);
+    }
+
+    function test_badTokenAddrs() public {
+        vm.expectRevert(QuoteLib.UnsupportedPair.selector);
+        periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(1234), 0);
+
+        vm.expectRevert(QuoteLib.UnsupportedPair.selector);
+        periphery.quoteExactInput(address(eulerSwap), address(1234), address(assetTST), 0);
     }
 
     function test_altPrice() public {
@@ -114,6 +123,10 @@ contract Basic is EulerSwapTestBase {
 
         t1.mint(address(this), amount);
         uint256 q = periphery.quoteExactInput(address(eulerSwap), address(t1), address(t2), amount);
+        {
+            uint256 qRev = periphery.quoteExactOutput(address(eulerSwap), address(t1), address(t2), q);
+            assertApproxEqAbs(amount, qRev, 200 + (MAX_QUOTE_ERROR + 1) * 2); // max 100:1 price differential, 2 swaps
+        }
 
         t1.transfer(address(eulerSwap), amount);
         if (dir) eulerSwap.swap(0, q, address(this), "");
@@ -122,6 +135,10 @@ contract Basic is EulerSwapTestBase {
 
         t2.mint(address(this), amount2);
         uint256 q2 = periphery.quoteExactInput(address(eulerSwap), address(t2), address(t1), amount2);
+        {
+            uint256 qRev = periphery.quoteExactOutput(address(eulerSwap), address(t2), address(t1), q2);
+            assertApproxEqAbs(amount2, qRev, 200 + (MAX_QUOTE_ERROR + 1) * 2);
+        }
 
         t2.transfer(address(eulerSwap), amount2);
         if (dir) eulerSwap.swap(q2, 0, address(this), "");

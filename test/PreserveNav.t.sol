@@ -42,6 +42,10 @@ contract PreserveNav is EulerSwapTestBase {
             else (t1, t2) = (assetTST2, assetTST);
 
             uint256 q = periphery.quoteExactInput(address(eulerSwap), address(t1), address(t2), amount1);
+            {
+                uint256 qRev = periphery.quoteExactOutput(address(eulerSwap), address(t1), address(t2), q);
+                assertApproxEqAbs(amount1, qRev, (MAX_QUOTE_ERROR + 1) * 2);
+            }
 
             t1.mint(address(this), amount1);
             t1.transfer(address(eulerSwap), amount1);
@@ -66,6 +70,10 @@ contract PreserveNav is EulerSwapTestBase {
             else (t1, t2) = (assetTST2, assetTST);
 
             uint256 q = periphery.quoteExactInput(address(eulerSwap), address(t1), address(t2), amount2);
+            {
+                uint256 qRev = periphery.quoteExactOutput(address(eulerSwap), address(t1), address(t2), q);
+                assertApproxEqAbs(amount2, qRev, (MAX_QUOTE_ERROR + 1) * 2);
+            }
 
             t1.mint(address(this), amount2);
             t1.transfer(address(eulerSwap), amount2);
