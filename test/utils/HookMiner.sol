@@ -53,7 +53,7 @@ library HookMiner {
                 uint256(
                     keccak256(
                         abi.encodePacked(
-                            bytes1(0xFF), deployer, keccak256(abi.encode(account, salt)), keccak256(creationCode)
+                            bytes1(0xFF), deployer, salt, keccak256(creationCode)
                         )
                     )
                 )

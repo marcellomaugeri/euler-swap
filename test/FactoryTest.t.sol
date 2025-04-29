@@ -53,6 +53,18 @@ contract FactoryTest is EulerSwapTestBase {
         (hookAddress, salt) = HookMiner.find(address(eulerSwapFactory), holder, flags, creationCode);
     }
 
+    function testDifferingAddressesSameSalt() public view {
+        (IEulerSwap.Params memory poolParams,) = getBasicParams();
+
+        address a1 = eulerSwapFactory.computePoolAddress(poolParams, bytes32(0));
+
+        poolParams.eulerAccount = address(123);
+
+        address a2 = eulerSwapFactory.computePoolAddress(poolParams, bytes32(0));
+
+        assert(a1 != a2);
+    }
+
     function testDeployPool() public {
         uint256 allPoolsLengthBefore = eulerSwapFactory.poolsLength();
 

@@ -62,7 +62,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
 
         EulerSwap pool = EulerSwap(
             MetaProxyDeployer.deployMetaProxy(
-                eulerSwapImpl, abi.encode(params), keccak256(abi.encode(params.eulerAccount, salt))
+                eulerSwapImpl, abi.encode(params), salt
             )
         );
 
@@ -91,7 +91,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
                         abi.encodePacked(
                             bytes1(0xff),
                             address(this),
-                            keccak256(abi.encode(poolParams.eulerAccount, salt)),
+                            salt,
                             keccak256(MetaProxyDeployer.creationCodeMetaProxy(eulerSwapImpl, abi.encode(poolParams)))
                         )
                     )
