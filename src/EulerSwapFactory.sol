@@ -119,7 +119,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
 
     /// @inheritdoc IEulerSwapFactory
     function pools() external view returns (address[] memory) {
-        return _getSlice(allPools, 0, type(uint256).max);
+        return allPools.values();
     }
 
     /// @inheritdoc IEulerSwapFactory
@@ -138,7 +138,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
 
     /// @inheritdoc IEulerSwapFactory
     function poolsByPair(address asset0, address asset1) external view returns (address[] memory) {
-        return _getSlice(poolMap[asset0][asset1], 0, type(uint256).max);
+        return poolMap[asset0][asset1].values();
     }
 
     /// @notice Validates operator authorization for euler account and update the relevant EulerAccountState.
