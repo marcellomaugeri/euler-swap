@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.27;
 
+import {EnumerableSet} from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
+
 import {IEulerSwapFactory, IEulerSwap} from "./interfaces/IEulerSwapFactory.sol";
 import {EVCUtil} from "ethereum-vault-connector/utils/EVCUtil.sol";
 import {GenericFactory} from "evk/GenericFactory/GenericFactory.sol";
@@ -13,15 +15,19 @@ import {MetaProxyDeployer} from "./utils/MetaProxyDeployer.sol";
 /// @custom:security-contact security@euler.xyz
 /// @author Euler Labs (https://www.eulerlabs.com/)
 contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
-    /// @dev An array to store all pools addresses.
-    address[] private allPools;
+    using EnumerableSet for EnumerableSet.AddressSet;
+
     /// @dev Vaults must be deployed by this factory
     address public immutable evkFactory;
     /// @dev The EulerSwap code instance that will be proxied to
     address public immutable eulerSwapImpl;
-    /// @dev Mapping between euler account and EulerAccountState
-    mapping(address eulerAccount => EulerAccountState state) private eulerAccountState;
-    mapping(address asset0 => mapping(address asset1 => address[])) private poolMap;
+
+    /// @dev Mapping from euler account to pool, if installed
+    mapping(address eulerAccount => address) internal installedPools;
+    /// @dev Set of all pool addresses
+    EnumerableSet.AddressSet internal allPools;
+    /// @dev Mapping from sorted pair of underlyings to set of pools
+    mapping(address asset0 => mapping(address asset1 => EnumerableSet.AddressSet)) internal poolMap;
 
     event PoolDeployed(address indexed asset0, address indexed asset1, address indexed eulerAccount, address pool);
     event PoolConfig(address indexed pool, IEulerSwap.Params params, IEulerSwap.InitialState initialState);
@@ -98,12 +104,12 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
 
     /// @inheritdoc IEulerSwapFactory
     function poolByEulerAccount(address eulerAccount) external view returns (address) {
-        return eulerAccountState[eulerAccount].pool;
+        return installedPools[eulerAccount];
     }
 
     /// @inheritdoc IEulerSwapFactory
     function poolsLength() external view returns (uint256) {
-        return allPools.length;
+        return allPools.length();
     }
 
     /// @inheritdoc IEulerSwapFactory
@@ -113,12 +119,12 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
 
     /// @inheritdoc IEulerSwapFactory
     function pools() external view returns (address[] memory) {
-        return _getSlice(allPools, 0, type(uint256).max);
+        return allPools.values();
     }
 
     /// @inheritdoc IEulerSwapFactory
     function poolsByPairLength(address asset0, address asset1) external view returns (uint256) {
-        return poolMap[asset0][asset1].length;
+        return poolMap[asset0][asset1].length();
     }
 
     /// @inheritdoc IEulerSwapFactory
@@ -132,7 +138,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
 
     /// @inheritdoc IEulerSwapFactory
     function poolsByPair(address asset0, address asset1) external view returns (address[] memory) {
-        return _getSlice(poolMap[asset0][asset1], 0, type(uint256).max);
+        return poolMap[asset0][asset1].values();
     }
 
     /// @notice Validates operator authorization for euler account and update the relevant EulerAccountState.
@@ -143,16 +149,10 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
 
         (address asset0, address asset1) = _getAssets(newOperator);
 
-        address[] storage poolMapArray = poolMap[asset0][asset1];
+        installedPools[eulerAccount] = newOperator;
 
-        eulerAccountState[eulerAccount] = EulerAccountState({
-            pool: newOperator,
-            allPoolsIndex: uint48(allPools.length),
-            poolMapIndex: uint48(poolMapArray.length)
-        });
-
-        allPools.push(newOperator);
-        poolMapArray.push(newOperator);
+        allPools.add(newOperator);
+        poolMap[asset0][asset1].add(newOperator);
     }
 
     /// @notice Uninstalls the pool associated with the given Euler account
@@ -161,7 +161,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
     /// @dev If no pool exists for the account, the function returns without any action
     /// @param eulerAccount The address of the Euler account whose pool should be uninstalled
     function uninstall(address eulerAccount) internal {
-        address pool = eulerAccountState[eulerAccount].pool;
+        address pool = installedPools[eulerAccount];
 
         if (pool == address(0)) return;
 
@@ -169,22 +169,12 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
 
         (address asset0, address asset1) = _getAssets(pool);
 
-        address[] storage poolMapArr = poolMap[asset0][asset1];
+        allPools.remove(pool);
+        poolMap[asset0][asset1].remove(pool);
 
-        swapAndPop(allPools, eulerAccountState[eulerAccount].allPoolsIndex);
-        swapAndPop(poolMapArr, eulerAccountState[eulerAccount].poolMapIndex);
-
-        delete eulerAccountState[eulerAccount];
+        delete installedPools[eulerAccount];
 
         emit PoolUninstalled(asset0, asset1, eulerAccount, pool);
-    }
-
-    /// @notice Swaps the element at the given index with the last element and removes the last element
-    /// @param arr The storage array to modify
-    /// @param index The index of the element to remove
-    function swapAndPop(address[] storage arr, uint256 index) internal {
-        arr[index] = arr[arr.length - 1];
-        arr.pop();
     }
 
     /// @notice Retrieves the asset addresses for a given pool
@@ -202,14 +192,18 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
     /// @param start The starting index of the slice (inclusive)
     /// @param end The ending index of the slice (exclusive)
     /// @return A new memory array containing the requested slice of addresses
-    function _getSlice(address[] storage arr, uint256 start, uint256 end) internal view returns (address[] memory) {
-        uint256 length = arr.length;
+    function _getSlice(EnumerableSet.AddressSet storage arr, uint256 start, uint256 end)
+        internal
+        view
+        returns (address[] memory)
+    {
+        uint256 length = arr.length();
         if (end == type(uint256).max) end = length;
         if (end < start || end > length) revert SliceOutOfBounds();
 
         address[] memory slice = new address[](end - start);
         for (uint256 i; i < end - start; ++i) {
-            slice[i] = arr[start + i];
+            slice[i] = arr.at(start + i);
         }
 
         return slice;

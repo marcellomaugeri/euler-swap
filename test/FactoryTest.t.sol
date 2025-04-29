@@ -249,4 +249,76 @@ contract FactoryTest is EulerSwapTestBase {
         assertEq(pools.length, 1);
         assertEq(pools[0], hookAddress);
     }
+
+    address alice = makeAddr("alice");
+    address bob = makeAddr("bob");
+
+    function test_multipleUninstalls() public {
+        (IEulerSwap.Params memory params, IEulerSwap.InitialState memory initialState) = getBasicParams();
+
+        // Deploy pool for Alice
+        params.eulerAccount = holder = alice;
+        (address alicePool, bytes32 aliceSalt) = mineSalt(params);
+
+        vm.startPrank(alice);
+        evc.setAccountOperator(alice, alicePool, true);
+        eulerSwapFactory.deployPool(params, initialState, aliceSalt);
+
+        // Deploy pool for Bob
+        params.eulerAccount = holder = bob;
+        (address bobPool, bytes32 bobSalt) = mineSalt(params);
+
+        vm.startPrank(bob);
+        evc.setAccountOperator(bob, bobPool, true);
+        eulerSwapFactory.deployPool(params, initialState, bobSalt);
+
+        {
+            address[] memory ps = eulerSwapFactory.pools();
+            assertEq(ps.length, 2);
+            assertEq(ps[0], alicePool);
+            assertEq(ps[1], bobPool);
+        }
+
+        {
+            (address asset0, address asset1) = EulerSwap(alicePool).getAssets();
+            address[] memory ps = eulerSwapFactory.poolsByPair(asset0, asset1);
+            assertEq(ps.length, 2);
+            assertEq(ps[0], alicePool);
+            assertEq(ps[1], bobPool);
+        }
+
+        // Uninstall pool for Alice
+        vm.startPrank(alice);
+        evc.setAccountOperator(alice, alicePool, false);
+        eulerSwapFactory.uninstallPool();
+
+        {
+            address[] memory ps = eulerSwapFactory.pools();
+            assertEq(ps.length, 1);
+            assertEq(ps[0], bobPool);
+        }
+
+        {
+            (address asset0, address asset1) = EulerSwap(alicePool).getAssets();
+            address[] memory ps = eulerSwapFactory.poolsByPair(asset0, asset1);
+            assertEq(ps.length, 1);
+            assertEq(ps[0], bobPool);
+        }
+
+        // Uninstalling pool for Bob reverts due to an OOB access of the allPools array
+        vm.startPrank(bob);
+        evc.setAccountOperator(bob, bobPool, false);
+        eulerSwapFactory.uninstallPool();
+
+        {
+            address[] memory ps = eulerSwapFactory.pools();
+            assertEq(ps.length, 0);
+        }
+
+        {
+            (address asset0, address asset1) = EulerSwap(alicePool).getAssets();
+            address[] memory ps = eulerSwapFactory.poolsByPair(asset0, asset1);
+            assertEq(ps.length, 0);
+        }
+    }
 }
