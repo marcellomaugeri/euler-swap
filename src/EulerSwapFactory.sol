@@ -60,11 +60,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
 
         uninstall(params.eulerAccount);
 
-        EulerSwap pool = EulerSwap(
-            MetaProxyDeployer.deployMetaProxy(
-                eulerSwapImpl, abi.encode(params), salt
-            )
-        );
+        EulerSwap pool = EulerSwap(MetaProxyDeployer.deployMetaProxy(eulerSwapImpl, abi.encode(params), salt));
 
         updateEulerAccountState(params.eulerAccount, address(pool));
 
