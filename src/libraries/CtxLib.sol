@@ -19,22 +19,15 @@ library CtxLib {
         }
     }
 
+    error InsufficientCalldata();
+
     /// @dev Unpacks encoded Params from trailing calldata. Loosely based on
     /// the implementation from EIP-3448 (except length is hard-coded).
+    /// 384 is the size of the Params struct after ABI encoding.
     function getParams() internal pure returns (IEulerSwap.Params memory p) {
-        bytes memory data;
-
-        assembly {
-            let size := 384
-            let dataPtr := sub(calldatasize(), size)
-            data := mload(64)
-            // increment free memory pointer by metadata size + 32 bytes (length)
-            mstore(64, add(data, add(size, 32)))
-            mstore(data, size)
-            let memPtr := add(data, 32)
-            calldatacopy(memPtr, dataPtr, size)
+        require(msg.data.length >= 384, InsufficientCalldata());
+        unchecked {
+            return abi.decode(msg.data[msg.data.length - 384:], (IEulerSwap.Params));
         }
-
-        return abi.decode(data, (IEulerSwap.Params));
     }
 }
