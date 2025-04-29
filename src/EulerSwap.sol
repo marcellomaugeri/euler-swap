@@ -58,7 +58,7 @@ contract EulerSwap is IEulerSwap, EVCUtil, UniswapHook {
     }
 
     /// @inheritdoc IEulerSwap
-    function activate(InitialState calldata initialState) public {
+    function activate(InitialState calldata initialState) external {
         CtxLib.Storage storage s = CtxLib.getStorage();
         Params memory p = CtxLib.getParams();
 
