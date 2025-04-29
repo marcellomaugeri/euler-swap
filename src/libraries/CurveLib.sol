@@ -9,7 +9,7 @@ library CurveLib {
     error Overflow();
     error CurveViolation();
 
-    /// @notice Returns true iff the specified reserve amounts would be acceptable.
+    /// @notice Returns true if the specified reserve amounts would be acceptable, false otherwise.
     /// Acceptable points are on, or above and to-the-right of the swapping curve.
     function verify(IEulerSwap.Params memory p, uint256 newReserve0, uint256 newReserve1)
         internal
@@ -55,7 +55,7 @@ library CurveLib {
             int256 term1 = int256(Math.mulDiv(py * 1e18, y - y0, px, Math.Rounding.Ceil)); // scale: 1e36
             int256 term2 = (2 * int256(c) - int256(1e18)) * int256(x0); // scale: 1e36
             B = (term1 - term2) / int256(1e18); // scale: 1e18
-            C = Math.mulDiv((1e18 - c), x0 * x0, 1e18, Math.Rounding.Ceil); // scale: 1e36
+            C = Math.mulDiv(1e18 - c, x0 * x0, 1e18, Math.Rounding.Ceil); // scale: 1e36
             fourAC = Math.mulDiv(4 * c, C, 1e18, Math.Rounding.Ceil); // scale: 1e36
         }
 
@@ -68,7 +68,7 @@ library CurveLib {
             unchecked {
                 squaredB = absB * absB; // scale: 1e36
                 discriminant = squaredB + fourAC; // scale: 1e36
-                sqrt = Math.sqrt(discriminant); // // scale: 1e18
+                sqrt = Math.sqrt(discriminant); // scale: 1e18
                 sqrt = (sqrt * sqrt < discriminant) ? sqrt + 1 : sqrt;
             }
         } else {
