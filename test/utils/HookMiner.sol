@@ -49,15 +49,7 @@ library HookMiner {
         returns (address hookAddress)
     {
         return address(
-            uint160(
-                uint256(
-                    keccak256(
-                        abi.encodePacked(
-                            bytes1(0xFF), deployer, keccak256(abi.encode(account, salt)), keccak256(creationCode)
-                        )
-                    )
-                )
-            )
+            uint160(uint256(keccak256(abi.encodePacked(bytes1(0xFF), deployer, salt, keccak256(creationCode)))))
         );
     }
 }
