@@ -210,7 +210,7 @@ library QuoteLib {
                 xNew = reserve0 - amount;
                 if (xNew < x0) {
                     // remain on f()
-                    yNew = CurveLib.f(xNew, py, px, y0, x0, cx);
+                    yNew = CurveLib.f(xNew, px, py, x0, y0, cx);
                 } else {
                     // move to g()
                     yNew = CurveLib.fInverse(xNew, py, px, y0, x0, cy);
