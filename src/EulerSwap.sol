@@ -85,8 +85,8 @@ contract EulerSwap is IEulerSwap, EVCUtil, UniswapHook {
         s.reserve1 = initialState.currReserve1;
 
         require(CurveLib.verify(p, s.reserve0, s.reserve1), CurveLib.CurveViolation());
-        require(!CurveLib.verify(p, s.reserve0 > 0 ? s.reserve0 - 1 : 0, s.reserve1), CurveLib.CurveViolation());
-        require(!CurveLib.verify(p, s.reserve0, s.reserve1 > 0 ? s.reserve1 - 1 : 0), CurveLib.CurveViolation());
+        if (s.reserve0 != 0) require(!CurveLib.verify(p, s.reserve0 - 1, s.reserve1), CurveLib.CurveViolation());
+        if (s.reserve1 != 0) require(!CurveLib.verify(p, s.reserve0, s.reserve1 - 1), CurveLib.CurveViolation());
 
         // Configure external contracts
 
