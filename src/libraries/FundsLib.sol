@@ -75,7 +75,7 @@ library FundsLib {
 
         uint256 feeAmount = amount * p.fee / 1e18;
 
-        {
+        if (p.protocolFeeRecipient != address(0)) {
             uint256 protocolFeeAmount = feeAmount * p.protocolFee / 1e18;
 
             if (protocolFeeAmount != 0) {
