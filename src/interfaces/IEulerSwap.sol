@@ -59,7 +59,7 @@ interface IEulerSwap {
     function getLimits(address tokenIn, address tokenOut) external view returns (uint256, uint256);
 
     /// @notice Optimistically sends the requested amounts of tokens to the `to`
-    /// address, invokes `uniswapV2Call` callback on `to` (if `data` was provided),
+    /// address, invokes `eulerSwapCall` callback on `to` (if `data` was provided),
     /// and then verifies that a sufficient amount of tokens were transferred to
     /// satisfy the swapping curve invariant.
     function swap(uint256 amount0Out, uint256 amount1Out, address to, bytes calldata data) external;

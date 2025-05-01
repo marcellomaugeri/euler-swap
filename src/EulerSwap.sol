@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.27;
 
-import {IUniswapV2Callee} from "./interfaces/IUniswapV2Callee.sol";
+import {IEulerSwapCallee} from "./interfaces/IEulerSwapCallee.sol";
 
 import {EVCUtil} from "evc/utils/EVCUtil.sol";
 import {IEVC} from "evc/interfaces/IEthereumVaultConnector.sol";
@@ -160,7 +160,7 @@ contract EulerSwap is IEulerSwap, EVCUtil, UniswapHook {
 
         // Invoke callback
 
-        if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(_msgSender(), amount0Out, amount1Out, data);
+        if (data.length > 0) IEulerSwapCallee(to).eulerSwapCall(_msgSender(), amount0Out, amount1Out, data);
 
         // Deposit all available funds, adjust received amounts downward to collect fees
 
