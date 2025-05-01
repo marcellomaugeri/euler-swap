@@ -190,7 +190,7 @@ contract HookSwapsTest is EulerSwapTestBase {
                 CustomRevert.WrappedError.selector,
                 address(eulerSwap),
                 IHooks.beforeInitialize.selector,
-                abi.encodeWithSelector(UniswapHook.AlreadyInitialized.selector),
+                abi.encodeWithSelector(BaseHook.HookNotImplemented.selector),
                 abi.encodeWithSelector(Hooks.HookCallFailed.selector)
             )
         );
