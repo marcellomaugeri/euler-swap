@@ -9,6 +9,7 @@ import {UniswapHook} from "../src/UniswapHook.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {IPoolManager, PoolManagerDeployer} from "./utils/PoolManagerDeployer.sol";
 import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
+import {PoolDonateTest} from "@uniswap/v4-core/src/test/PoolDonateTest.sol";
 import {MinimalRouter} from "./utils/MinimalRouter.sol";
 import {PoolModifyLiquidityTest} from "@uniswap/v4-core/src/test/PoolModifyLiquidityTest.sol";
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
@@ -18,6 +19,7 @@ import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {CustomRevert} from "@uniswap/v4-core/src/libraries/CustomRevert.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
+import {BaseHook} from "v4-periphery/src/utils/BaseHook.sol";
 
 contract HookSwapsTest is EulerSwapTestBase {
     using StateLibrary for IPoolManager;
@@ -28,6 +30,7 @@ contract HookSwapsTest is EulerSwapTestBase {
     PoolSwapTest public swapRouter;
     MinimalRouter public minimalRouter;
     PoolModifyLiquidityTest public liquidityManager;
+    PoolDonateTest public donateRouter;
 
     PoolSwapTest.TestSettings public settings = PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
 
@@ -38,6 +41,7 @@ contract HookSwapsTest is EulerSwapTestBase {
         swapRouter = new PoolSwapTest(poolManager);
         minimalRouter = new MinimalRouter(poolManager);
         liquidityManager = new PoolModifyLiquidityTest(poolManager);
+        donateRouter = new PoolDonateTest(poolManager);
 
         deployEulerSwap(address(poolManager));
 
@@ -133,13 +137,13 @@ contract HookSwapsTest is EulerSwapTestBase {
         assertTrue(perms.beforeAddLiquidity);
         assertTrue(perms.beforeSwap);
         assertTrue(perms.beforeSwapReturnDelta);
+        assertTrue(perms.beforeDonate);
 
         assertFalse(perms.afterInitialize);
         assertFalse(perms.afterAddLiquidity);
         assertFalse(perms.beforeRemoveLiquidity);
         assertFalse(perms.afterRemoveLiquidity);
         assertFalse(perms.afterSwap);
-        assertFalse(perms.beforeDonate);
         assertFalse(perms.afterDonate);
         assertFalse(perms.afterSwapReturnDelta);
         assertFalse(perms.afterAddLiquidityReturnDelta);
@@ -163,7 +167,7 @@ contract HookSwapsTest is EulerSwapTestBase {
                 CustomRevert.WrappedError.selector,
                 address(eulerSwap),
                 IHooks.beforeAddLiquidity.selector,
-                abi.encodeWithSelector(UniswapHook.NativeConcentratedLiquidityUnsupported.selector),
+                abi.encodeWithSelector(BaseHook.HookNotImplemented.selector),
                 abi.encodeWithSelector(Hooks.HookCallFailed.selector)
             )
         );
@@ -186,11 +190,28 @@ contract HookSwapsTest is EulerSwapTestBase {
                 CustomRevert.WrappedError.selector,
                 address(eulerSwap),
                 IHooks.beforeInitialize.selector,
-                abi.encodeWithSelector(UniswapHook.AlreadyInitialized.selector),
+                abi.encodeWithSelector(BaseHook.HookNotImplemented.selector),
                 abi.encodeWithSelector(Hooks.HookCallFailed.selector)
             )
         );
         poolManager.initialize(newPoolKey, 79228162514264337593543950336);
+    }
+
+    /// @dev revert on donations as they are irrecoverable if they were supported
+    function test_revertDonate(uint256 amount0, uint256 amount1) public {
+        PoolKey memory poolKey = eulerSwap.poolKey();
+
+        // hook intentionally reverts to prevent irrecoverable donations
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CustomRevert.WrappedError.selector,
+                address(eulerSwap),
+                IHooks.beforeDonate.selector,
+                abi.encodeWithSelector(BaseHook.HookNotImplemented.selector),
+                abi.encodeWithSelector(Hooks.HookCallFailed.selector)
+            )
+        );
+        donateRouter.donate(poolKey, amount0, amount1, "");
     }
 
     function _swap(PoolKey memory key, bool zeroForOne, bool exactInput, uint256 amount) internal {

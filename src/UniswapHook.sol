@@ -27,8 +27,6 @@ contract UniswapHook is BaseHook {
 
     PoolKey internal _poolKey;
 
-    error AlreadyInitialized();
-    error NativeConcentratedLiquidityUnsupported();
     error LockedHook();
 
     constructor(address evc_, address _poolManager) BaseHook(IPoolManager(_poolManager)) {
@@ -143,25 +141,22 @@ contract UniswapHook is BaseHook {
         return (BaseHook.beforeSwap.selector, returnDelta, 0);
     }
 
-    /// @dev Each deployed hook only services one pair and prevent subsequent initializations
-    function _beforeInitialize(address, PoolKey calldata, uint160) internal view override returns (bytes4) {
-        // when the hook is deployed for the first time, the internal _poolKey is empty
-        // upon activation, the internal _poolKey is initialized and set
-        // once the hook contract is activated, do not allow subsequent initializations
-        require(_poolKey.tickSpacing == 0, AlreadyInitialized());
-        return BaseHook.beforeInitialize.selector;
-    }
-
-    function _beforeAddLiquidity(address, PoolKey calldata, IPoolManager.ModifyLiquidityParams calldata, bytes calldata)
-        internal
-        pure
-        override
-        returns (bytes4)
-    {
-        revert NativeConcentratedLiquidityUnsupported();
-    }
-
     function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
+        /**
+         * @dev Hook Permissions without overrides:
+         * - beforeInitialize, beforeDoate, beforeAddLiquidity
+         * We use BaseHook's original reverts to *intentionally* revert
+         *
+         * beforeInitialize: the hook reverts for initializations NOT going through EulerSwap.activateHook()
+         * we want to prevent users from initializing other pairs with the same hook address
+         *
+         * beforeDonate: because the hook does not support native concentrated liquidity, any
+         * donations are permanently irrecoverable. The hook reverts on beforeDonate to prevent accidental misusage
+         *
+         * beforeAddLiquidity: the hook reverts to prevent v3-CLAMM positions
+         * because the hook is a "custom curve", any concentrated liquidity position sits idle and entirely unused
+         * to protect users from accidentally creating non-productive positions, the hook reverts on beforeAddLiquidity
+         */
         return Hooks.Permissions({
             beforeInitialize: true,
             afterInitialize: false,
@@ -171,7 +166,7 @@ contract UniswapHook is BaseHook {
             afterRemoveLiquidity: false,
             beforeSwap: true,
             afterSwap: false,
-            beforeDonate: false,
+            beforeDonate: true,
             afterDonate: false,
             beforeSwapReturnDelta: true,
             afterSwapReturnDelta: false,
