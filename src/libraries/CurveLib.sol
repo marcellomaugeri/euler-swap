@@ -68,16 +68,14 @@ library CurveLib {
             unchecked {
                 squaredB = absB * absB; // scale: 1e36
                 discriminant = squaredB + fourAC; // scale: 1e36
-                sqrt = Math.sqrt(discriminant); // scale: 1e18
-                sqrt = (sqrt * sqrt < discriminant) ? sqrt + 1 : sqrt;
+                sqrt = Math.sqrt(discriminant, Math.Rounding.Ceil); // scale: 1e18
             }
         } else {
             // B^2 cannot be calculated directly at 1e18 scale without overflowing
             uint256 scale = computeScale(absB); // calculate the scaling factor such that B^2 can be calculated without overflowing
             squaredB = Math.mulDiv(absB / scale, absB, scale, Math.Rounding.Ceil);
             discriminant = squaredB + fourAC / (scale * scale);
-            sqrt = Math.sqrt(discriminant);
-            sqrt = (sqrt * sqrt < discriminant) ? sqrt + 1 : sqrt;
+            sqrt = Math.sqrt(discriminant, Math.Rounding.Ceil);
             sqrt = sqrt * scale;
         }
 
@@ -86,7 +84,7 @@ library CurveLib {
             // use the regular quadratic formula solution (-b + sqrt(b^2 - 4ac)) / 2a
             x = Math.mulDiv(absB + sqrt, 1e18, 2 * c, Math.Rounding.Ceil) + 1;
         } else {
-            // use the "citardauq" quadratic formula solution 2c / (-b + sqrt(b^2 - 4ac))
+            // use the "citardauq" quadratic formula solution 2c / (-b - sqrt(b^2 - 4ac))
             x = (2 * C + (absB + sqrt - 1)) / (absB + sqrt) + 1;
         }
 
