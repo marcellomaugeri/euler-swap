@@ -29,8 +29,15 @@ library CurveLib {
         }
     }
 
-    /// @dev EulerSwap curve definition
-    /// Pre-conditions: 0 < x <= x0, 1 <= {px,py} <= 1e36, {x0,y0} <= type(uint112).max, c <= 1e18
+    /// @dev EulerSwap curve
+    /// @notice Computes the output `y` for a given input `x`.
+    /// @param x The input reserve value, constrained to 1 <= x <= x0.
+    /// @param px (1 < px <= 1e25).
+    /// @param py (1 < py <= 1e25).
+    /// @param x0 (1 < x0 <= 2^112 - 1).
+    /// @param y0 (0 <= y0 <= 2^112 - 1).
+    /// @param c (0 < c <= 1e18).
+    /// @return y The output reserve value corresponding to input `x`, guaranteed to satisfy `y >= y0`.
     function f(uint256 x, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c) internal pure returns (uint256) {
         unchecked {
             uint256 v = Math.mulDiv(px * (x0 - x), c * x + (1e18 - c) * x0, x * 1e18, Math.Rounding.Ceil);
@@ -39,8 +46,15 @@ library CurveLib {
         }
     }
 
-    /// @dev EulerSwap inverse function definition
-    /// Pre-conditions: 0 < x <= x0, 1 <= {px,py} <= 1e36, {x0,y0} <= type(uint112).max, c <= 1e18
+    /// @dev EulerSwap inverse curve
+    /// @notice Computes the output `x` for a given input `y`.
+    /// @param y The input reserve value, constrained to y >= y0.
+    /// @param px (1 < px <= 1e25).
+    /// @param py (1 < py <= 1e25).
+    /// @param x0 (1 < x0 <= 2^112 - 1).
+    /// @param y0 (0 <= y0 <= 2^112 - 1).
+    /// @param c (0 < c <= 1e18).
+    /// @return x The output reserve value corresponding to input `y`, guaranteed to satisfy `1 <= x <= x0`.
     function fInverse(uint256 y, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 c)
         internal
         pure
