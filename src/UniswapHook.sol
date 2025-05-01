@@ -29,6 +29,7 @@ contract UniswapHook is BaseHook {
 
     error AlreadyInitialized();
     error NativeConcentratedLiquidityUnsupported();
+    error LockedHook();
 
     constructor(address evc_, address _poolManager) BaseHook(IPoolManager(_poolManager)) {
         evc = evc_;
@@ -65,9 +66,25 @@ contract UniswapHook is BaseHook {
     /// in activateHook().
     function validateHookAddress(BaseHook _this) internal pure override {}
 
+    modifier nonReentrantHook() {
+        {
+            CtxLib.Storage storage s = CtxLib.getStorage();
+            require(s.status == 1, LockedHook());
+            s.status = 2;
+        }
+
+        _;
+
+        {
+            CtxLib.Storage storage s = CtxLib.getStorage();
+            s.status = 1;
+        }
+    }
+
     function _beforeSwap(address, PoolKey calldata key, IPoolManager.SwapParams calldata params, bytes calldata)
         internal
         override
+        nonReentrantHook
         returns (bytes4, BeforeSwapDelta, uint24)
     {
         IEulerSwap.Params memory p = CtxLib.getParams();
