@@ -142,6 +142,21 @@ contract UniswapHook is BaseHook {
     }
 
     function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
+        /**
+         * @dev Hook Permissions without overrides:
+         * - beforeInitialize, beforeDoate, beforeAddLiquidity
+         * We use BaseHook's original reverts to *intentionally* revert
+         *
+         * beforeInitialize: the hook reverts for initializations NOT going through EulerSwap.activateHook()
+         * we want to prevent users from initializing other pairs with the same hook address
+         *
+         * beforeDonate: because the hook does not support native concentrated liquidity, any
+         * donations are permanently irrecoverable. The hook reverts on beforeDonate to prevent accidental misusage
+         *
+         * beforeAddLiquidity: the hook reverts to prevent v3-CLAMM positions
+         * because the hook is a "custom curve", any concentrated liquidity position sits idle and entirely unused
+         * to protect users from accidentally creating non-productive positions, the hook reverts on beforeAddLiquidity
+         */
         return Hooks.Permissions({
             beforeInitialize: true,
             afterInitialize: false,
