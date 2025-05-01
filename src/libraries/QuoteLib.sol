@@ -98,9 +98,10 @@ library QuoteLib {
             (, uint16 borrowCap) = vault.caps();
             uint256 maxWithdraw = decodeCap(uint256(borrowCap));
             maxWithdraw = vault.totalBorrows() > maxWithdraw ? 0 : maxWithdraw - vault.totalBorrows();
-            if (maxWithdraw > cash) maxWithdraw = cash;
-            maxWithdraw += vault.convertToAssets(vault.balanceOf(eulerAccount));
-            if (maxWithdraw < outLimit) outLimit = maxWithdraw;
+            if (maxWithdraw < outLimit) {
+                maxWithdraw += vault.convertToAssets(vault.balanceOf(eulerAccount));
+                if (maxWithdraw < outLimit) outLimit = maxWithdraw;
+            }
         }
 
         return (inLimit, outLimit);
