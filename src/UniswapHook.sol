@@ -96,10 +96,10 @@ contract UniswapHook is BaseHook {
             bool isExactInput = params.amountSpecified < 0;
             if (isExactInput) {
                 amountIn = uint256(-params.amountSpecified);
-                amountOut = QuoteLib.computeQuote(evc, p, params.zeroForOne, uint256(-params.amountSpecified), true);
+                amountOut = QuoteLib.computeQuote(evc, p, params.zeroForOne, amountIn, true);
             } else {
-                amountIn = QuoteLib.computeQuote(evc, p, params.zeroForOne, uint256(params.amountSpecified), false);
                 amountOut = uint256(params.amountSpecified);
+                amountIn = QuoteLib.computeQuote(evc, p, params.zeroForOne, amountOut, false);
             }
 
             // return the delta to the PoolManager, so it can process the accounting
@@ -131,7 +131,6 @@ contract UniswapHook is BaseHook {
             uint256 newReserve0 = params.zeroForOne ? (s.reserve0 + amountInWithoutFee) : (s.reserve0 - amountOut);
             uint256 newReserve1 = !params.zeroForOne ? (s.reserve1 + amountInWithoutFee) : (s.reserve1 - amountOut);
 
-            require(newReserve0 <= type(uint112).max && newReserve1 <= type(uint112).max, CurveLib.Overflow());
             require(CurveLib.verify(p, newReserve0, newReserve1), CurveLib.CurveViolation());
 
             s.reserve0 = uint112(newReserve0);
