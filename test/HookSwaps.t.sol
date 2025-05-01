@@ -167,7 +167,7 @@ contract HookSwapsTest is EulerSwapTestBase {
                 CustomRevert.WrappedError.selector,
                 address(eulerSwap),
                 IHooks.beforeAddLiquidity.selector,
-                abi.encodeWithSelector(UniswapHook.NativeConcentratedLiquidityUnsupported.selector),
+                abi.encodeWithSelector(BaseHook.HookNotImplemented.selector),
                 abi.encodeWithSelector(Hooks.HookCallFailed.selector)
             )
         );
