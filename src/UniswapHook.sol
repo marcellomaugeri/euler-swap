@@ -171,7 +171,7 @@ contract UniswapHook is BaseHook {
             afterRemoveLiquidity: false,
             beforeSwap: true,
             afterSwap: false,
-            beforeDonate: false,
+            beforeDonate: true,
             afterDonate: false,
             beforeSwapReturnDelta: true,
             afterSwapReturnDelta: false,
