@@ -171,7 +171,7 @@ library QuoteLib {
             if (asset0IsInput) {
                 // swap X in and Y out
                 xNew = reserve0 + amount;
-                if (xNew < x0) {
+                if (xNew <= x0) {
                     // remain on f()
                     yNew = CurveLib.f(xNew, px, py, x0, y0, cx);
                 } else {
@@ -182,7 +182,7 @@ library QuoteLib {
             } else {
                 // swap Y in and X out
                 yNew = reserve1 + amount;
-                if (yNew < y0) {
+                if (yNew <= y0) {
                     // remain on g()
                     xNew = CurveLib.f(yNew, py, px, y0, x0, cy);
                 } else {
@@ -197,7 +197,7 @@ library QuoteLib {
                 // swap Y out and X in
                 require(reserve1 > amount, SwapLimitExceeded());
                 yNew = reserve1 - amount;
-                if (yNew < y0) {
+                if (yNew <= y0) {
                     // remain on g()
                     xNew = CurveLib.f(yNew, py, px, y0, x0, cy);
                 } else {
@@ -209,7 +209,7 @@ library QuoteLib {
                 // swap X out and Y in
                 require(reserve0 > amount, SwapLimitExceeded());
                 xNew = reserve0 - amount;
-                if (xNew < x0) {
+                if (xNew <= x0) {
                     // remain on f()
                     yNew = CurveLib.f(xNew, px, py, x0, y0, cx);
                 } else {
