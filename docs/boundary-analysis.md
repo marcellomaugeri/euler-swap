@@ -6,64 +6,73 @@ The EulerSwap automated market maker (AMM) curve is governed by two key function
 
 ## Implementation of `f()`
 
-The `f()` function is part of the EulerSwap core, defined in `EulerSwap.sol`, and corresponds to equation (2) in the EulerSwap white paper. The `f()` function is a parameterisable curve in the `EulerSwap` contract that defines the permissible boundary for points in EulerSwap AMMs. The curve allows points on or above and to the right of the curve while restricting others. Its primary purpose is to act as an invariant validator by checking if a hypothetical state `(x, y)` within the AMM is valid. It also calculates swap output amounts for given inputs, though some swap scenarios require `fInverse()`.
+The `f()` function is part of the EulerSwap core, defined in `CurveLib.sol`, and corresponds to equation (2) in the EulerSwap white paper. The `f()` function is a parameterisable curve that defines the permissible boundary for points in EulerSwap AMMs. The curve allows points on or above and to the right of the curve while restricting others. Its primary purpose is to act as an invariant validator by checking if a hypothetical state `(x, y)` within the AMM is valid. It also calculates swap output amounts for given inputs, though some swap scenarios require `fInverse()`. This section focuses on `f()`, while the analysis for `fInverse()` follows in the next section.
 
 ### Derivation
 
 This derivation shows how to implement the `f()` function in Solidity, starting from the theoretical model described in the EulerSwap white paper. The initial equation from the EulerSwap white paper is:
 
-\[
-y_0 + \left(\frac{p_x}{p_y}\right) (x_0 - x) \left(c + (1 - c) \frac{x_0}{x}\right)
-\]
+```
+y0 + (px / py) * (x0 - x) * (c + (1 - c) * x0 / x)
+```
 
-Multiply the second term by \(\frac{x}{x}\) and scale `c` by \(1e18\):
+Multiply the second term by `x / x` and scale `c` by `1e18`:
 
-\[
-y_0 + \left(\frac{p_x}{p_y}\right) (x_0 - x) \frac{(c \cdot x) + (1e18 - c) \cdot x_0}{x \cdot 1e18}
-\]
+```
+y0 + (px / py) * (x0 - x) * ((c * x) + (1e18 - c) * x0) / (x * 1e18)
+```
 
-Reorder division by \(p_y\) to prepare for Solidity implementation:
+Reorder division by `py` to prepare for Solidity implementation:
 
-\[
-y_0 + p_x \cdot (x_0 - x) \cdot \frac{(c \cdot x) + (1e18 - c) \cdot x_0}{x \cdot 1e18} \cdot \frac{1}{p_y}
-\]
+```
+y0 + px * (x0 - x) * ((c * x) + (1e18 - c) * x0) / (x * 1e18) / py
+```
 
 To avoid intermediate overflow, use `Math.mulDiv` in Solidity, which combines multiplication and division safely:
 
-\[
-y_0 + \frac{\text{Math.mulDiv}(p_x \cdot (x_0 - x), c \cdot x + (1e18 - c) \cdot x_0, x \cdot 1e18)}{p_y}
-\]
+```
+y0 + Math.mulDiv(px * (x0 - x), c * x + (1e18 - c) * x0, x * 1e18) / py
+```
 
 Applying ceiling rounding with `Math.Rounding.Ceil` ensures accuracy:
 
-\[
-y_0 + \left(\text{Math.mulDiv}(p_x \cdot (x_0 - x), c \cdot x + (1e18 - c) \cdot x_0, x \cdot 1e18, \text{Math.Rounding.Ceil}) + (p_y - 1)\right) / p_y
-\]
+```
+y0 + (Math.mulDiv(px * (x0 - x), c * x + (1e18 - c) * x0, x * 1e18, Math.Rounding.Ceil) + (py - 1)) / py
+```
 
-Adding `(p_y - 1)` ensures proper ceiling rounding by making sure the result is rounded up when the numerator is not perfectly divisible by `p_y`.
+Adding `(py - 1)` ensures proper ceiling rounding by making sure the result is rounded up when the numerator is not perfectly divisible by `py`.
 
 ### Boundary analysis
 
-#### Pre-conditions
+#### Parameters and pre-conditions
 
-- \(x \leq x_0\)
-- \(1e18 \leq p_x, p_y \leq 1e36\) (60 to 120 bits)
-- \(1 \leq x_0, y_0 \leq 2^{112} - 1 \approx 5.19e33\) (0 to 112 bits)
-- \(1 < c \leq 1e18\) (0 to 60 bits)
+The following parameters and pre-conditions are assumed in this analysis, as documented in the function NatSpec:
+
+```solidity
+/// @dev EulerSwap curve
+/// @notice Computes the output `y` for a given input `x`.
+/// @param x The input reserve value, constrained to 1 <= x <= x0.
+/// @param px (1 <= px <= 1e25).
+/// @param py (1 <= py <= 1e25).
+/// @param x0 (1 <= x0 <= 2^112 - 1).
+/// @param y0 (0 <= y0 <= 2^112 - 1).
+/// @param c (0 <= c <= 1e18).
+/// @return y The output reserve value corresponding to input `x`, guaranteed to satisfy `y0 <= y <= 2^112 - 1`.
+```
 
 #### Step-by-step
 
 The arguments to `mulDiv` are safe from overflow:
 
-- **Arg 1:** `px * (x0 - x)` ≤ `1e36 * (2**112 - 1)` ≈ 232 bits
-- **Arg 2:** `c * x + (1e18 - c) * x0` ≤ `1e18 * (2**112 - 1) * 2` ≈ 173 bits
-- **Arg 3:** `x * 1e18` ≤ `1e18 * (2**112 - 1)` ≈ 172 bits
+- **Numerator (arg1):** `px * (x0 - x)` is less than or equal to `1e36 * (2^112 - 1)`, approximately 232 bits
+- **Multiplier (arg2):** `c * x + (1e18 - c) * x0` is less than or equal to `1e18 * (2^112 - 1) * 2`, approximately 173 bits
+- **Denominator (arg3):** `x * 1e18` is less than or equal to `1e18 * (2^112 - 1)`, approximately 172 bits
 
-If `mulDiv` or the addition with `y0` overflows, the result would exceed `type(uint112).max`. When `mulDiv` overflows, its result would be > `2**256 - 1`. Dividing by `py` (`1e36` max) gives ~`2**136`, which exceeds the `2**112 - 1` limit, meaning these results are invalid as they cannot be satisfied by any swapper.
+If `mulDiv` or the addition with `y0` overflows, the result would exceed `type(uint112).max`. When `mulDiv` overflows, its result would be greater than `2^256 - 1`. Dividing by `py` (maximum `1e36`) yields a result of about `2^136`, which exceeds the `2^112 - 1` limit, meaning these results are invalid as they cannot be satisfied by any swapper.
 
 #### Unchecked math considerations
 
-The arguments to `mulDiv` are protected from overflow as demonstrated above. The `mulDiv` output is further limited to `2**248 - 1` to prevent overflow in subsequent operations:
+The arguments to `mulDiv` are protected from overflow as shown above. The `mulDiv` output is further limited to `2^248 - 1` to prevent overflow in subsequent operations:
 
 ```solidity
 unchecked {
@@ -73,9 +82,9 @@ unchecked {
 }
 ```
 
-This does not introduce additional failure cases. Even values between `2**248 - 1` and `2**256 - 1` would not reduce to `2**112 - 1`, aligning with the boundary analysis.
+This does not introduce additional failure cases. Even values between `2^248 - 1` and `2^256 - 1` would not reduce to `2^112 - 1`, aligning with the boundary analysis.
 
-### Implementation of `fInverse()`
+## Implementation of `fInverse()`
 
 The `fInverse()` function defined in `CurveLib.sol` represents the positive real root of the solution to a quadratic equation. It is used to find `x` given `y` when quoting for swap input/output amounts in the domain `y >= y0`. Its range is `1 <= x <= x0`. More information about the derivation of the function can be found in the Appendix of the EulerSwap white paper. This documentation covers the implementation in Solidity.
 
@@ -105,9 +114,9 @@ when `B < 0`, and
 
 when `B >= 0`.
 
-#### Boundary analysis
+### Boundary analysis
 
-##### Parameters and pre-conditions
+#### Parameters and pre-conditions
 
 The following parameters and pre-conditions are assumed in this analysis, as documented in the function NatSpec:
 
@@ -123,7 +132,7 @@ The following parameters and pre-conditions are assumed in this analysis, as doc
 /// @return x The output reserve value corresponding to input `y`, guaranteed to satisfy `1 <= x <= x0`.
 ```
 
-##### Step-by-step
+#### Step-by-step
 
 Components `B`, `C`, and `fourAC` are calculated in an unchecked block, so we must ensure that none of their values or intermediate values can overflow or underflow. We use an increased scale of `1e36` for `C` and `fourAC` for increased numerical precision ahead of computing the determinant in the next section of the function.
 
@@ -137,7 +146,7 @@ Components `B`, `C`, and `fourAC` are calculated in an unchecked block, so we mu
    }
 ```
 
-###### B component
+##### B component
 
 Since `y >= y0` from the function domain and `1 <= py <= 1e25` from the pre-conditions, we know `term1` is always a non-negative integer.
 
@@ -164,7 +173,7 @@ Substituting into the expression for `B`, we get:
 
 All arguments to `mulDiv` and the result itself fit safely within `int256` bounds
 
-###### C component
+##### C component
 
 Arguments to `mulDiv`:
 
@@ -179,7 +188,7 @@ With `0 <= c <= 1e18` from the pre-conditions, we know that `1e18 - c` is a stri
 
 All arguments to `mulDiv` and the result itself fit safely within `uint256` bounds.
 
-###### fourAC component
+##### fourAC component
 
 Arguments to `mulDiv`:
 
@@ -194,7 +203,7 @@ Given that `C` is already bounded and `c <= 1e18`, we have:
 
 All arguments to `mulDiv` and the result itself fit safely within `uint256` bounds.
 
-###### Proceeding `absB`, `squaredB`, `discriminant`, and `sqrt` components
+##### Proceeding `absB`, `squaredB`, `discriminant`, and `sqrt` components
 
 `absB` is computed as the absolute value of `B`, so:
 
@@ -227,7 +236,7 @@ The maximum values in both paths are dominated by the `squaredB` term, which is 
 
 All intermediate results `absB`, `squaredB`, `discriminant`, `sqrt` fit safely within `uint256`.
 
-###### Final calculation of `x`
+##### Final calculation of `x`
 
 The final calculation for `x` depends on the sign of `B`:
 
