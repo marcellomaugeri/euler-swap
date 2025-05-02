@@ -2,9 +2,9 @@
 
 ## Introduction
 
-The EulerSwap automated market maker (AMM) curve is governed by two key functions: f() and fInverse(). These functions are critical to maintaining protocol invariants and ensuring accurate swap calculations within the AMM. This document provides a detailed boundary analysis of both functions, assessing their Solidity implementations against the equations in the white paper. It ensures that appropriate safety measures are in place to avoid overflow, underflow, and precision loss, and that unchecked operations are thoroughly justified.
+The EulerSwap automated market maker (AMM) curve is governed by two key functions: `f()` and `fInverse()`. These functions are critical to maintaining protocol invariants and ensuring accurate swap calculations within the AMM. This document provides a detailed boundary analysis of both functions, assessing their Solidity implementations against the equations in the white paper. It ensures that appropriate safety measures are in place to avoid overflow, underflow, and precision loss, and that unchecked operations are thoroughly justified.
 
-## Implementation of function `f()`
+## Implementation of `f()`
 
 The `f()` function is part of the EulerSwap core, defined in `EulerSwap.sol`, and corresponds to equation (2) in the EulerSwap white paper. The `f()` function is a parameterisable curve in the `EulerSwap` contract that defines the permissible boundary for points in EulerSwap AMMs. The curve allows points on or above and to the right of the curve while restricting others. Its primary purpose is to act as an invariant validator by checking if a hypothetical state `(x, y)` within the AMM is valid. It also calculates swap output amounts for given inputs, though some swap scenarios require `fInverse()`.
 
@@ -75,64 +75,202 @@ unchecked {
 
 This does not introduce additional failure cases. Even values between `2**248 - 1` and `2**256 - 1` would not reduce to `2**112 - 1`, aligning with the boundary analysis.
 
-## Implementation of function `fInverse()`
+### Implementation of `fInverse()`
 
-The `fInverse()` function, defined in `EulerSwapPeriphery.sol`, is part of the periphery because it is not required as an invariant. Instead, its sole purpose is to facilitate specific swap input and output calculations that cannot be managed by `f()`. This function maps to equation (22) in the Appendix of the EulerSwap white paper.
+The `fInverse()` function defined in `CurveLib.sol` represents the positive real root of the solution to a quadratic equation. It is used to find `x` given `y` when quoting for swap input/output amounts in the domain `y >= y0`. Its range is `1 <= x <= x0`. More information about the derivation of the function can be found in the Appendix of the EulerSwap white paper. This documentation covers the implementation in Solidity.
 
-### Boundary analysis
+The main components of the particular quadratic equation we wish to solve are:
 
-#### Pre-conditions
+```
+A = cx
+B = py / px (y - y0) - (2cx - 1) x0
+C = -(1 - cx) x0^2
+```
 
-- \(y > y_0\)
-- \(1e18 \leq p_x, p_y \leq 1e36\) (60 to 120 bits)
-- \(1 \leq x_0, y_0 \leq 2^{112} - 1 \approx 5.19e33\) (0 to 112 bits)
-- \(1 < c \leq 1e18\) (0 to 60 bits)
+The solution we seek is the positive real root, which is given by:
 
-#### Step-by-step
+`x = (-B + sqrt(B^2 - 4AC)) / 2A`
 
-1. **A component (`A = 2 * c`)**
+This can be rearranged into a lesser-known form sometimes called the "[citardauq](https://en.wikipedia.org/wiki/Quadratic_formula#Square_root_in_the_denominator)" form as:
 
-   - Since `c <= 1e18`, `A = 2 * c <= 2e18`, well within `uint256` capacity (max `2**256 - 1`).
+`x = 2C / (-B - sqrt(B^2 - 4AC))`
 
-2. **B component calculation**
+We make use of the more common form when `B <= 0` and the "citardauq" form when `B > 0`, which helps provide greater numerical stability. Since `C` is always negative in our case, note that we can further simplify the equations above by redefining it as a strictly positive quantity `C = (1 - cx) x0^2`, which allows many of the minus signs to cancel. Combined, these simplifications mean we can use:
 
-   - `B = int256((px * (y - y0) + py - 1) / py) - int256((x0 * (2 * c - 1e18) + 1e18 - 1) / 1e18)`
-   - The first term is bounded by `(px * (y - y0)) / py`, where `px, py <= 1e36` and `(y - y0) <= 2**112 - 1`.
-   - The second term scales `x0` with `(2 * c - 1e18)`, keeping the result well within the `int256` bounds due to controlled arithmetic and the limits on `c` and `x0`.
+`x = (B + sqrt(B^2 + 4AC)) / 2A`
 
-3. **Absolute value and B² computation**
+when `B < 0`, and
 
-   - `absB = B < 0 ? uint256(-B) : uint256(B)`
-   - `squaredB = Math.mulDiv(absB, absB, 1e18, Math.Rounding.Ceil)`
-   - As `absB` is derived from `B`, and `B` is bounded, `squaredB` remains within a safe range.
+`x = 2C / (B + sqrt(B^2 + 4AC))`
 
-4. **4AC Component (`AC4 = AC4a * AC4b / 1e18`)**
+when `B >= 0`.
 
-   - `AC4a = Math.mulDiv(4 * c, (1e18 - c), 1e18, Math.Rounding.Ceil)`
-   - `4 * c * (1e18 - c)` has a maximum of `1e18 * 1e18 = 1e36`, divided by `1e18`, the result ≤ `1e18`.
-   - `AC4b = Math.mulDiv(x0, x0, 1e18, Math.Rounding.Ceil)`
-   - The maximum value of `x0 * x0` is `(2**112 - 1)² ≈ 2**224`, safely within the `uint256` range.
+#### Boundary analysis
 
-5. **Discriminant calculation**
+##### Parameters and pre-conditions
 
-   - `discriminant = (squaredB + AC4) * 1e18`
-   - Since both `squaredB` and `AC4` are bounded by `uint256`, multiplying by `1e18` does not cause overflow.
+The following parameters and pre-conditions are assumed in this analysis, as documented in the function NatSpec:
 
-6. **Square root computation and adjustment**
+```solidity
+/// @dev EulerSwap inverse curve
+/// @notice Computes the output `x` for a given input `y`.
+/// @param y The input reserve value, constrained to y >= y0.
+/// @param px (1 < px <= 1e25).
+/// @param py (1 < py <= 1e25).
+/// @param x0 (1 < x0 <= 2^112 - 1).
+/// @param y0 (0 <= y0 <= 2^112 - 1).
+/// @param c (0 < c <= 1e18).
+/// @return x The output reserve value corresponding to input `y`, guaranteed to satisfy `1 <= x <= x0`.
+```
 
-   - `uint256 sqrt = Math.sqrt(discriminant)`
-   - The square root of a `uint256` value is always within `uint128`, making this operation safe.
-   - Adjustment step `sqrt = (sqrt * sqrt < discriminant) ? sqrt + 1 : sqrt` maintains precision without overflow.
+##### Step-by-step
 
-7. **Final computation of `x`**
-   - `Math.mulDiv(uint256(int256(sqrt) - B), 1e18, A, Math.Rounding.Ceil)`
-   - The subtraction and multiplication are controlled by previous bounds, ensuring no overflow.
-   - Division by `A` is safe as `A` is non-zero and small (`≤ 2e18`).
+Components `B`, `C`, and `fourAC` are calculated in an unchecked block, so we must ensure that none of their values or intermediate values can overflow or underflow. We use an increased scale of `1e36` for `C` and `fourAC` for increased numerical precision ahead of computing the determinant in the next section of the function.
 
-#### Unchecked math considerations
+```solidity
+   unchecked {
+      int256 term1 = int256(Math.mulDiv(py * 1e18, y - y0, px, Math.Rounding.Ceil)); // scale: 1e36
+      int256 term2 = (2 * int256(c) - int256(1e18)) * int256(x0); // scale: 1e36
+      B = (term1 - term2) / int256(1e18); // scale: 1e18
+      C = Math.mulDiv(1e18 - c, x0 * x0, 1e18, Math.Rounding.Ceil); // scale: 1e36
+      fourAC = Math.mulDiv(4 * c, C, 1e18, Math.Rounding.Ceil); // scale: 1e36
+   }
+```
 
-As above, the use of unchecked arithmetic is safe because all inputs are bounded by pre-conditions.
+###### B component
 
-## Conclusion
+Since `y >= y0` from the function domain and `1 <= py <= 1e25` from the pre-conditions, we know `term1` is always a non-negative integer.
 
-The `f()` and `fInverse()` functions of EulerSwap are implemented with rigorous safety measures, using `Math.mulDiv` for safe arithmetic and applying ceiling rounding to maintain precision. Boundary analysis shows that all potential overflow scenarios are precluded by pre-condition checks and bounded operations, justifying the use of unchecked math in the Solidity implementation.
+Arguments to `mulDiv`:
+
+- **Numerator (arg1):** `py * 1e18 <= 1e54`
+- **Multiplier (arg2):** `y - y0 <= 2^112 - 1`
+- **Denominator (arg3):** `1 <= px <= 1e25`
+
+Gives rise to:
+
+- `term1_min = (1 * 1e18 * 1) / 1e25 = 0`
+- `term1_max = (1e43 * 5.19e33) / 1 = 5.19e76`
+
+The second term `term2` can be negative or positive:
+
+- `term2_min = (-1e18) * 5.19e33 ≈ -5.19e51`
+- `term2_max = (9.999e24) * 5.19e33 ≈ 5.19e58`
+
+Substituting into the expression for `B`, we get:
+
+- `B_min = (1 - 5.19e58) / 1e18 ≈ -5.19e40`
+- `B_max = (5.19e76 - (-5.19e51)) / 1e18 ≈ 5.19e58`
+
+All arguments to `mulDiv` and the result itself fit safely within `int256` bounds
+
+###### C component
+
+Arguments to `mulDiv`:
+
+- **Numerator (arg1):** `1e18 - c <= 1e18`
+- **Multiplier (arg2):** `x0 * x0 <= (2^112 - 1)^2`
+- **Denominator (arg3):** `1e18`
+
+With `0 <= c <= 1e18` from the pre-conditions, we know that `1e18 - c` is a strictly non-negative integer less than `1e18`. The squared term `x0 * x0` reaches its maximum when `x0 = 2^112 - 1`. Thus:
+
+- `C_min = 0`
+- `C_max = (1e18 - 1) * (2^112 - 1)^2 / 1e18 ≈ 2.69e67`
+
+All arguments to `mulDiv` and the result itself fit safely within `uint256` bounds.
+
+###### fourAC component
+
+Arguments to `mulDiv`:
+
+- **Numerator (arg1):** `4 * c <= 4e18`
+- **Multiplier (arg2):** `C ∈ [0, ~2.69e67]`
+- **Denominator (arg3):** `1e18`
+
+Given that `C` is already bounded and `c <= 1e18`, we have:
+
+- `fourAC_min = (4 * c * 0) / 1e18 = 0`
+- `fourAC_max = (4e18 * 2.69e67) / 1e18 = 1.076e68`
+
+All arguments to `mulDiv` and the result itself fit safely within `uint256` bounds.
+
+###### Proceeding `absB`, `squaredB`, `discriminant`, and `sqrt` components
+
+`absB` is computed as the absolute value of `B`, so:
+
+- `absB ∈ [0, 5.19e58]`
+
+`squaredB` is computed as:
+
+- If `absB < 1e36`, then `squaredB = absB * absB`, which gives at most `~1e72`.
+- If `absB >= 1e36`, then scaled multiplication is used safely to avoid overflow:
+
+```solidity
+uint256 scale = computeScale(absB);
+squaredB = Math.mulDiv(absB / scale, absB, scale, Math.Rounding.Ceil);
+```
+
+In this case, `scale` is the smallest power-of-two scale factor such that the multiplication `absB / scale * absB` does not overflow `uint256`. The resulting value is slightly larger than the true square due to rounding, but remains bounded within `~1e72`.
+
+`discriminant` is then computed differently depending on which path was taken:
+
+- If `absB < 1e36`: `discriminant = squaredB + fourAC`
+- If `absB >= 1e36`: `discriminant = squaredB + fourAC / (scale * scale)`
+
+The maximum values in both paths are dominated by the `squaredB` term, which is at most `~1e72`, and the additive `fourAC` or `fourAC / (scale^2)` term remains below `1.08e68`. So in either case:
+
+- `discriminant ∈ [0, ~1e72]`
+
+`sqrt` is the square root of the discriminant:
+
+- `sqrt ∈ [0, 1e36]`, since `sqrt(1e72) = 1e36`
+
+All intermediate results `absB`, `squaredB`, `discriminant`, `sqrt` fit safely within `uint256`.
+
+###### Final calculation of `x`
+
+The final calculation for `x` depends on the sign of `B`:
+
+```solidity
+   uint256 x;
+   if (B <= 0) {
+      // use the regular quadratic formula solution (-b + sqrt(b^2 - 4ac)) / 2a
+      x = Math.mulDiv(absB + sqrt, 1e18, 2 * c, Math.Rounding.Ceil) + 1;
+   } else {
+      // use the "citardauq" quadratic formula solution 2c / (-b - sqrt(b^2 - 4ac))
+      x = Math.ceilDiv(2 * C, absB + sqrt) + 1;
+   }
+```
+
+When `B <= 0`
+
+Arguments to `mulDiv`:
+
+- **Numerator (arg1):** `absB + sqrt ∈ [0, 5.19e58 + 1e36] ≈ ~5.19e58`
+- **Multiplier (arg2):** constant `1e18`
+- **Denominator (arg3):** `2 * c ∈ [2, 2e18]`
+
+We have:
+
+```
+x_min = Math.mulDiv(1, 1e18, 2e18) + 1 = floor(0.5) + 1 = 1
+x_max = (5.19e58 * 1e18) / 2 + 1 = ~2.6e76
+```
+
+All arguments to `mulDiv` and the result itself fit safely within `uint256` bounds and `x` satisfies the range requirements of the function.
+
+When `B > 0`:
+
+Arguments to `ceilDiv`:
+
+- **Numerator (arg1):** `2 * C ∈ [0, 2 * 2.69e67] = [0, 5.38e67]`
+- **Denominator (arg2):** `absB + sqrt ∈ [1, 5.19e58 + 1e36] ≈ ~5.19e58`
+
+We have:
+
+```
+x_min = ceilDiv(0, 5.19e58) + 1 = 0 + 1 = 1
+x_max = ceilDiv(5.38e67, 1) + 1 = 5.38e67 + 1
+```
+
+All arguments to `ceilDiv` and the result itself fit safely within `uint256` bounds and `x` satisfies the range requirements of the function.
