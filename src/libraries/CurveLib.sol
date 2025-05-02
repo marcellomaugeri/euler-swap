@@ -35,7 +35,7 @@ library CurveLib {
         unchecked {
             uint256 v = Math.mulDiv(px * (x0 - x), c * x + (1e18 - c) * x0, x * 1e18, Math.Rounding.Ceil);
             require(v <= type(uint248).max, Overflow());
-            return y0 + Math.ceilDiv(v, py);
+            return y0 + (v + (py - 1)) / py;
         }
     }
 
