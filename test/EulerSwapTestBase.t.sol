@@ -198,7 +198,6 @@ contract EulerSwapTestBase is EVaultTestBase {
         bytes memory creationCode = MetaProxyDeployer.creationCodeMetaProxy(eulerSwapImpl, abi.encode(params));
         (address predictedAddr, bytes32 salt) = HookMiner.find(
             address(eulerSwapFactory),
-            holder,
             uint160(
                 Hooks.BEFORE_INITIALIZE_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG
                     | Hooks.BEFORE_DONATE_FLAG | Hooks.BEFORE_ADD_LIQUIDITY_FLAG

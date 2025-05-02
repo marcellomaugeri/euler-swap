@@ -15,11 +15,10 @@ library HookMiner {
 
     /// @notice Find a salt that produces a hook address with the desired `flags`
     /// @param deployer The address that will deploy the hook. Typically the EulerSwapFactory.
-    /// @param account The account that is invoking the factory.
     /// @param flags The desired flags for the hook address. Example `uint160(Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG | ...)`
     /// @param creationCode The creation code of a hook contract. Example: `type(Counter).creationCode`
     /// @return (hookAddress, salt) The hook deploys to `hookAddress` when using `salt` with the syntax: `new Hook{salt: salt}(<constructor arguments>)`
-    function find(address deployer, address account, uint160 flags, bytes memory creationCode)
+    function find(address deployer, uint160 flags, bytes memory creationCode)
         internal
         view
         returns (address, bytes32)
@@ -28,7 +27,7 @@ library HookMiner {
 
         address hookAddress;
         for (uint256 salt; salt < MAX_LOOP; salt++) {
-            hookAddress = computeAddress(deployer, account, salt, creationCode);
+            hookAddress = computeAddress(deployer, salt, creationCode);
 
             // if the hook's bottom 14 bits match the desired flags AND the address does not have bytecode, we found a match
             if (uint160(hookAddress) & FLAG_MASK == flags && hookAddress.code.length == 0) {
@@ -40,10 +39,9 @@ library HookMiner {
 
     /// @notice Precompute a contract address deployed via CREATE2
     /// @param deployer The address that will deploy the hook. Typically the EulerSwapFactory.
-    /// @param account The account that is invoking the factory.
     /// @param salt The salt used to deploy the hook
     /// @param creationCode The creation code of a hook contract.
-    function computeAddress(address deployer, address account, uint256 salt, bytes memory creationCode)
+    function computeAddress(address deployer, uint256 salt, bytes memory creationCode)
         internal
         pure
         returns (address hookAddress)
