@@ -13,6 +13,11 @@ contract Basic is EulerSwapTestBase {
         eulerSwap = createEulerSwap(60e18, 60e18, 0, 1e18, 1e18, 0.4e18, 0.85e18);
     }
 
+    function test_basicApprovals() public view {
+        assertEq(assetTST.allowance(address(eulerSwap), address(eTST)), 0);
+        assertEq(assetTST.allowance(address(eulerSwap), eTST.permit2Address()), type(uint256).max);
+    }
+
     function test_basicSwap_exactIn() public monotonicHolderNAV {
         uint256 amountIn = 1e18;
         uint256 amountOut =

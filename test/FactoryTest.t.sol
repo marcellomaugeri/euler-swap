@@ -38,7 +38,7 @@ contract FactoryTest is EulerSwapTestBase {
                 | Hooks.BEFORE_DONATE_FLAG | Hooks.BEFORE_ADD_LIQUIDITY_FLAG
         );
         bytes memory creationCode = MetaProxyDeployer.creationCodeMetaProxy(eulerSwapImpl, abi.encode(poolParams));
-        (hookAddress, salt) = HookMiner.find(address(eulerSwapFactory), holder, flags, creationCode);
+        (hookAddress, salt) = HookMiner.find(address(eulerSwapFactory), flags, creationCode);
     }
 
     function mineBadSalt(IEulerSwap.Params memory poolParams)
@@ -52,7 +52,7 @@ contract FactoryTest is EulerSwapTestBase {
                 | Hooks.BEFORE_DONATE_FLAG
         );
         bytes memory creationCode = MetaProxyDeployer.creationCodeMetaProxy(eulerSwapImpl, abi.encode(poolParams));
-        (hookAddress, salt) = HookMiner.find(address(eulerSwapFactory), holder, flags, creationCode);
+        (hookAddress, salt) = HookMiner.find(address(eulerSwapFactory), flags, creationCode);
     }
 
     function testDifferingAddressesSameSalt() public view {
