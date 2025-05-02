@@ -14,20 +14,23 @@ contract CurveLibTest is EulerSwapTestBase {
         super.setUp();
     }
 
-    function testGas_fInverse() public pure {
-        // Set representative values within valid bounds
+    function test_fInverse() public pure {
+        // Params
         uint256 px = 1e18;
         uint256 py = 1e18;
         uint256 x0 = 1e14;
         uint256 y0 = 1e14;
-        uint256 c = 1e18;
+        uint256 cx = 1e18;
 
         // Use CurveLib.f to get a valid y
-        uint256 x = 1e12;
-        uint256 y = CurveLib.f(x, px, py, x0, y0, c);
-
-        // Measure gas of fInverse
-        CurveLib.fInverse(y, px, py, x0, y0, c);
+        uint256 x = 1;
+        console.log("x    ", x);
+        uint256 y = CurveLib.f(x, px, py, x0, y0, cx);
+        console.log("y    ", y);
+        uint256 xCalc = CurveLib.fInverse(y, px, py, x0, y0, cx);
+        console.log("xCalc", xCalc);
+        uint256 yCalc = CurveLib.f(xCalc, px, py, x0, y0, cx);
+        console.log("yCalc", yCalc);
     }
 
     function test_fuzzfInverse(uint256 x, uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 cx, uint256 cy)
@@ -35,12 +38,12 @@ contract CurveLibTest is EulerSwapTestBase {
         pure
     {
         // Params
-        px = 1e18;
-        py = bound(py, 1, 1e36);
+        px = 1;
+        py = bound(py, 1, 1e25);
         x0 = bound(x0, 1, 1e28);
         y0 = bound(y0, 0, 1e28);
-        cx = bound(cx, 1, 1e18);
-        cy = bound(cy, 1, 1e18);
+        cx = bound(cx, 0, 1e18);
+        cy = bound(cy, 0, 1e18);
         console.log("px", px);
         console.log("py", py);
         console.log("x0", x0);
