@@ -87,6 +87,27 @@ contract CurveLibTest is EulerSwapTestBase {
         }
     }
 
+    function test_fuzzFEquillibrium(uint256 px, uint256 py, uint256 x0, uint256 y0, uint256 cx, uint256 cy)
+        public
+        pure
+    {
+        // Params
+        px = bound(px, 1, 1e25);
+        py = bound(py, 1, 1e25);
+        x0 = bound(x0, 1, 1e28);
+        y0 = bound(y0, 1, 1e28);
+        cx = bound(cx, 1, 1e18);
+        cy = bound(cy, 1, 1e18);
+
+        uint256 y = CurveLib.f(x0, px, py, x0, y0, cx);
+        uint256 x = CurveLib.f(y0, py, px, y0, x0, cy);
+
+        if (x < type(uint112).max && y < type(uint112).max) {
+            assertEq(y, y0);
+            assertEq(x, x0);
+        }
+    }
+
     /// @dev Less efficient method to compute fInverse. Useful for differential fuzzing.
     function binarySearch(IEulerSwap.Params memory p, uint256 newReserve1, uint256 xMin, uint256 xMax)
         internal
