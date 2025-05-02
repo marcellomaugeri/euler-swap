@@ -96,8 +96,8 @@ contract CurveLibTest is EulerSwapTestBase {
         py = bound(py, 1, 1e25);
         x0 = bound(x0, 1, 1e28);
         y0 = bound(y0, 1, 1e28);
-        cx = bound(cx, 1, 1e18);
-        cy = bound(cy, 1, 1e18);
+        cx = bound(cx, 0, 1e18);
+        cy = bound(cy, 0, 1e18);
 
         uint256 y = CurveLib.f(x0, px, py, x0, y0, cx);
         uint256 x = CurveLib.f(y0, py, px, y0, x0, cy);
