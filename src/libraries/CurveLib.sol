@@ -48,7 +48,7 @@ library CurveLib {
 
     /// @dev EulerSwap inverse curve
     /// @notice Computes the output `x` for a given input `y`.
-    /// @param y The input reserve value, constrained to y >= y0.
+    /// @param y The input reserve value, constrained to y0 <= y <= 2^112 - 1.
     /// @param px (1 < px <= 1e25).
     /// @param py (1 < py <= 1e25).
     /// @param x0 (1 < x0 <= 2^112 - 1).
