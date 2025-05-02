@@ -115,11 +115,11 @@ The following parameters and pre-conditions are assumed in this analysis, as doc
 /// @dev EulerSwap inverse curve
 /// @notice Computes the output `x` for a given input `y`.
 /// @param y The input reserve value, constrained to y0 <= y <= 2^112 - 1.
-/// @param px (1 < px <= 1e25).
-/// @param py (1 < py <= 1e25).
-/// @param x0 (1 < x0 <= 2^112 - 1).
+/// @param px (1 <= px <= 1e25).
+/// @param py (1 <= py <= 1e25).
+/// @param x0 (1 <= x0 <= 2^112 - 1).
 /// @param y0 (0 <= y0 <= 2^112 - 1).
-/// @param c (0 < c <= 1e18).
+/// @param c (0 <= c <= 1e18).
 /// @return x The output reserve value corresponding to input `y`, guaranteed to satisfy `1 <= x <= x0`.
 ```
 
