@@ -64,11 +64,11 @@ The following parameters and pre-conditions are assumed in this analysis, as doc
 
 The arguments to `mulDiv` are safe from overflow:
 
-- **Numerator (arg1):** `px * (x0 - x)` is less than or equal to `1e36 * (2^112 - 1)`, approximately 232 bits
+- **Numerator (arg1):** `px * (x0 - x)` is less than or equal to `1e25 * (2^112 - 1)`, approximately 195 bits
 - **Multiplier (arg2):** `c * x + (1e18 - c) * x0` is less than or equal to `1e18 * (2^112 - 1) * 2`, approximately 173 bits
 - **Denominator (arg3):** `x * 1e18` is less than or equal to `1e18 * (2^112 - 1)`, approximately 172 bits
 
-If `mulDiv` or the addition with `y0` overflows, the result would exceed `type(uint112).max`. When `mulDiv` overflows, its result would be greater than `2^256 - 1`. Dividing by `py` (maximum `1e36`) yields a result of about `2^136`, which exceeds the `2^112 - 1` limit, meaning these results are invalid as they cannot be satisfied by any swapper.
+If `mulDiv` or the addition with `y0` overflows, the result would exceed `type(uint112).max`. When `mulDiv` overflows, its result would be greater than `2^256 - 1`. Dividing by `py` (maximum `1e25`) yields a result of about `2^173`, which exceeds the `2^112 - 1` limit, meaning these results are invalid as they cannot be satisfied by any swapper.
 
 #### Unchecked math considerations
 
