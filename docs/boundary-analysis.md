@@ -274,3 +274,49 @@ x_max = ceilDiv(5.38e67, 1) + 1 = 5.38e67 + 1
 ```
 
 All arguments to `ceilDiv` and the result itself fit safely within `uint256` bounds and `x` satisfies the range requirements of the function.
+
+#### Special cases
+
+##### Minimum liquidity concentration `cx = 0`
+
+When the liquidity concentration parameter is `cx = 0`, we have `A = 0`, `C = x0^2` and `B = py * (y - y0) / px + x0`. At first glance, this appears to create problems for `fInverse()`.
+
+Specifically, if `A = 0` and `B <= 0`, we would use the regular quadratic formula solution for `x`, which would invoke
+
+```solidity
+x = Math.mulDiv(absB + sqrt, 1e18, 2 * c, Math.Rounding.Ceil) + 1;
+```
+
+In turn, this would revert, because the denominator would be 0.
+
+In practice, however, valid inputs of `y` do not give this result. When `cx = 0`, we know that `B > 0`, meaning that the "citardauq" quadratic branch will be used. Indeed, the curve becomes a constant-product AMM, with:
+
+```
+x = x0^2 / (py * (y - y0) / px + x0).
+```
+
+##### Maximum liquidity concentration `cx = 1`
+
+When the liquidity concentration parameter is `cx = 1`, we have `A = 1`, `C = (1 - cx) x0^2 = 0` and `B = py * (y - y0) / px - x0`. At first glance, this also appears to create problems for `fInverse()`.
+
+Specifically, if `C = 0` and `B > 0`, we would use the "citardauq" quadratic formula solution for `x`, which would invoke
+
+```solidity
+x = Math.ceilDiv(2 * C, absB + sqrt) + 1;
+```
+
+In turn, this would incorrectly identify `x = 0`.
+
+In practice, however, valid inputs of `y` do not give this result. When `cx = 1`, we know that the curve becomes a constant-sum AMM, with:
+
+```
+x = x0 + py * (y - y0) / px
+```
+
+Substituitng into `B`, we obtain
+
+```
+B = x - 2 * x0
+```
+
+For the "citardauq" quadratic to be invoked we need `B > 0`, which means `x > 2 * x0`, which is not possible, because the domain of the function is `1 <= x <= x0`. We have a contradiction. Thus, we have shown that valid inputs do not invoke this code path.
