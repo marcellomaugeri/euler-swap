@@ -116,4 +116,22 @@ contract FeesTest is EulerSwapTestBase {
         assertEq(eTST.balanceOf(address(holder)), 10e18 + amountIn - protocolFeesCollected);
         assertEq(eTST2.balanceOf(address(holder)), 10e18 - amountOut);
     }
+
+    function test_fuzzFeeRounding(uint256 amount, uint256 fee) public pure {
+        // This test demonstrates why you don't need to round up fees required
+        // when quoting an exact output swap. It's because the actual fee
+        // subtracted during a deposit is rounded down.
+
+        amount = bound(amount, 1, type(uint112).max);
+        fee = bound(fee, 0, 1e18 - 1);
+
+        // Exact out
+        {
+            uint256 quote = (amount * 1e18) / (1e18 - fee);
+            uint256 feeAmount = quote * fee / 1e18;
+            uint256 paid = quote - feeAmount;
+
+            assertEq(paid, amount);
+        }
+    }
 }
