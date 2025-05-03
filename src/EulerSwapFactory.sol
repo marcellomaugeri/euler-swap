@@ -114,7 +114,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
 
     /// @inheritdoc IEulerSwapFactory
     function poolsSlice(uint256 start, uint256 end) external view returns (address[] memory) {
-        return _getSlice(allPools, start, end);
+        return getSlice(allPools, start, end);
     }
 
     /// @inheritdoc IEulerSwapFactory
@@ -133,7 +133,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
         view
         returns (address[] memory)
     {
-        return _getSlice(poolMap[asset0][asset1], start, end);
+        return getSlice(poolMap[asset0][asset1], start, end);
     }
 
     /// @inheritdoc IEulerSwapFactory
@@ -147,7 +147,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
     function updateEulerAccountState(address eulerAccount, address newOperator) internal {
         require(evc.isAccountOperatorAuthorized(eulerAccount, newOperator), OperatorNotInstalled());
 
-        (address asset0, address asset1) = _getAssets(newOperator);
+        (address asset0, address asset1) = IEulerSwap(newOperator).getAssets();
 
         installedPools[eulerAccount] = newOperator;
 
@@ -167,7 +167,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
 
         require(!evc.isAccountOperatorAuthorized(eulerAccount, pool), OldOperatorStillInstalled());
 
-        (address asset0, address asset1) = _getAssets(pool);
+        (address asset0, address asset1) = IEulerSwap(pool).getAssets();
 
         allPools.remove(pool);
         poolMap[asset0][asset1].remove(pool);
@@ -177,14 +177,6 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
         emit PoolUninstalled(asset0, asset1, eulerAccount, pool);
     }
 
-    /// @notice Retrieves the asset addresses for a given pool
-    /// @dev Calls the pool contract to get its asset0 and asset1 addresses
-    /// @param pool The address of the pool to query
-    /// @return The addresses of asset0 and asset1 in the pool
-    function _getAssets(address pool) internal view returns (address, address) {
-        return IEulerSwap(pool).getAssets();
-    }
-
     /// @notice Returns a slice of an array of addresses
     /// @dev Creates a new memory array containing elements from start to end index
     ///      If end is type(uint256).max, it will return all elements from start to the end of the array
@@ -192,7 +184,7 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
     /// @param start The starting index of the slice (inclusive)
     /// @param end The ending index of the slice (exclusive)
     /// @return A new memory array containing the requested slice of addresses
-    function _getSlice(EnumerableSet.AddressSet storage arr, uint256 start, uint256 end)
+    function getSlice(EnumerableSet.AddressSet storage arr, uint256 start, uint256 end)
         internal
         view
         returns (address[] memory)
