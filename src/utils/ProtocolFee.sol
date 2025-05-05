@@ -8,6 +8,7 @@ abstract contract ProtocolFee is Owned {
     address public protocolFeeRecipient;
 
     error InvalidFee();
+    error RecipientSetAlready();
 
     constructor(address _feeOwner) Owned(_feeOwner) {}
 
@@ -19,6 +20,7 @@ abstract contract ProtocolFee is Owned {
     }
 
     function setProtocolFeeRecipient(address newRecipient) external onlyOwner {
+        require(protocolFeeRecipient == address(0), RecipientSetAlready());
         protocolFeeRecipient = newRecipient;
     }
 }
