@@ -2,7 +2,7 @@
 
 % Encoding and Geometry
 \usepackage[utf8]{inputenc}
-\usepackage[a4paper, margin=1in]{geometry} % Standard 1-inch margins for better layout
+\usepackage[a4paper, margin=1in]{geometry}
 \usepackage{parskip}
 
 % Math Packages
@@ -14,21 +14,24 @@
 \usepackage{subcaption}
 \usepackage{multirow}
 \usepackage{tikz}
-\usetikzlibrary{positioning} % Ensures compatibility with Overleaf
+\usetikzlibrary{positioning}
 
 % Hyperlinks
-\usepackage[colorlinks=true, linkcolor=blue, urlcolor=blue]{hyperref} % Load last to avoid conflicts
+\usepackage[colorlinks=true, linkcolor=blue, urlcolor=blue]{hyperref}
 
 % Floating Objects Placement
-\usepackage[section]{placeins} 
+\usepackage[section]{placeins}
 
 % Bibliography
 \usepackage[
-    backend=biber,
-    style=alphabetic,
-    sorting=ynt
+backend=biber,
+style=alphabetic,
+sorting=ynt
 ]{biblatex}
 \addbibresource{references.bib}
+
+% Typesetting improvements
+\usepackage{microtype}
 
 % Title Information
 \title{EulerSwap White Paper}
@@ -39,133 +42,128 @@
 
 \maketitle
 
-\begin{abstract}    
-EulerSwap is an automated market maker (AMM) that integrates with Euler credit vaults to provide deeper liquidity for swaps. When a user initiates a swap, a smart contract called an EulerSwap operator borrows the required output token using the input token as collateral. This model enables up to 40x the liquidity depth of traditional AMMs by making idle assets in Euler more efficient. Unlike traditional AMMs, which often fragment liquidity across multiple pools, EulerSwap further increases capital efficiency by allowing a single, cross-collateralised credit vault to support multiple asset pairs at once. At its core, EulerSwap uses a flexible AMM curve to optimise swap pricing, ensuring deep liquidity while maintaining market balance. By combining just-in-time liquidity, shared liquidity across pools, and customisable AMM mechanics, EulerSwap reduces inefficiencies in liquidity provision, offering deeper markets, lower costs, and greater control for liquidity providers.
+\pagestyle{plain}
+
+\begin{abstract}
+Liquidity in decentralised exchanges (DEXs) is typically underutilised, with capital often sitting idle instead of earning yield elsewhere. EulerSwap addresses this inefficiency by integrating an automated market maker (AMM) with Euler's lending vaults. Liquidity providers (LPs) can earn swap fees, accrue lending yield, and borrow natively against their position. When a user initiates a swap, the AMM reuses collateral and debt within Euler to facilitate the trade and improve capital efficiency. If needed, EulerSwap can borrow the swap’s output token using the input token as collateral. This just-in-time (JIT) liquidity model can offer up to 50x greater liquidity depth than traditional AMMs by putting idle vault assets to more productive use. Unlike conventional AMMs that fragment liquidity across multiple pools, EulerSwap also improves capital efficiency by enabling a single, cross-collateralised vault to work as a liquidity hub to support many trading pairs simultaneously. It features a novel AMM design that enables asymmetric depth and concentrated liquidity—especially useful for new token launches. EulerSwap instances are modular, composable, and integrate natively with Uniswap v4 hooks, unlocking more flexible and programmable trading logic. By combining just-in-time liquidity, shared vaults across pools, and customisable AMM mechanics, EulerSwap reduces inefficiencies in liquidity provision—delivering deeper markets, lower costs, and greater control for liquidity providers.
 \end{abstract}
 
 \section{Introduction}
 
-EulerSwap is an automated market maker (AMM) that leverages Euler credit vaults for the provision of just-in-time liquidity as a way to provide deeper liquidity for swaps. EulerSwap differs from traditional AMMs in that it does not depend on many small liquidity providers (LPs) pooling their liquidity inside a single contract. Instead, each EulerSwap instance has a single LP -- an account holder on Euler -- whose deposits function as both liquidity for swaps and as margin collateral for building leveraged positions inside Euler. 
+Liquidity on decentralised exchanges (DEXs) is often underutilised, sitting idle even when it could be generating additional yield elsewhere. This inefficiency raises costs for liquidity providers (LPs), limits market depth, and makes it harder for DEXs to compete with centralised platforms. EulerSwap addresses this by integrating an automated market maker (AMM) directly with Euler’s lending vaults, enabling liquidity to be used simultaneously for swaps, lending, and borrowing.
 
-When a user initiates a swap, EulerSwap dynamically borrows the required `out token' using the `in token' and the LP's initial margin collateral as backing. This borrowing approach ensures liquidity is provided just-in-time, only when needed, maximising capital efficiency. By borrowing liquidity to service swaps in this way, EulerSwap can turn \$1M initial liquidity into the equivalent of a \$40m deep liquidity pool on a traditional AMM (see Example below).
+With EulerSwap, DEX reserves become dual-purpose. LPs can earn lending yield during periods of low trading activity and borrow against their liquidity to support deeper swap markets or use their capital productively elsewhere. This model significantly boosts capital efficiency and reduces opportunity cost.
 
-The way this works under the hood is by taking advantage of the `operator' functionality of the Ethereum Vault Connector (EVC), which provides a way for Euler credit vault users to delegate authority to someone else to manage their account balances. An EulerSwap operator is a smart contract that manages an LP's account on their behalf using the logic encoded in a custom-built AMM smart contract. Specifically, an EulerSwap operator is able to rebalance the collateral and debt inside an LPs account in order to service swaps and earn swap fees.
+Unlike traditional AMMs that pool liquidity from many LPs into a single contract, each EulerSwap instance is controlled by a single LP—an Euler account holder—who supplies both swap liquidity and collateral. When a user initiates a trade, EulerSwap can dynamically borrow the output token using the input token and the LPs' collateral as backing. This just-in-time (JIT) liquidity provision allows a relatively small amount of deposited capital to simulate much deeper liquidity. Under optimal conditions, \$1 million of initial collateral can support a swap market with the effective depth of a \$50 million AMM pool on a conventional DEX.
 
-Unlike conventional AMMs, which usually require separate liquidity pools for each asset pair, EulerSwap further increases capital efficiency by enabling the use of a single, cross-collateralised credit vault to support multiple asset pairs at once. This liquidity-sharing model ensures that idle liquidity can be used efficiently across multiple trading pairs simultaneously. This design resembles Curve's 3pool concept, but extends it to any number of asset pairings. Unlike traditional AMMs that silo liquidity into separate pools, EulerSwap's cross-collateralisation allows a single USDC credit vault to back multiple trading pairs simultaneously, maximising liquidity utilisation. A single USDC credit vault could be used to support swaps with USDT, USDE, DAI, and many other pairs all in the same block.
+This model is especially valuable for new token projects, which often face high costs to bootstrap liquidity. Instead of seeding large pools upfront, they can create JIT-powered markets with deeper liquidity and lower capital requirements—while simultaneously establishing a lending market for their token.
 
-EulerSwap introduces a flexible AMM curve (illustrated in Figure \ref{fig:fig1}) that supports deep liquidity for short-term swaps while maintaining a neutral net position over longer periods. A highly customisable curve allows for bespoke pricing strategies, asymmetric liquidity deposits, and single-sided liquidity concentration—all fully controlled by the LP. LPs can modify their EulerSwap parameters at any time by simply swapping out the operator smart contract in their Euler account for another one.
+EulerSwap also improves capital efficiency by allowing a single, cross-collateralised vault to act as a liquidity hub for multiple trading pairs. Similar in spirit to Curve’s 3pool, this design extends to any number of assets. For instance, one USDC vault on Euler could support swaps with USDT, USDe, DAI, USDS, RLUSD, and more—concurrently.
 
-For end-users, EulerSwap offers a seamless, Uniswap-style experience, while behind the scenes, it harnesses advanced features such as dynamic liquidity borrowing, custom pricing curves, and shared liquidity provisioning. Liquidity providers, including professional market makers, token issuers, and DAOs, gain unprecedented capital efficiency. Meanwhile, swappers—ranging from leverage traders and aggregators to MEV bots—benefit from deeper liquidity and optimised trade execution. 
+The protocol introduces a flexible AMM curve (see Figure \ref{fig:fig1}) that supports deep liquidity for short-term trading while helping to keep LPs' positions neutral over longer time horizons. LPs can customise pricing logic, apply asymmetric or single-sided liquidity strategies, and update their parameters by swapping out their EulerSwap operator contract (see below)—giving them far more control than pooled AMM models allow. This flexibility is particularly useful for professional market makers and token issuers who require precision in managing inventory and risk.
 
-\section{Example}
+From the end-user perspective, EulerSwap delivers a seamless, Uniswap-style interface. Behind the scenes, it leverages innovations like JIT liquidity, shared vaults across pools, and customisable AMM mechanics—delivering deeper markets, lower costs, and greater control for liquidity providers. For DAOs, token projects, or market makers—EulerSwap offers a powerful tool for unlocking capital efficiency by uniting swap and lending markets in one modular, composable, and customisable system.
 
-Suppose that Euler allows borrowing of USDT with USDC as collateral at a loan-to-value (LTV) ratio of 0.95, and vice versa. This means that for every \$1 of USDC or USDT collateral, a user can borrow up to \$0.95 of the other asset. 
+\section{Just-in-time (JIT) liquidity}
 
-Now suppose you have an account on Euler with 1M USDC deposited as initial liquidity. Using maximum leverage your account could hypothetically support deposits of 20M USDC and debts of 19M USDT. Alternatively, if you swapped your 1 million USDC to 1 million USDT, it could support the opposite. 
+Under the hood, JIT liquidity works by leveraging the unique \texttt{operator} functionality of the Ethereum Vault Connector (EVC), a core immutable primitive at the heart of Euler. EVC operators allow Euler users to delegate authority over their account balances to a smart contract. An EulerSwap operator is a specialised contract that manages an LP’s account, rebalancing collateral and debt to support swaps and earn swap fees.
 
-To enable swaps and earn additional yield, you install an EulerSwap operator on your account to facilitate swaps. Now let’s say another user wants to swap 10M USDC for USDT. The steps are as follows:
+Consider the following example.
+
+Suppose that Euler supports borrowing USDT with USDC as collateral at a loan-to-value (LTV) ratio of 0.95, and vice versa. This means that for every \$1 of USDC or USDT collateral, a user can borrow up to \$0.95 of the other asset.
+
+Now suppose an LP has an Euler account with \$1 million of USDC deposited as initial margin liquidity. Using maximum leverage, the account could hypothetically support deposits of \$20 million in USDC and debts of \$19 million in USDT. Conversely, if the LP swaps the initial \$1 million USDC into USDT, it could support \$20 million in USDT deposits and \$19 million in USDC debt. EulerSwap converts this \$40 million swing in notional liquidity between two leveraged positions into usable, virtual liquidity available for swaps.
+
+To facilitate swaps and earn yield, the LP installs an EulerSwap operator on their account. Suppose another user wishes to swap \$10 million USDC for USDT. The process proceeds as follows:
 
 \begin{enumerate}
-    \item The swapper sends 10M USDC to your EulerSwap operator as the swap input amount.
-    \item The operator deposits the 10M USDC as collateral in Euler.
-    \item The operator then borrows approximately 10M USDT against the account's collateral, which includes your original deposit, alongside the swap input.
-    \item The operator sends the borrowed USDT to the user as the swap output.
+\item The swapper sends \$10 million USDC to the LP’s EulerSwap operator.
+\item The operator deposits the received USDC as collateral into Euler.
+\item Against this collateral—which now includes the LP’s initial margin and the swap input—the operator borrows approximately \$10 million USDT.
+\item The borrowed USDT is sent to the user as the swap output.
 \end{enumerate}
 
 \quad
-Importantly, this isn’t a 1:1 swap because: a) the EulerSwap operator charges a fee for facilitating the swap; and b) the exact swap output is determined by an AMM curve inside the operator, chosen by you, which factors in increasingly large price impact as the swap input amount increases. After the swap, your Euler account now holds 11M USDC deposits and 10M USDT debt. Later, when a swap occurs in the reverse direction, the incoming `in token' repays the outstanding loan, and any excess collateral is returned as the `out token.' 
+This is not a 1:1 swap for two reasons:a) the EulerSwap operator charges a fee for facilitating the trade, andb) the swap output is priced using a custom AMM curve, defined by the LP, which accounts for price impact that increases with larger trade sizes.
 
-The AMM curve inside the operator helps to ensure that imbalances in collateral and debt on the account encourage swaps that bring your account back to neutrality. The AMM is designed to help ensure that positions on your account do not remain open for extended periods, reducing your account's exposure to borrowing costs. Over time, your account will incur costs due to small interest rate differentials, whilst generating significant swap fees through utilisation of idle liquidity in Euler's credit vaults. The whole process is depicted in Fig. \ref{fig:EulerSwap_liquidity}.
+After the trade, the LP’s Euler account now holds \$11 million in USDC deposits and \$10 million in USDT debt. When a reverse-direction swap occurs, the incoming input token is used to repay the outstanding loan, and excess collateral deposits are then returned to the swapper as output. This is essentially the reverse process of the original trade.
 
-\bigskip
+The AMM curve inside the operator helps ensure that imbalances in the LPs’ collateral and debt positions incentivise trades that restore a neutral balance. This dynamic encourages temporary positions that self-resolve through market activity, reducing long-term exposure to interest costs. Although the account incurs some borrowing costs over time, these are offset by swap fees earned through the utilisation of idle capital in Euler’s lending markets.
+
 \begin{figure}[h]
-    \centering
-    \begin{tikzpicture}[
-        node distance=1cm, 
-        every node/.style={draw, text width=2.5cm, align=center, rounded corners}
-        ]
-        % Nodes
-        \node (user1) {User Sends 10M USDC};
-        \node (EulerSwap) [right=of user1] {EulerSwap Swap Operator};
-        \node (deposit) [below=of EulerSwap] {Deposits 10M USDC as Collateral};
-        \node (borrow) [below=of deposit] {Borrows ~10M USDT};
-        \node (user2) [left=of borrow] {User Receives 10M USDT};
-        
-        % Arrows
-        \draw[->] (user1) -- (EulerSwap);
-        \draw[->] (EulerSwap) -- (deposit);
-        \draw[->] (deposit) -- (borrow);
-        \draw[->] (borrow) -- (user2);
-    \end{tikzpicture}
-    \caption{\textbf{Swap flow in EulerSwap AMM}. EulerSwap’s just-in-time liquidity borrowing. The swap operator dynamically increases liquidity by borrowing the ``out token" against the ``in token."}
-    \label{fig:EulerSwap_liquidity}
+\centering
+\begin{tikzpicture}[
+node distance=1cm,
+every node/.style={draw, text width=2.5cm, align=center, rounded corners}
+]
+% Nodes
+\node (user1) {User Sends 10M USDC};
+\node (EulerSwap) [right=of user1] {EulerSwap Operator};
+\node (deposit) [below=of EulerSwap] {Deposits 10M USDC as Collateral};
+\node (borrow) [below=of deposit] {Borrows ~10M USDT};
+\node (user2) [left=of borrow] {User Receives 10M USDT};
+
+    % Arrows
+    \draw[->] (user1) -- (EulerSwap);
+    \draw[->] (EulerSwap) -- (deposit);
+    \draw[->] (deposit) -- (borrow);
+    \draw[->] (borrow) -- (user2);
+\end{tikzpicture}
+\caption{\textbf{Swap flow in EulerSwap AMM}. The operator dynamically borrows the output token using the input token as collateral, providing just-in-time liquidity.}
+\label{fig:EulerSwap_liquidity}
+
 \end{figure}
 
-\section{Virtual reserves and debt limits}
+\subsection{Liquidation risks}
 
-Since EulerSwap AMMs do not hold the assets used to service swaps at all times, they do swap calculations based on `virtual' reserves and debt limits, rather than on `real' reserves. 
+Borrowing against LP positions or making use of JIT liquidity introduces risks alongside capital efficiency. These positions incur interest on borrowed assets, which can reduce profitability if not offset by swap fees, interest earned on collateral, or external incentives. Moreover, leveraged LPs are vulnerable to liquidation if collateral values drop or debt ratios rise.
 
-Each EulerSwap LP can configure independent virtual reserve levels. These reserves define the maximum debt exposure an AMM will take on. For instance, if a user deposits \$1,000 in collateral and sets virtual reserves at \$5,000 per vault, the AMM effectively supports up to \$10,000 in combined swap depth, with a loan-to-value (LTV) ratio of 83.3\%. 
+JIT is most effective for correlated asset pairs with high LTV ratios, where liquidation risk is minimal. For more volatile asset pairs, LPs can hedge their position externally—for example, using perpetual futures markets, where traders are often paid to hold the short side. A practical strategy could involve deploying a long-only EulerSwap operator while hedging with a short-only position on a perpetuals platform.
 
-Note that the effective LTV must always remain below the borrowing LTV of the credit vault to prevent liquidation. Additionally, different AMM curves influence whether the maximum virtual reserves are achievable.
+\section{Curve mechanics and virtual reserves}
 
-\section{Curve}
+While the operator logic manages execution and capital flow, the behaviour of swaps is ultimately governed by a customisable AMM curve. EulerSwap features a unique curve that allows different amounts of liquidity and different concentrations of liquidity on different sides of the pool based on the reserves available. The space of possible reserves is determined by how much real liquidity an LP has and how much debt their operator is allowed to hold. Since EulerSwap AMMs do not always hold the assets used to service swaps at all times, they perform calculations based on \emph{virtual} reserves and debt limits, rather than on strictly \emph{real} reserves. Each EulerSwap LP can configure independent virtual reserve levels. These reserves define the maximum debt exposure an AMM will take on. Note that the effective LTV must always remain below the borrowing LTV of the lending vault to prevent liquidation. Additionally, different AMM curves influence whether the maximum virtual reserves are achievable.
 
-The space of possible reserves in an EulerSwap AMM is determined by how much debt a swap operator is allowed to hold. The EulerSwap curve passes through an equilibrium point $(x_0, y_0)$, at which the marginal price is defined by:
+The EulerSwap curve passes through a reserve equilibrium point $(x_0, y_0)$, at which the marginal price is defined by:
 
 \begin{equation}
 \frac{dy}{dx} \Big|_{(x_0, y_0)} = -\frac{p_x}{p_y}.
 \end{equation}
 
-Unlike most AMM curves, which are usually defined by a single convex function, EulerSwap uses a piecewise-defined curve, with different functions providing trading behaviour either side of the equilibrium point:
+Unlike most AMM curves, which are usually defined by a single convex function, EulerSwap uses a piecewise-defined curve, with different functions guiding trading behaviour either side of the equilibrium point. In the domain $0 < x \leq x_0$, the curve is defined by
 
 \begin{equation}
-    \label{eq:fx-main}
-    f(x) =
-    \begin{dcases}
-        f_1(x), 
-        & 0 < x \leq x_0 \\
-        f_2(x), 
-        & x_0 < x
-    \end{dcases}.
+\label{eq:euler-swap-main-y}
+y
+=
+y_{0}+\frac{p_{x}}{p_{y}}\left(x_{0}-x\right)\left(c_{x}+\left(1-c_{x}\right)\left(\frac{x_{0}}{x}\right)\right),
 \end{equation}
 
-In the domain $0 < x \leq x_0$, the curve is defined by
+with $y$ depending on $x$. In the region $x_0 < x$, we let $x$ become the dependent variable, so that the domain is $0 < y \leq y_0$, and the curve is defined by
 
 \begin{equation}
-    \label{eq:fx1-main}
-    f_1(x) 
-    =
-    y_{0}+\frac{p_{x}}{p_{y}}\left(x_{0}-x\right)\left(c_{x}+\left(1-c_{x}\right)\left(\frac{x_{0}}{x}\right)\right).
+\label{eq:euler-swap-main-x}
+x
+=
+x_{0}+\frac{p_{y}}{p_{x}}\left(y_{0}-y\right)\left(c_{y}+\left(1-c_{y}\right)\left(\frac{y_{0}}{y}\right)\right),
 \end{equation}
 
-In the domain $x_0 < x$, the curve is defined by
+with $x$ depending on $y$. Although defining an AMM using this technique is unusual, both curves have well-defined inverses, allowing trading behaviour to be fully defined for any swap input or output amount in any direction.
 
-\begin{equation}
-    \label{eq:fx2-main}
-    f_2(x) 
-    =
-    \frac{
-        \sqrt{
-            \left( \frac{p_x}{p_y} (x - x_0) + y_0 (1 - 2c_y) \right)^2 
-            + 4c_y (1 - c_y) y_0^2
-        } 
-        - \left( \frac{p_x}{p_y} (x - x_0) + y_0 (1 - 2c_y) \right)
-    }{2c_y}.
-\end{equation}
+The $c_x, c_y$ parameters in the equations are liquidity concentration parameters that control how liquidity is distributed along the curve, with values closer to 1 concentrating liquidity around the equilibrium point, similar to a Curve StableSwap pool, and values closer to 0 distributing it across a wider price range, similar to a classic Uniswap v2 pool. When the $c$ parameters are both 1, the AMM becomes a constant-sum AMM, and when they are both 0, the AMM becomes a constant-product AMM.
 
- The $c_x, c_y$ parameters here are liquidity concentration parameters that control how liquidity is distributed along the curve, with values closer to 1 concentrating liquidity around equilibrium and values closer to 0 distributing it across a wider price range. This flexibility enables EulerSwap to be used for entirely new use cases or to simulate the behaviour of atypical AMM protocols, such as the MakerDAO \href{https://mips.makerdao.com/mips/details/MIP29}{Peg Stability Module} (PSM). A full derivation is given in the Appendix \ref{sec:appendix}.  
- 
- \begin{figure}[h]  % 'h' places it here, 't' for top, 'b' for bottom, 'p' for separate page
-    \centering  % Centers the image
-    \includegraphics[width=0.5\textwidth]{curve.png} % Adjust width as needed
-    \caption{\textbf{EulerSwap AMM curve.} The EulerSwap curve (red line) consists of two sides with separate reserve values $x_0, y_0$ and liquidity concentration parameters $c_x, c_y$, allowing liquidity to be distributed asymmetrically. This means liquidity can be more or less dense or concentrated on one side of the AMM relative to the other. The exchange rate at equilibrium is determined by the pricing parameters $p_x, p_y$ and is fully flexible. You can interact with the curve \href{https://www.desmos.com/calculator/gzwmvbs1dk}{here} on Desmos to compare its behaviour with traditional constant-sum and constant-product curves (black lines).}
-    \label{fig:fig1}  % Useful for referencing the figure in text
+This flexibility enables EulerSwap to be used for entirely new use cases or to simulate the behaviour of atypical AMM protocols, such as the MakerDAO \href{https://mips.makerdao.com/mips/details/MIP29}{Peg Stability Module} (PSM). A full description is given in the Appendix \ref{sec:appendix}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.5\textwidth]{curve.png}
+\caption{\textbf{EulerSwap AMM curve.} The EulerSwap curve (red line) consists of two sides with separate reserve values $x_0, y_0$ and liquidity concentration parameters $c_x, c_y$, allowing liquidity to be distributed asymmetrically. This means liquidity can be more or less dense or concentrated on one side of the AMM relative to the other. The exchange rate at equilibrium is determined by the pricing parameters $p_x, p_y$ and is fully flexible. The curve is also available as an interactive model on \href{https://www.desmos.com/calculator/iczoxr4mhw}{Desmos} to compare its behaviour with traditional constant-sum and constant-product curves (black lines).}
+\label{fig:fig1}
 \end{figure}
 
 \section{Conclusion}
 
-EulerSwap enhances AMMs by leveraging just-in-time liquidity to expand the depth of liquidity available to swappers. By integrating Euler’s credit vaults, it enables LPs to earn swap fees on top of their ordinary deposits while offering a customisable AMM curve that supports concentrated, distributed, and asymmetric liquidity structures. These features make EulerSwap adaptable to a wide range of trading strategies. However, this efficiency is not without some trade-offs. Swap operators incur interest costs on borrowed assets, which can erode profitability if not offset by swap fees, interest on collateral, or token incentives. Additionally, EulerSwap inherits Euler’s risk parameters, making it most effective for correlated asset pairs with high loan-to-value (LTV) ratios, while volatile assets pose higher liquidation risks if positions become imbalanced. Despite these trade-offs, EulerSwap represents a breakthrough in AMM design by repurposing idle liquidity in lending protocols, reducing capital inefficiencies, and optimising swap execution. By catering to professional market makers, DAOs, and algorithmic traders, it positions itself as a powerful tool for on-chain liquidity optimisation. Future research could explore optimal strategies for setting pricing and liquidity concentration parameters dynamically based on market conditions. EulerSwap's design opens new possibilities for AMM efficiency, setting a foundation for further DeFi innovation.
+EulerSwap enhances AMMs by leveraging just-in-time liquidity to expand the depth of liquidity available to swappers. By integrating Euler’s lending vaults, it enables LPs to earn swap fees on top of their ordinary deposits while offering a customisable AMM curve that supports concentrated, distributed, and asymmetric liquidity structures. These features make EulerSwap adaptable to a wide range of trading strategies. By catering to professional market makers, DAOs, and algorithmic trading systems, EulerSwap positions itself as a foundational infrastructure for efficient, programmable on-chain liquidity. 
 
 \section*{Acknowledgments}
 
@@ -175,12 +173,12 @@ During a security review of EulerSwap, Chris Michel noted similarities between s
 \section{Appendix}
 \label{sec:appendix}
 
-\subsection{Curve derivation}
-\label{sec:curve-derivation}
+\subsection{Curve description}
+\label{sec:curve-description}
 
-We begin with an Automated Market Maker (AMM) holding initial liquidity reserves of two assets, $X$ and $Y$, denoted as $x_0$ and $y_0$, respectively. In the absence of trading, the AMM remains at equilibrium at the point $(x_0, y_0)$. 
+Here we describe how the EulerSwap curve generalises the behaviours of both the constant-sum (CSMM) and constant-product market maker (CPMM) curves using liquidity concentration parameters. We begin with an automated market maker (AMM) holding initial liquidity reserves of two assets, $X$ and $Y$, denoted as $x_0$ and $y_0$, respectively. In the absence of trading, the AMM remains at equilibrium at the point $(x_0, y_0)$. 
 
-Our goal is to derive a curve for a constant-function trading market maker (CFMM) that supports swaps between the two assets with the following properties:
+Our goal is to find a curve for a constant-function trading market maker (CFMM) that supports swaps between the two assets with the following properties:
 
 \begin{itemize}
     \item Passes through the equilibrium point $(x_0, y_0)$.
@@ -190,9 +188,9 @@ Our goal is to derive a curve for a constant-function trading market maker (CFMM
 
 To develop such a function, we first introduce two fundamental AMM curve models.
 
-\subsubsection{Constant-sum and constant-product AMM curves}
+\subsubsection{Constant-sum and constant-product curves}
 
-The canonical constant-sum (CSMM) and constant-product (CPMM) market making curves are given by:
+The canonical CSMM and CPMM curves are given by:
 
 \begin{align}
     x + y &= x_0 + y_0, \\
@@ -228,11 +226,11 @@ These results confirm that at equilibrium $(x_0, y_0)$, the slope of both functi
 \frac{dy}{dx} \Big|_{(x_0, y_0)} = -\frac{p_x}{p_y}.
 \]
 
-Whilst these curves sufficiently generalise the constant-sum and constant-product curves to an arbitrary price at equilibrium, in practice, the modified CPMM equation \eqref{eq:exponential-form} has limited practical application as a CFMM because it involves an exponential form that is computationally intensive and impractical for on-chain calculations. We therefore seek a simpler equation that preserves the spirit of the trading behaviour of the generalised CPMM; that is, some kind of herpbola that passes through the equilibrium point $(x_0, y_0)$ and maintains an exchange rate of $-p_x / p_y$ at that point. To resolve this, we introduce the concept of artificial reserves.
+While this weighted CPMM generalises the constant-product formula to support a customisable price at equilibrium, it introduces significant computational complexity. In particular, the exponential form involves power functions of reserves, which are expensive to compute on-chain in the EVM. As a result, this formulation is not directly implementable in practice. To address this, we construct an alternative using artificial reserves—a design trick that preserves the slope and equilibrium properties while greatly simplifying the functional form.
 
 \subsubsection{Introducing artificial reserves to create a new, simpler curve}
 
-Note that in the interval $0 < x < x_0$ swaps should only increase liquidity beyond $y_0$ and deplete $x_0$ liquidity. That is, our trading function in this interval need not depend on the initial amount of $y_0$ liquidity. This suggests that we can split the domain of the AMM curves into two, and replace the real reserve $y_0$ in the interval $0 < x < x_0$ with an carefully chosen artificial reserve $y_v$ designed to eliminate the exponential form in the weighted hyperbola. 
+Note that in the interval $0 < x \leq x_0$ swaps should only increase liquidity beyond $y_0$ and deplete $x_0$ liquidity. That is, our trading function in this interval need not depend on the initial amount of $y_0$ liquidity. This suggests that we can split the domain of the AMM curves into two, and replace the real reserve $y_0$ in the interval $0 < x \leq x_0$ with a carefully chosen artificial reserve $y_v$ designed to eliminate the exponential form in the weighted hyperbola. 
 
 Re-arranging equations \eqref{eq:weighted-line} and \eqref{eq:exponential-form} into explicit functions of $y$, we obtain
 \begin{align}
@@ -245,7 +243,7 @@ Re-arranging equations \eqref{eq:weighted-line} and \eqref{eq:exponential-form} 
 In this view, it is easy to see that a substitution of $y_0 \rightarrow y_v$, given by
 
 \[
-y_v = x_0 \frac{p_x}{p_y}.
+y_v = x_0 \frac{p_x}{p_y}
 \]
 
 will eliminate the exponential form in equation \eqref{eq:exponential-form-explicit}. We then have equations
@@ -266,7 +264,8 @@ Taking the derivatives of these equations with respect to $x$, we obtain:
 
 \begin{align}
     \frac{dy}{dx} &= -\frac{p_x}{p_y}, \\
-    \frac{dy}{dx} &= -\frac{p_x}{p_y} \left( \frac{x_0}{x} + \frac{x_0(x_0 - x)}{x^2} \right).
+    \frac{dy}{dx} &= -\frac{p_x}{p_y} \left( \frac{x_0}{x} + \frac{x_0(x_0 - x)}{x^2} \right)
+    = -\frac{p_x}{p_y} \left( \frac{x_0}{x} \right)^2.
 \end{align}
 
 These results confirm that at equilibrium $(x_0, y_0)$, the slope of both functions is:
@@ -275,57 +274,107 @@ These results confirm that at equilibrium $(x_0, y_0)$, the slope of both functi
 \frac{dy}{dx} \Big|_{(x_0, y_0)} = -\frac{p_x}{p_y}.
 \]
 
-\subsubsection{Unifying into a single curve in the region $0 < x < x_0$}
+\subsubsection{Unifying into a single curve in the region $0 < x \leq x_0$}
 
-To create a single unified curve, we introduce a liquidity concentration parameter \( c_x \in [0, 1] \), which determines the curve’s behaviour:
+To create a single unified curve, we introduce a liquidity concentration parameter \( c_x \in [0, 1] \) that determines the curve’s convexity:
 
 \begin{itemize}
     \item When \( c_x = 1 \), the AMM functions as a constant-sum AMM.
     \item When \( c_x = 0 \), the AMM behaves as a constant-product-like AMM.
-    \item Intermediate values of \( c_x \) create a hybrid trading function with liquidity that is more or less concentrated around the equilibrium point.
+    \item Intermediate values of \( c_x \) create a hybrid trading function, with liquidity that is more or less concentrated around the equilibrium point.
 \end{itemize}
 
-This gives the final equation:
+This parameterisation leads to the following equation:
 
 \begin{equation}
     \label{eq:EulerSwap-1}
     y = y_0 + \frac{p_x}{p_y} (x_0 - x) \left( c_x + (1 - c_x) \left(\frac{x_0}{x}\right) \right).
 \end{equation}
 
-This is equivalent to the function \( f_1(x) \) given by equation \eqref{eq:fx1-main} in the main text.
+This equation is equivalent to equation \eqref{eq:euler-swap-main-y} in the main text. It is implemented as the function `f()' in Solidity within the `CurveLib.sol' contract. It serves two main purposes:
 
-\subsubsection{Extending the curve to the $x > x_0$ region}
+\begin{itemize}
+    \item Swap quoting: Providing quotes for \(y\) given \(x\) in the domain \(0 < x \leq x_0\).
+    \item System invariant: Acting as a key invariant within the EulerSwap system (detailed below).
+\end{itemize}
 
-It is important to remember that equation \eqref{eq:EulerSwap-1} only works as a trading function in the interval $0 < x < x_0$. For \( x > x_0 \), we construct a reflected curve that also passes through \( (x_0, y_0) \) and maintains the required derivative:
+The marginal price at anywhere along the curve is given by the derivative, which is given by:
+
+\begin{align}
+    \frac{dy}{dx}
+    &=
+    \frac{p_x}{p_y} \left[ -\left( c_x + (1 - c_x) \left( \frac{x_0}{x} \right) \right) - (x_0 - x) (1 - c_x) \left( \frac{x_0}{x} \right)^2 \right] \\ \nonumber
+    &=
+    -\frac{p_x}{p_y} \left[ c_x + (1 - c_x) \left( \frac{x_0}{x} \right)^2 \right] 
+\end{align}
+
+To function as a complete trading function, equation \eqref{eq:EulerSwap-1} can also be inverted to compute \(x\) given \(y\) in the range \(0 < x \leq x_0\). By rearranging the formula into a quadratic in \(x\), we derive:
 
 \begin{equation}
-    \label{eq:EulerSwap-3-inverse}
-    x = x_0 + \frac{p_y}{p_x} (y_0 - y) \left( c_y + (1 - c_y) \left(\frac{y_0}{y}\right) \right).
+    \label{eq:EulerSwap-inverse-1}
+    c_{x}x^{2} + \left( \frac{p_{y}}{p_{x}} \left( y - y_{0} \right) - \left( 2c_{x} - 1 \right) x_{0} \right) x - \left(1 - c_{x} \right) x_{0}^{2} = 0.
 \end{equation}
 
-Since this equation defines \( x \) in terms of \( y \), we invert it by solving for \( y \), leading to the quadratic equation:
+This is a quadratic equation in $x$ that we can solve for using the classic quadratic formula. The components of a classic solution would be given by:
+\begin{align}
+    A 
+    &= 
+    c_x, \\ \nonumber
+    B 
+    &=
+    \frac{p_{y}}{p_{x}} \left( y - y_{0} \right) - \left( 2c_{x} - 1 \right) x_{0}, \\ \nonumber
+    C 
+    &= - \left(1 - c_{x} \right) x_{0}^{2}. 
+\end{align}
+
+With this, our solution for the positive real root is given by:
 
 \begin{equation}
-    y = c_y y^2 + \left( \frac{p_x}{p_y} (x - x_0) - y_0(2c_y - 1) \right)y - (1 - c_y) y_0^2.
+\label{eq:quadratic-formula}
+    x
+    =
+    \frac{-B + \sqrt{B^2 - 4AC}}{2A}.
 \end{equation}
 
-Taking only the positive real root, we obtain:
+In some circumstances, particularly when $B \geq 0$, this form of the quadratic equation is numerically unstable. In Solidity, we therefore sometimes use an alternative form called \href{https://en.wikipedia.org/wiki/Quadratic_formula}{``citardauq'' formula}, which is a rearrangement of equation \eqref{eq:quadratic-formula} to give:
 
 \begin{equation}
-    \label{eq:EulerSwap-2}
-    y = \frac{
-        \sqrt{
-            \left( \frac{p_x}{p_y} (x - x_0) + y_0 (1 - 2c_y) \right)^2 
-            + 4c_y (1 - c_y) y_0^2
-        } 
-        - \left( \frac{p_x}{p_y} (x - x_0) + y_0 (1 - 2c_y) \right)
-    }{2c_y}.
+\label{eq:citardauq-formula}
+    x
+    =
+    \frac{2C}{-B - \sqrt{B^2 - 4AC}}.
 \end{equation}
 
-This corresponds to the function \( f_2(x) \) given by equation \eqref{eq:fx2-main} in the main text.
+By re-defining $C = \left(1 - c_{x} \right) x_{0}^{2}$, and noting that $B = -B$ when $B < 0$, we can further simplify these equations to give:
 
-\subsection{Invariant derivation}
-\label{sec:invariant-derivation}
+\begin{align}
+    \label{eq:Eulerswap-inverse}
+    x =
+    \begin{dcases}
+    \frac{B + \sqrt{B^2 + 4AC}}{2A}, & \text{if } B \leq 0 \\\\
+    \frac{2C}{B + \sqrt{B^2 + 4AC}}, & \text{if } B > 0.
+    \end{dcases}
+\end{align}
+
+This solution is implemented as the function `fInverse()' in Solidity within the `CurveLib.sol' contract. Its main purpose is to provide quotes to swappers. 
+
+\subsubsection{Extending the curve to the $x \geq x_0$ region}
+
+To support swaps where the input token lies in the region , we need a symmetric extension of the trading function to the right-hand side of the curve. Rather than defining a new function from scratch, we reflect the existing function by interchanging the roles of $x$ and $y$. However, this reflection alone is not sufficient: we must also reparameterise the function to use the correct pricing $p_x, p_y$ and concentration $c_x, c_y$ parameters that govern the behaviour of the AMM on the $y$-side of the pool.
+
+This leads us to the following reparameterised version of equation \eqref{eq:EulerSwap-1}:
+
+\begin{equation}
+\label{eq:EulerSwap-2}
+x = x_0 + \frac{p_y}{p_x} (y_0 - y) \left( c_y + (1 - c_y) \left(\frac{y_0}{y}\right) \right).
+\end{equation}
+
+This equation is equivalent to equation \eqref{eq:euler-swap-main-x} in the main text. It provides a pricing function for swaps in which $x$ is given and $y$ is unknown, and where we are in the domain $0 < y \leq y_0$ (which corresponds to $x \geq x_0$).
+
+Importantly, this is not a new curve, but a reparameterisation of the original left-hand side. It shares the same structural form and equilibrium properties but is applied to the opposite side of the pool using flipped arguments and parameters. In practice, this function is implemented using the same Solidity routine (`f()') as equation \eqref{eq:EulerSwap-1}, with the arguments appropriately swapped to match the trading direction. The inverse of this function can be derived analogously by reparameterising equation \eqref{eq:Eulerswap-inverse}.
+
+\subsection{Invariant}
+\label{sec:invariant}
 
 In traditional AMM protocols, the curve is typically defined as an implicit function of $y$. For example, the classic Uniswap AMM follows a constant-product equation:
 
@@ -333,7 +382,7 @@ In traditional AMM protocols, the curve is typically defined as an implicit func
     xy = x_0 y_0
 \end{equation}
 
-where $x_0$ and $y_0$ are the initial liquidity reserves. This equation defines an invariant condition, ensuring that any valid swap must satisfy:
+where $x_0$ and $y_0$ are the reserves of the equilbirium point. This equation defines an invariant condition, ensuring that any valid swap must satisfy:
 
 \begin{equation}
     xy \geq x_0 y_0.
@@ -353,14 +402,14 @@ This means that for any valid trade, the resulting reserve state must lie on or 
 
 For EulerSwap, we apply a similar principle. Given any reserve state $(x, y)$, we check whether it satisfies an equivalent invariant condition.
 
-From equation \eqref{eq:EulerSwap-1}, for values where \( 0 < x < x_0 \), the AMM curve constraint requires:
+From equation \eqref{eq:EulerSwap-1}, for values where \( 0 < x \leq x_0 \), the AMM curve constraint requires a lower bound for $y$:
 
 \begin{equation}
     \label{eq:invariant-x1}
     y \geq y_{0}+\frac{p_{x}}{p_{y}}\left(x_{0}-x\right)\left(c_{x}+\left(1-c_{x}\right)\left(\frac{x_{0}}{x}\right)\right).
 \end{equation}
 
-For values where \( x > x_0 \), we could derive a similar condition for $y$ from equation \eqref{eq:EulerSwap-2}. However, a simpler and computationally cheaper approach is to use the inverse equation \eqref{eq:EulerSwap-3-inverse}, which defines the lower bound for $x$ instead:
+For values where \( 0 < y \leq y_0 \), which is equivalent to \( x > x_0 \), we simply use a lower bound for $x$ instead:
 
 \begin{equation}
     \label{eq:invariant-x2}
@@ -381,10 +430,3 @@ associated with Euler Labs. The opinions reflected herein are subject to change 
 updated.
 
 \end{document}
-
-
-
-Section 5.1.2 starts off with the principle that the trading function should not depend on y0, and applies it to formula (8), on the assumption (correct me if I'm wrong) that whatever y_v we choose will not change the trading behaviour. However this is not true for formula (8), because y0 is not just a vertical offset, but is embedded in the exponents.
-What stays true is just the fact that, whatever y_v we choose, the curve will pass through the point (x0, y_v) with slope -px/py, so we might as well choose an "easy" one that simplifies the calculations: the driving reason for imposing px x0 = py yv seems rather to be that this renders the exponents in formula (8) equal, thus effectively reverting it to an unweighted hyperbola. Then, once we add back the vertical offset, the trading behaviour of formula (14) indeed no longer depends on y0, but just because we have now "made" y0 just a vertical offset, shifting formula (12). 
-In other words, we have formula (8) which defines a parametric curve y = f(x; x*,y*,p*) that always passes through the point (x*,y*) with slope -p*. We want a function that passes through (x0,y0) with slope -p0. We could use y = f(x; x0,y0,p0) but this is computationally intensive. Instead, we choose y = f(x; x0,x0p0,p0) + (y0 - x0p0) because this still satisfies the requirements, but the particular choice of y* makes f() less computationally intensive.
-In fact, there is a mistake earlier on in the appendix: the slope of the plain hyperbola x y = x0 y0 at the point (x0, y0) is not -1 but -y0/x0. The choice of y_v = x0 px/py makes that slope equal to -px/py. So overall it would seem like choosing a plain hyperbola from the start, with appropriate parameters and offset, would do the trick. Have I interpreted correctly the intentions of your derivation process?
