@@ -37,7 +37,9 @@ abstract contract ProtocolFee is Owned {
     /// @notice Set the protocol fee, expressed as a percentage of LP fee
     /// @param newFee The new protocol fee, in WAD units (0.10e18 = 10%)
     function setProtocolFee(uint256 newFee) external onlyOwner {
-        require(MIN_PROTOCOL_FEE <= newFee && newFee <= 0.25e18 && protocolFeeRecipient != address(0), InvalidFee());
+        require(
+            MIN_PROTOCOL_FEE <= newFee && newFee <= MAX_PROTOCOL_FEE && protocolFeeRecipient != address(0), InvalidFee()
+        );
         protocolFee = newFee;
     }
 
