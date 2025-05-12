@@ -6,6 +6,7 @@ import {Owned} from "solmate/src/auth/Owned.sol";
 abstract contract ProtocolFee is Owned {
     uint256 public protocolFee;
     address public protocolFeeRecipient;
+    address public immutable recipientSetter;
     uint256 public immutable deploymentTimestamp;
 
     uint256 public constant MIN_PROTOCOL_FEE = 0.1e18; // 10%
@@ -14,13 +15,22 @@ abstract contract ProtocolFee is Owned {
     error InvalidFee();
     error RecipientSetAlready();
 
-    constructor(address _feeOwner) Owned(_feeOwner) {
+    constructor(address _feeOwner, address _recipientSetter) Owned(_feeOwner) {
         deploymentTimestamp = block.timestamp;
+        recipientSetter = _recipientSetter;
     }
 
     /// @notice Permissionlessly enable a minimum protocol fee after 1 year
+    /// @dev The following conditions must be met:
+    /// The protocol fee can only be enabled after 1 year of deployment
+    /// The fee recipient MUST be specified
+    /// The protocol fee was not previously set
     function enableProtocolFee() external {
-        require(block.timestamp >= (deploymentTimestamp + 365 days) && protocolFeeRecipient != address(0), InvalidFee());
+        require(
+            block.timestamp >= (deploymentTimestamp + 365 days) && protocolFeeRecipient != address(0)
+                && protocolFee == 0,
+            InvalidFee()
+        );
         protocolFee = MIN_PROTOCOL_FEE;
     }
 
@@ -31,8 +41,8 @@ abstract contract ProtocolFee is Owned {
         protocolFee = newFee;
     }
 
-    function setProtocolFeeRecipient(address newRecipient) external onlyOwner {
-        require(protocolFeeRecipient == address(0), RecipientSetAlready());
+    function setProtocolFeeRecipient(address newRecipient) external {
+        require(msg.sender == recipientSetter && protocolFeeRecipient == address(0), RecipientSetAlready());
         protocolFeeRecipient = newRecipient;
     }
 }
