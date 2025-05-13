@@ -2,6 +2,7 @@
 pragma solidity ^0.8.27;
 
 import {Owned} from "solmate/src/auth/Owned.sol";
+import {UniswapHook} from "../UniswapHook.sol";
 import {IPoolManager} from "v4-core/interfaces/IPoolManager.sol";
 
 abstract contract ProtocolFee is Owned {
@@ -21,7 +22,11 @@ abstract contract ProtocolFee is Owned {
         recipientSetter = _recipientSetter;
     }
 
-    function _poolManager() internal view virtual returns (IPoolManager);
+    function _eulerSwapImpl() internal view virtual returns (address) {}
+
+    function _poolManager() internal view returns (IPoolManager) {
+        return UniswapHook(_eulerSwapImpl()).poolManager();
+    }
 
     /// @notice Permissionlessly enable a minimum protocol fee after 1 year
     /// @dev All of the following conditions must be met:
