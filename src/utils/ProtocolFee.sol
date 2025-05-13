@@ -2,6 +2,7 @@
 pragma solidity ^0.8.27;
 
 import {Owned} from "solmate/src/auth/Owned.sol";
+import {IPoolManager} from "v4-core/interfaces/IPoolManager.sol";
 
 abstract contract ProtocolFee is Owned {
     uint256 public protocolFee;
@@ -20,15 +21,18 @@ abstract contract ProtocolFee is Owned {
         recipientSetter = _recipientSetter;
     }
 
+    function _poolManager() internal view virtual returns (IPoolManager);
+
     /// @notice Permissionlessly enable a minimum protocol fee after 1 year
-    /// @dev The following conditions must be met:
+    /// @dev All of the following conditions must be met:
+    /// EulerSwap is deployed on a chain with Uniswap v4
     /// The protocol fee can only be enabled after 1 year of deployment
     /// The fee recipient MUST be specified
     /// The protocol fee was not previously set
     function enableProtocolFee() external {
         require(
-            block.timestamp >= (deploymentTimestamp + 365 days) && protocolFeeRecipient != address(0)
-                && protocolFee == 0,
+            address(_poolManager()) != address(0) && block.timestamp >= (deploymentTimestamp + 365 days)
+                && protocolFeeRecipient != address(0) && protocolFee == 0,
             InvalidFee()
         );
         protocolFee = MIN_PROTOCOL_FEE;

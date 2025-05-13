@@ -41,9 +41,9 @@ contract EulerSwapFactory is IEulerSwapFactory, EVCUtil, ProtocolFee {
     error SliceOutOfBounds();
     error InvalidProtocolFee();
 
-    constructor(address evc, address evkFactory_, address eulerSwapImpl_, address feeOwner_)
+    constructor(address evc, address evkFactory_, address eulerSwapImpl_, address feeOwner_, address feeRecipientSetter_)
         EVCUtil(evc)
-        ProtocolFee(feeOwner_)
+        ProtocolFee(feeOwner_, feeRecipientSetter_)
     {
         evkFactory = evkFactory_;
         eulerSwapImpl = eulerSwapImpl_;
