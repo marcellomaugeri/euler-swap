@@ -22,11 +22,12 @@ contract DeployProtocol is ScriptUtil {
         address poolManager = vm.parseJsonAddress(json, ".poolManager");
         address evkFactory = vm.parseJsonAddress(json, ".evkFactory");
         address feeOwner = vm.parseJsonAddress(json, ".feeOwner");
+        address feeRecipientSetter = vm.parseJsonAddress(json, ".feeRecipientSetter");
 
         vm.startBroadcast(deployerAddress);
 
         address eulerSwapImpl = address(new EulerSwap(evc, poolManager));
-        new EulerSwapFactory(evc, evkFactory, eulerSwapImpl, feeOwner);
+        new EulerSwapFactory(evc, evkFactory, eulerSwapImpl, feeOwner, feeRecipientSetter);
         new EulerSwapPeriphery();
         vm.stopBroadcast();
     }

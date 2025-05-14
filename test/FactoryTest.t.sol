@@ -9,6 +9,11 @@ import {EulerSwapTestBase, IEulerSwap, IEVC, EulerSwap} from "./EulerSwapTestBas
 import {EulerSwapFactory, IEulerSwapFactory} from "../src/EulerSwapFactory.sol";
 import {EulerSwap} from "../src/EulerSwap.sol";
 import {MetaProxyDeployer} from "../src/utils/MetaProxyDeployer.sol";
+import {ProtocolFee} from "../src/utils/ProtocolFee.sol";
+
+interface ImmutablePoolManager {
+    function poolManager() external view returns (IPoolManager);
+}
 
 contract FactoryTest is EulerSwapTestBase {
     IPoolManager public poolManager;
@@ -322,5 +327,84 @@ contract FactoryTest is EulerSwapTestBase {
             address[] memory ps = eulerSwapFactory.poolsByPair(asset0, asset1);
             assertEq(ps.length, 0);
         }
+    }
+
+    /// @dev test that all conditions are required for the protocol fee timebomb
+    function test_valid_protocolFee_timebomb(address anyone, address feeRecipient) public {
+        vm.assume(feeRecipient != address(0));
+        vm.expectRevert(ProtocolFee.InvalidFee.selector);
+        vm.prank(anyone);
+        eulerSwapFactory.enableProtocolFee();
+
+        skip(365 days);
+        vm.expectRevert(ProtocolFee.InvalidFee.selector);
+        vm.prank(anyone);
+        eulerSwapFactory.enableProtocolFee();
+
+        vm.prank(eulerSwapFactory.recipientSetter());
+        eulerSwapFactory.setProtocolFeeRecipient(feeRecipient);
+
+        vm.prank(anyone);
+        eulerSwapFactory.enableProtocolFee();
+
+        assertEq(eulerSwapFactory.protocolFee(), eulerSwapFactory.MIN_PROTOCOL_FEE());
+    }
+
+    /// @dev test that protocol fee timebomb can not decrease a valid fee
+    function test_revert_protocolFee_timebomb(address anyone, address feeRecipient) public {
+        vm.assume(feeRecipient != address(0));
+        vm.prank(eulerSwapFactory.recipientSetter());
+        eulerSwapFactory.setProtocolFeeRecipient(feeRecipient);
+
+        // fee is set
+        vm.prank(eulerSwapFactory.owner());
+        eulerSwapFactory.setProtocolFee(0.2e18);
+        assertEq(eulerSwapFactory.protocolFee(), 0.2e18);
+
+        // fee cannot be decreased with timebomb
+        skip(365 days);
+        vm.expectRevert(ProtocolFee.InvalidFee.selector);
+        vm.prank(anyone);
+        eulerSwapFactory.enableProtocolFee();
+    }
+
+    /// @dev test protocol fee timebomb cannot be reverted
+    function test_protocolFee_minimum(address anyone, address feeRecipient) public {
+        vm.assume(feeRecipient != address(0));
+        skip(365 days);
+        vm.prank(eulerSwapFactory.recipientSetter());
+        eulerSwapFactory.setProtocolFeeRecipient(feeRecipient);
+
+        vm.prank(anyone);
+        eulerSwapFactory.enableProtocolFee();
+
+        vm.expectRevert(ProtocolFee.InvalidFee.selector);
+        eulerSwapFactory.setProtocolFee(0.05e18);
+
+        // fee can be increased
+        vm.prank(eulerSwapFactory.owner());
+        eulerSwapFactory.setProtocolFee(0.2e18);
+        assertEq(eulerSwapFactory.protocolFee(), 0.2e18);
+    }
+
+    /// @dev test protocol fee timebomb does not work if poolManager is not set
+    function test_revert_protocolFee_timebomb_noPoolManager(address anyone, address feeRecipient) public {
+        vm.assume(feeRecipient != address(0));
+        skip(365 days);
+        vm.prank(eulerSwapFactory.recipientSetter());
+        eulerSwapFactory.setProtocolFeeRecipient(feeRecipient);
+
+        // assume poolManager is not set
+        EulerSwap eulerSwapImpl = EulerSwap(eulerSwapFactory.eulerSwapImpl());
+        vm.mockCall(
+            address(eulerSwapImpl),
+            abi.encodeWithSelector(ImmutablePoolManager.poolManager.selector),
+            abi.encode(address(0))
+        );
+        assertEq(address(eulerSwapImpl.poolManager()), address(0));
+
+        vm.expectRevert(ProtocolFee.InvalidFee.selector);
+        vm.prank(anyone);
+        eulerSwapFactory.enableProtocolFee();
     }
 }
