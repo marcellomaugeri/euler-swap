@@ -3,6 +3,9 @@ pragma solidity ^0.8.24;
 
 import {IEVault, IEulerSwap, EulerSwapTestBase, EulerSwap, TestERC20} from "./EulerSwapTestBase.t.sol";
 import {QuoteLib} from "../src/libraries/QuoteLib.sol";
+import {CurveExtrasLib} from "./utils/CurveExtrasLib.sol";
+import {IERC4626} from "evk/EVault/IEVault.sol";
+import {Math} from "openzeppelin-contracts/utils/math/Math.sol";
 
 contract Basic is EulerSwapTestBase {
     EulerSwap public eulerSwap;
@@ -176,6 +179,11 @@ contract Basic is EulerSwapTestBase {
             t1.mint(address(this), amount);
             uint256 q = periphery.quoteExactInput(address(eulerSwap), address(t1), address(t2), amount);
 
+            // calculate marginal price after swap
+            (uint112 reserve0, uint112 reserve1,) = eulerSwap.getReserves();
+            uint256 calculatedMarginalPrice =
+                CurveExtrasLib.computeMarginalPriceAfterSwap(eulerSwap.getParams(), reserve0, reserve1, dir, amount);
+
             // Try to swap out 1 extra
 
             t1.transfer(address(eulerSwap), amount);
@@ -195,6 +203,16 @@ contract Basic is EulerSwapTestBase {
             assertEq(t2.balanceOf(address(this)), q + prevBal);
 
             assertGe(getHolderNAV(), origNAV);
+
+            // Confirm computed marginal price is correct
+
+            // Scale unit amount sold (1e6) up, to account for the fee that will be charged
+            uint256 marginalIn = 1e6 * 1e18 / (1e18 - fee);
+            uint256 quoteMarginal =
+                periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), marginalIn);
+            uint256 quotedMarginalPrice = quoteMarginal * 1e12; // scale 1e6 amount in to 1e18
+
+            assertApproxEqAbs(calculatedMarginalPrice, quotedMarginalPrice, 1e13);
         }
     }
 
