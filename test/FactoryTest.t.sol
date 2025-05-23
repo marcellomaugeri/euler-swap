@@ -341,9 +341,13 @@ contract FactoryTest is EulerSwapTestBase {
         vm.prank(anyone);
         eulerSwapFactory.enableProtocolFee();
 
+        vm.expectEmit(true, true, true, true);
+        emit ProtocolFee.ProtocolFeeRecipientSet(feeRecipient);
         vm.prank(eulerSwapFactory.recipientSetter());
         eulerSwapFactory.setProtocolFeeRecipient(feeRecipient);
 
+        vm.expectEmit(true, true, true, true);
+        emit ProtocolFee.ProtocolFeeSet(eulerSwapFactory.MIN_PROTOCOL_FEE());
         vm.prank(anyone);
         eulerSwapFactory.enableProtocolFee();
 
@@ -372,6 +376,8 @@ contract FactoryTest is EulerSwapTestBase {
     function test_protocolFee_minimum(address anyone, address feeRecipient) public {
         vm.assume(feeRecipient != address(0));
         skip(365 days);
+        vm.expectEmit(true, true, true, true);
+        emit ProtocolFee.ProtocolFeeRecipientSet(feeRecipient);
         vm.prank(eulerSwapFactory.recipientSetter());
         eulerSwapFactory.setProtocolFeeRecipient(feeRecipient);
 
@@ -382,6 +388,8 @@ contract FactoryTest is EulerSwapTestBase {
         eulerSwapFactory.setProtocolFee(0.05e18);
 
         // fee can be increased
+        vm.expectEmit(true, true, true, true);
+        emit ProtocolFee.ProtocolFeeSet(0.2e18);
         vm.prank(eulerSwapFactory.owner());
         eulerSwapFactory.setProtocolFee(0.2e18);
         assertEq(eulerSwapFactory.protocolFee(), 0.2e18);

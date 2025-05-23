@@ -17,6 +17,9 @@ abstract contract ProtocolFee is Owned {
     error InvalidFee();
     error RecipientSetAlready();
 
+    event ProtocolFeeSet(uint256 protocolFee);
+    event ProtocolFeeRecipientSet(address protocolFeeRecipient);
+
     constructor(address _feeOwner, address _recipientSetter) Owned(_feeOwner) {
         deploymentTimestamp = block.timestamp;
         recipientSetter = _recipientSetter;
@@ -41,6 +44,7 @@ abstract contract ProtocolFee is Owned {
             InvalidFee()
         );
         protocolFee = MIN_PROTOCOL_FEE;
+        emit ProtocolFeeSet(protocolFee);
     }
 
     /// @notice Set the protocol fee, expressed as a percentage of LP fee
@@ -50,10 +54,12 @@ abstract contract ProtocolFee is Owned {
             MIN_PROTOCOL_FEE <= newFee && newFee <= MAX_PROTOCOL_FEE && protocolFeeRecipient != address(0), InvalidFee()
         );
         protocolFee = newFee;
+        emit ProtocolFeeSet(protocolFee);
     }
 
     function setProtocolFeeRecipient(address newRecipient) external {
         require(msg.sender == recipientSetter && protocolFeeRecipient == address(0), RecipientSetAlready());
         protocolFeeRecipient = newRecipient;
+        emit ProtocolFeeRecipientSet(protocolFeeRecipient);
     }
 }
