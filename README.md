@@ -48,23 +48,36 @@ forge coverage
 forge doc --serve --port 4000
 ```
 
-## Private Deployment
+## Deployments
 
-- EulerSwapFactory: 0x04C54FF83e4BC428FD1eDA2f41cdBd583A2e9cF8
-- EulerSwapPeriphery: 0x64A8410D7D2ecF3Aaf32b6C3932e4586f3C42ecE
+### Mainnet
 
-------
+Uniswap4 Hook Compatible:
 
-- EulerSwapFactory: 0xF75548aF02f1928CbE9015985D4Fcbf96d728544
-- EulerSwapPeriphery: 0x813D74E832b3d9E9451d8f0E871E877edf2a5A5f
-- USDT-USDT pool: 0x2bFED8dBEb8e6226a15300AC77eE9130E52410fE
+- EulerSwapFactory: `0xFb9FE66472917F0F8966506A3bf831Ac0c10caD4`
+- EulerSwapPeriphery: `0x52b26d9046BEc495914FaE467Ff0e95762C5ed74`
+- EulerSwap Impl: `0xF5d35536482f62c9031b4d6bD34724671BCE33d1`
 
------- with Uniswap hook contracts (latest)
+Only OG interface:
 
-- EulerSwap implementation: 0x0B8CD42911551882638f4C762A66570e1fAc624f
-- EulerSwapFactory: 0x52177559e6430396b9A7E2176Ef33b4e4052D125
-- EulerSwapPeriphery: 0x9F27Bc363DB128cdC349CA54671E6Fbe2bE194D0
-- USDT-USDT pool: 0x13f627635CD96a2A75c2efBDba979172cAb2E888
+- EulerSwapFactory: `0x806AF31A325bE46812Fc8E8391333c4fA74B1211`
+- EulerSwapPeriphery: `0xbAA3acceE85a34cAB03a587cD9b3A3728EC89E3A`
+- EulerSwap Impl: `0x05D6C4D46A794468f282469c0E9346f121EA92Ee`
+
+### Unichain
+
+Uniswap4 Hook Compatible:
+
+- EulerSwapFactory: `0xeDA1c70208F2745A4e0720eB48AE7C016d6BC799`
+- EulerSwapPeriphery: `0x6FD365537bd39e8a3F492045f76E81120f3CD1E6`
+- EulerSwap Impl: `0x33f799F1a46032712D10f511191E27C20c5F4cB8`
+
+Only OG interface:
+
+- EulerSwapFactory: `0x55e5eAe7Ea2a1f84F9536F49d8B5b9796cCC1BC6`
+- EulerSwapPeriphery: `0xBf35dd297691d6F6438f7f6f82C020A499018723`
+- EulerSwap Impl: `0x4A71aB6Cd0256114c0E139CAe5518CA5B3c3696d`
+
 
 ## Safety
 
