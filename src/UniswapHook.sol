@@ -15,6 +15,7 @@ import {
 import {IEVault} from "evk/EVault/IEVault.sol";
 
 import {IEulerSwap} from "./interfaces/IEulerSwap.sol";
+import "./Events.sol";
 import {CtxLib} from "./libraries/CtxLib.sol";
 import {QuoteLib} from "./libraries/QuoteLib.sol";
 import {CurveLib} from "./libraries/CurveLib.sol";
@@ -135,6 +136,12 @@ contract UniswapHook is BaseHook {
 
             s.reserve0 = uint112(newReserve0);
             s.reserve1 = uint112(newReserve1);
+
+            if (params.zeroForOne) {
+                emit Swap(msg.sender, amountInWithoutFee, 0, 0, amountOut, s.reserve0, s.reserve1, msg.sender);
+            } else {
+                emit Swap(msg.sender, 0, amountInWithoutFee, amountOut, 0, s.reserve0, s.reserve1, msg.sender);
+            }
         }
 
         return (BaseHook.beforeSwap.selector, returnDelta, 0);
