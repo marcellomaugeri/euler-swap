@@ -36,13 +36,13 @@ contract Events is EulerSwapTestBase {
                 amountOut,
                 r0 + uint112(amountInWithoutFee),
                 r1 - uint112(amountOut),
-                address(this)
+                address(1234)
             );
         }
 
-        eulerSwap.swap(0, amountOut, address(this), "");
+        eulerSwap.swap(0, amountOut, address(1234), "");
 
-        assertEq(assetTST2.balanceOf(address(this)), amountOut);
+        assertEq(assetTST2.balanceOf(address(1234)), amountOut);
     }
 
     function test_events_exactInReverse() public {
