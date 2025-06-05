@@ -9,6 +9,7 @@ import {IEVault} from "evk/EVault/IEVault.sol";
 
 import {IEulerSwap} from "./interfaces/IEulerSwap.sol";
 import {UniswapHook} from "./UniswapHook.sol";
+import "./Events.sol";
 import {CtxLib} from "./libraries/CtxLib.sol";
 import {FundsLib} from "./libraries/FundsLib.sol";
 import {CurveLib} from "./libraries/CurveLib.sol";
@@ -16,18 +17,6 @@ import {QuoteLib} from "./libraries/QuoteLib.sol";
 
 contract EulerSwap is IEulerSwap, EVCUtil, UniswapHook {
     bytes32 public constant curve = bytes32("EulerSwap v1");
-
-    event EulerSwapActivated(address indexed asset0, address indexed asset1);
-    event Swap(
-        address indexed sender,
-        uint256 amount0In,
-        uint256 amount1In,
-        uint256 amount0Out,
-        uint256 amount1Out,
-        uint112 reserve0,
-        uint112 reserve1,
-        address indexed to
-    );
 
     error Locked();
     error AlreadyActivated();

@@ -13,6 +13,7 @@ import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import "../src/Events.sol";
 
 contract HookFeesTest is EulerSwapTestBase {
     using StateLibrary for IPoolManager;
@@ -59,6 +60,18 @@ contract HookFeesTest is EulerSwapTestBase {
         vm.startPrank(anyone);
         assetTST.approve(address(minimalRouter), amountIn);
 
+        vm.expectEmit(true, true, true, true);
+        emit Swap(
+            address(minimalRouter),
+            amountInWithoutFee,
+            0,
+            0,
+            amountOut,
+            r0 + uint112(amountInWithoutFee),
+            r1 - uint112(amountOut),
+            address(poolManager)
+        );
+
         bool zeroForOne = address(assetTST) < address(assetTST2);
         BalanceDelta result = minimalRouter.swap(eulerSwap.poolKey(), zeroForOne, amountIn, 0, "");
         vm.stopPrank();
@@ -72,6 +85,56 @@ contract HookFeesTest is EulerSwapTestBase {
         // assert fees were not added to the reserves
         (uint112 r0New, uint112 r1New,) = eulerSwap.getReserves();
         if (zeroForOne) {
+            assertEq(r0New, r0 + amountInWithoutFee);
+            assertEq(r1New, r1 - amountOut);
+        } else {
+            // oneForZero, so the curve received asset1
+            assertEq(r0New, r0 - amountOut);
+            assertEq(r1New, r1 + amountInWithoutFee);
+        }
+
+        assertGt(getHolderNAV(), origNav + int256(amountIn - amountInWithoutFee));
+    }
+
+    function test_SwapExactIn_withLpFeeReverse() public {
+        int256 origNav = getHolderNAV();
+        (uint112 r0, uint112 r1,) = eulerSwap.getReserves();
+
+        uint256 amountIn = 1e18;
+        uint256 amountInWithoutFee = amountIn - (amountIn * eulerSwap.getParams().fee / 1e18);
+        uint256 amountOut =
+            periphery.quoteExactInput(address(eulerSwap), address(assetTST2), address(assetTST), amountIn);
+
+        assetTST2.mint(anyone, amountIn);
+
+        vm.startPrank(anyone);
+        assetTST2.approve(address(minimalRouter), amountIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Swap(
+            address(minimalRouter),
+            0,
+            amountInWithoutFee,
+            amountOut,
+            0,
+            r0 - uint112(amountOut),
+            r1 + uint112(amountInWithoutFee),
+            address(poolManager)
+        );
+
+        bool zeroForOne = address(assetTST) < address(assetTST2);
+        BalanceDelta result = minimalRouter.swap(eulerSwap.poolKey(), !zeroForOne, amountIn, 0, "");
+        vm.stopPrank();
+
+        assertEq(assetTST2.balanceOf(anyone), 0);
+        assertEq(assetTST.balanceOf(anyone), amountOut);
+
+        assertEq(!zeroForOne ? uint256(-int256(result.amount0())) : uint256(-int256(result.amount1())), amountIn);
+        assertEq(!zeroForOne ? uint256(int256(result.amount1())) : uint256(int256(result.amount0())), amountOut);
+
+        // assert fees were not added to the reserves
+        (uint112 r0New, uint112 r1New,) = eulerSwap.getReserves();
+        if (!zeroForOne) {
             assertEq(r0New, r0 + amountInWithoutFee);
             assertEq(r1New, r1 - amountOut);
         } else {
