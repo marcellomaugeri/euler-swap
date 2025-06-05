@@ -62,7 +62,7 @@ contract HookFeesTest is EulerSwapTestBase {
 
         vm.expectEmit(true, true, true, true);
         emit Swap(
-            address(poolManager),
+            address(minimalRouter),
             amountInWithoutFee,
             0,
             0,
@@ -112,7 +112,7 @@ contract HookFeesTest is EulerSwapTestBase {
 
         vm.expectEmit(true, true, true, true);
         emit Swap(
-            address(poolManager),
+            address(minimalRouter),
             0,
             amountInWithoutFee,
             amountOut,

@@ -7,9 +7,10 @@ pragma solidity ^0.8.27;
 event EulerSwapActivated(address indexed asset0, address indexed asset1);
 
 /// @notice Emitted after every swap.
+///   * `sender` is the initiator of the swap, or the Router when invoked via hook.
 ///   * `amount0In` and `amount1In` are after fees have been subtracted.
-///   * When executed via Uniswap4 hook, `sender` and `to` are the PoolManager.
 ///   * `reserve0` and `reserve1` are the pool's new reserves (after the swap).
+///   * `to` is the specified recipient of the funds, or the PoolManager when invoked via hook.
 event Swap(
     address indexed sender,
     uint256 amount0In,
