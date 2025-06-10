@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.27;
 
-import {Owned} from "solmate/src/auth/Owned.sol";
+import {Owned} from "solmate/auth/Owned.sol";
 import {UniswapHook} from "../UniswapHook.sol";
 import {IPoolManager} from "v4-core/interfaces/IPoolManager.sol";
 
