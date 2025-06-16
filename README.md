@@ -48,7 +48,7 @@ forge coverage
 forge doc --serve --port 4000
 ```
 
-## Deployments
+## Deployment Addresses
 
 On networks where Uniswap v4 is deployed, EulerSwap is deployed using a factory variant that creates Uniswap v4 hook compatible instances. Elsewhere, the original 'OG' version of EulerSwap factory is deployed.
 

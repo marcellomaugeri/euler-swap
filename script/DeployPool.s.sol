@@ -22,7 +22,9 @@ contract DeployPool is ScriptUtil {
         EulerSwapFactory factory = EulerSwapFactory(vm.parseJsonAddress(json, ".factory"));
 
         address pool = factory.poolByEulerAccount(eulerAccount);
-        require(pool == address(0), "EulerSwap pool is already installed for this account. Run the uninstall script first.");
+        require(
+            pool == address(0), "EulerSwap pool is already installed for this account. Run the uninstall script first."
+        );
 
         IEulerSwap.Params memory poolParams = IEulerSwap.Params({
             vault0: vm.parseJsonAddress(json, ".vault0"),
@@ -43,7 +45,8 @@ contract DeployPool is ScriptUtil {
             currReserve1: uint112(vm.parseJsonUint(json, ".currReserve1"))
         });
 
-        bytes memory creationCode = MetaProxyDeployer.creationCodeMetaProxy(factory.eulerSwapImpl(), abi.encode(poolParams));
+        bytes memory creationCode =
+            MetaProxyDeployer.creationCodeMetaProxy(factory.eulerSwapImpl(), abi.encode(poolParams));
         (address predictedPoolAddress, bytes32 salt) = HookMiner.find(
             address(address(factory)),
             uint160(
