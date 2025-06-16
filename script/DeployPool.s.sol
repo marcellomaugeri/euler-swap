@@ -11,11 +11,14 @@ import {MetaProxyDeployer} from "../src/utils/MetaProxyDeployer.sol";
 /// @title Script to deploy new pool.
 contract DeployPool is ScriptUtil {
     function run() public {
+        // load wallet
+        uint256 eulerAccountKey = vm.envUint("WALLET_PRIVATE_KEY");
+        address eulerAccount = vm.rememberKey(eulerAccountKey);
+
         // load JSON file
         string memory inputScriptFileName = "DeployPool_input.json";
         string memory json = _getJsonFile(inputScriptFileName);
 
-        address eulerAccount = vm.parseJsonAddress(json, ".eulerAccount");
         EulerSwapFactory factory = EulerSwapFactory(vm.parseJsonAddress(json, ".factory"));
         IEulerSwap.Params memory poolParams = IEulerSwap.Params({
             vault0: vm.parseJsonAddress(json, ".vault0"),
@@ -73,6 +76,6 @@ contract DeployPool is ScriptUtil {
         string memory object;
         object = vm.serializeAddress("factory", "deployedPool", pool);
 
-        vm.writeJson(object, string.concat(vm.projectRoot(), "/script/json", outputScriptFileName));
+        vm.writeJson(object, string.concat(vm.projectRoot(), "/script/json/", outputScriptFileName));
     }
 }
