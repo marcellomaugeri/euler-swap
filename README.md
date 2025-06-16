@@ -64,6 +64,9 @@ Uniswap4 Hook Compatible:
 - EulerSwapFactory: `0x45b146BC07c9985589B52df651310e75C6BE066A`
 - EulerSwapPeriphery: `0xdAAF468d84DD8945521Ea40297ce6c5EEfc7003a`
 
+## Getting Started
+
+The `script` folder contains scripts for deploying pools, as well as executing test trades on them. See the dedicated [README](./script/README.md)
 
 ## Safety
 
