@@ -6,19 +6,19 @@ Before running the scripts, please make sure to fill the `.env` file following t
 
 After filling the `.env` file, make sure to run: `source .env` in your terminal.
 
-## Deploy protocol
-
-- Fill the `DeployProtocol_input.json` file with the needed inputs.
-- Run `forge script ./script/DeployProtocol.s.sol --rpc-url network_name --broadcast --slow`
-
 ## Deploy new pool
 
-- Fill the `DeployPool_input.json` file with the needed inputs.
+- Fill the `DeployPool_input.json` file with the needed inputs. The provided example creates the pool on mainnet
 - In pool deployment, the `eulerAccount` address is the deployer address, so we derive the address from the attached private key in the `.env` file.
-- Run `forge script ./script/DeployPool.s.sol --rpc-url network_name --broadcast --slow`
+- Run `forge script ./script/DeployPool.s.sol --rpc-url network_name --broadcast --slow`, replacing `network_name` to match `_RPC_URL` environment variable (e.g. if running through `MAINNET_RPC_URL` replace `network_name` with `mainnet`)
+- The deployed pool address will be recorded in `./scripts/json/DeployPool_output.json` file
 
 ## Exact in swap
 
 - Fill the `SwapExactIn_input.json` file with the needed inputs.
-- Run `forge script ./script/SwapExactIn.s.sol --rpc-url network_name --broadcast --slow`
+- Run `forge script ./script/SwapExactIn.s.sol --rpc-url network_name --broadcast --slow`, replacing `network_name` to match `_RPC_URL` environment variable (e.g. if running through `MAINNET_RPC_URL` replace `network_name` with `mainnet`)
 
+## Deploy protocol
+
+- Fill the `DeployProtocol_input.json` file with the needed inputs.
+- Run `forge script ./script/DeployProtocol.s.sol --rpc-url network_name --broadcast --slow`, replacing `network_name` to match `_RPC_URL` environment variable (e.g. if running through `MAINNET_RPC_URL` replace `network_name` with `mainnet`)

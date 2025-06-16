@@ -11,14 +11,11 @@ import {MetaProxyDeployer} from "../src/utils/MetaProxyDeployer.sol";
 /// @title Script to deploy new pool.
 contract DeployPool is ScriptUtil {
     function run() public {
-        // load wallet
-        uint256 eulerAccountKey = vm.envUint("WALLET_PRIVATE_KEY");
-        address eulerAccount = vm.rememberKey(eulerAccountKey);
-
         // load JSON file
         string memory inputScriptFileName = "DeployPool_input.json";
         string memory json = _getJsonFile(inputScriptFileName);
 
+        address eulerAccount = vm.parseJsonAddress(json, ".eulerAccount");
         EulerSwapFactory factory = EulerSwapFactory(vm.parseJsonAddress(json, ".factory"));
         IEulerSwap.Params memory poolParams = IEulerSwap.Params({
             vault0: vm.parseJsonAddress(json, ".vault0"),
@@ -31,16 +28,15 @@ contract DeployPool is ScriptUtil {
             concentrationX: vm.parseJsonUint(json, ".concentrationX"),
             concentrationY: vm.parseJsonUint(json, ".concentrationY"),
             fee: vm.parseJsonUint(json, ".fee"),
-            protocolFee: vm.parseJsonUint(json, ".protocolFee"),
-            protocolFeeRecipient: vm.parseJsonAddress(json, ".protocolFeeRecipient")
+            protocolFee: factory.protocolFee(),
+            protocolFeeRecipient: factory.protocolFeeRecipient()
         });
         IEulerSwap.InitialState memory initialState = IEulerSwap.InitialState({
             currReserve0: uint112(vm.parseJsonUint(json, ".currReserve0")),
             currReserve1: uint112(vm.parseJsonUint(json, ".currReserve1"))
         });
-        address eulerSwapImpl = vm.parseJsonAddress(json, ".eulerSwapImplementation");
 
-        bytes memory creationCode = MetaProxyDeployer.creationCodeMetaProxy(eulerSwapImpl, abi.encode(poolParams));
+        bytes memory creationCode = MetaProxyDeployer.creationCodeMetaProxy(factory.eulerSwapImpl(), abi.encode(poolParams));
         (address predictedPoolAddress, bytes32 salt) = HookMiner.find(
             address(address(factory)),
             uint160(
@@ -77,6 +73,6 @@ contract DeployPool is ScriptUtil {
         string memory object;
         object = vm.serializeAddress("factory", "deployedPool", pool);
 
-        vm.writeJson(object, string.concat(vm.projectRoot(), "/script/json/out/", outputScriptFileName));
+        vm.writeJson(object, string.concat(vm.projectRoot(), "/script/json", outputScriptFileName));
     }
 }
