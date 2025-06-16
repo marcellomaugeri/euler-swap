@@ -5,8 +5,8 @@ import {ScriptUtil} from "./ScriptUtil.s.sol";
 import {IEulerSwapFactory, IEulerSwap, EulerSwapFactory} from "../src/EulerSwapFactory.sol";
 import {IEVC, IEulerSwap} from "../src/EulerSwap.sol";
 
-/// @title Script to deploy new pool.
-contract DeployPool is ScriptUtil {
+/// @title Script to uninstall a pool from an account.
+contract UninstallPool is ScriptUtil {
     function run() public {
         // load wallet
         uint256 eulerAccountKey = vm.envUint("WALLET_PRIVATE_KEY");
