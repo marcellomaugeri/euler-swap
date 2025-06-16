@@ -17,6 +17,11 @@ After filling the `.env` file, make sure to run: `source .env` in your terminal.
 - Fill the `SwapExactIn_input.json` file with the needed inputs.
 - Run `forge script ./script/SwapExactIn.s.sol --rpc-url network_name --broadcast --slow`, replacing `network_name` to match `_RPC_URL` environment variable (e.g. if running through `MAINNET_RPC_URL` replace `network_name` with `mainnet`)
 
+## Uninstall pool
+
+- Fill the `UninstallPool_input.json` file with the factory address.
+- Run `forge script ./script/UninstallPool.s.sol --rpc-url network_name --broadcast --slow`, replacing `network_name` to match `_RPC_URL` environment variable (e.g. if running through `MAINNET_RPC_URL` replace `network_name` with `mainnet`)
+
 ## Deploy protocol
 
 - Fill the `DeployProtocol_input.json` file with the needed inputs.

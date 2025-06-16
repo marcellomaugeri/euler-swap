@@ -20,6 +20,10 @@ contract DeployPool is ScriptUtil {
         string memory json = _getJsonFile(inputScriptFileName);
 
         EulerSwapFactory factory = EulerSwapFactory(vm.parseJsonAddress(json, ".factory"));
+
+        address pool = factory.poolByEulerAccount(eulerAccount);
+        require(pool == address(0), "EulerSwap pool is already installed for this account. Run the uninstall script first.");
+
         IEulerSwap.Params memory poolParams = IEulerSwap.Params({
             vault0: vm.parseJsonAddress(json, ".vault0"),
             vault1: vm.parseJsonAddress(json, ".vault1"),
@@ -69,7 +73,7 @@ contract DeployPool is ScriptUtil {
         evc.batch(items);
         vm.stopBroadcast();
 
-        address pool = factory.poolByEulerAccount(eulerAccount);
+        pool = factory.poolByEulerAccount(eulerAccount);
 
         string memory outputScriptFileName = "DeployPool_output.json";
 
