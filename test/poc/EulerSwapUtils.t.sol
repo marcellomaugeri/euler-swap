@@ -221,16 +221,12 @@ contract EulerSwapTestBase is EVaultTestBase {
         uint256 newCx,
         uint256 newCy
     ) public returns (IEulerSwap newOperator) {
-        vm.prank(holder);
-        evc.setAccountOperator(holder, address(periphery), true);
-
         // 1. Get old params and reserves
         IEulerSwap.Params memory oldParams = oldOperator.getParams();
         (uint112 r0, uint112 r1,) = oldOperator.getReserves();
 
-        // 2. Uninstall old operator -> no needed, since there is already in the code when I deploy
-        //vm.prank(holder);
-        //evc.setAccountOperator(holder, address(oldOperator), false);
+        // 2. Revoke old operator authorization
+        removeInstalledOperator();
 
         // 3. Configure new params
         IEulerSwap.Params memory newParams = oldParams;
@@ -256,11 +252,11 @@ contract EulerSwapTestBase is EVaultTestBase {
         );
 
         // 6. Set new operator
-        vm.prank(holder);
-        evc.setAccountOperator(holder, address(eulerSwap), true);
+        //vm.prank(holder);
+        //evc.setAccountOperator(holder, address(eulerSwap), true);
 
         // 7. Update installedOperator for test tracking
-        installedOperator = address(eulerSwap);
+        //installedOperator = address(eulerSwap);
 
         return eulerSwap;
     }

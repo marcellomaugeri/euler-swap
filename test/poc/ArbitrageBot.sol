@@ -32,6 +32,11 @@ contract ArbitrageBot is Test {
         holder = _holder;
     }
 
+    /// @notice Update the EulerSwap pool address after reinstallation
+    function updatePool(IEulerSwap _eulerSwap) external {
+        eulerSwap = _eulerSwap;
+    }
+
     function run(uint256 marketPrice0, uint256 marketPrice1) external {
         //console.log("--- Running Dynamic Predatory Arbitrage Bot ---");
         vm.startPrank(botAddress);

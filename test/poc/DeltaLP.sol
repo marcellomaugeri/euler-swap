@@ -50,8 +50,8 @@ contract DeltaLP is Test {
 
         // --- Scenario 1: Health Factor Rebalancing ---
         if (currentHealthFactor < targetHealthFactor - healthFactorDelta || currentHealthFactor > targetHealthFactor + healthFactorDelta) {
-            //addmodconsole.log("Health factor out of bounds. Rebalancing concentration...");
-            
+            console.log("Health factor out of bounds. Rebalancing concentration...");
+
             uint256 newCx = currentParams.concentrationX;
             uint256 newCy = currentParams.concentrationY;
 
@@ -62,10 +62,10 @@ contract DeltaLP is Test {
             // we make it more profitable for arbitrageurs to sell the debt-asset back to the pool,
             // thus reducing the holder's liability and improving their health factor.
             if (liability0 > liability1) {
-                //console.log("Liability in vault0 is higher. Increasing concentrationY to attract asset0.");
+                console.log("Liability in vault0 is higher. Increasing concentrationY to attract asset0.");
                 newCy = (newCy * 101) / 100; // Increase concentration by 1%
             } else if (liability1 > liability0) {
-                //console.log("Liability in vault1 is higher. Increasing concentrationX to attract asset1.");
+                console.log("Liability in vault1 is higher. Increasing concentrationX to attract asset1.");
                 newCx = (newCx * 101) / 100; // Increase concentration by 1%
             }
             // If liabilities are equal or zero, no change is made, but we still proceed to reinstall

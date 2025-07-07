@@ -183,6 +183,9 @@ contract EulibraTest is EulerSwapTestBase {
                 // Call the DeltaLP bot with the current round prices
                 deltaLP.rebalance(scaledPrice0, round.price1);
 
+                // Update the arbBot with the current EulerSwap pool
+                arbBot.updatePool(eulerSwap);
+
                 // Call to the arbitrage bot with the current round prices
                 arbBot.run(scaledPrice0, round.price1);
 
