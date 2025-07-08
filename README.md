@@ -9,7 +9,7 @@ The current project demonstrates two different point of views:
 1.  **Arbitrage Bot:** A bot that systematically exploits price divergences (slippage) in an EulerSwap to earn profits and, indirectly create pressure on a leveraged Liquidity Provider (LP).
 2.  **Delta-LP System:** A framework for an automated rebalancing system that allows LPs to provide liquidity for uncorrelated pairs while mitigating impermanent loss.
 
-This repository contains the proof-of-concept and testing environment for the arbitrage bot, showcasing how EulerSwap's mechanics can be used for advanced, targeted financial strategies.
+This repository contains the proof-of-concept and backtesting environment for the arbitrage bot, showcasing how EulerSwap's mechanics can be used for advanced, targeted financial strategies.
 
 **Important:** the current implementation is a **proof-of-concept** written in Solidity. This is intended to backtest the strategies and the environment (which can be tuned with the config.json file).
 Real bots can be implemented in any language and easily interact with the EulerSwap contracts via the provided interfaces and is left as future work.

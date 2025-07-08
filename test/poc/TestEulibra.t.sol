@@ -144,8 +144,8 @@ contract EulibraTest is EulerSwapTestBase {
             ArbitrageBot arbBot = new ArbitrageBot(bot, periphery, tokens, vaults, eulerSwap, holder);
 
             uint256 targetHealthFactor = 1.5e18; // Set the target health factor for the bot
-            uint256 healthFactorDelta = 0.1e18; // Allow a delta of 0
-            uint256 priceRatioDelta = 0.1e18; // Allow a delta of 10% in the price ratio
+            uint256 healthFactorDelta = 0.1e18; // Allow a delta of 10% in the health factor
+            uint256 priceRatioDelta = 10; // Allow a delta of 30% in the price ratio
 
             // 4. Define the DeltaLP
             DeltaLP deltaLP = new DeltaLP(
@@ -181,10 +181,10 @@ contract EulibraTest is EulerSwapTestBase {
                 vm.warp(round.timestamp / 1000);
 
                 // Call the DeltaLP bot with the current round prices
-                deltaLP.rebalance(scaledPrice0, round.price1);
+                deltaLP.rebalance(scaledPrice0, round.price1); // COMMENT THIS LINE TO DISABLE DELTA-LP 
 
                 // Update the arbBot with the current EulerSwap pool
-                arbBot.updatePool(eulerSwap);
+                arbBot.updatePool(eulerSwap); // COMMENT THIS LINE TO DISABLE ARBITRAGE BOT
 
                 // Call to the arbitrage bot with the current round prices
                 arbBot.run(scaledPrice0, round.price1);
@@ -197,111 +197,5 @@ contract EulibraTest is EulerSwapTestBase {
             console.log("Final Cumulative Bot Holdings:", calculateCumulativeBotHoldings());
             logState(address(eulerSwap));
         }
-
-        // Swap 1e18
-        //{
-            //uint256 amountIn = 1e18;
-            //uint256 amountOut = periphery.quoteExactInput(address(eulerSwap), address(tokens[0]), address(tokens[1]), amountIn);
-
-            /*
-            vm.startPrank(depositor);
-            tokens[0].mint(address(depositor), 2e18);
-            tokens[0].approve(address(periphery), amountIn);
-
-            periphery.swapExactIn(
-                address(eulerSwap),
-                address(tokens[0]),
-                address(tokens[1]),
-                amountIn,
-                address(depositor),
-                0,
-                0
-            );
-            logState(address(eulerSwap));
-            vm.stopPrank();
-            */
-        //}
-
-        // Swap the other token now
-        /*{ 
-            uint256 amountIn = 1e18;
-
-            vm.startPrank(depositor);
-            tokens[1].mint(address(depositor), 2e24);
-            tokens[1].approve(address(periphery), amountIn);
-
-            periphery.swapExactIn(
-                address(eulerSwap),
-                address(tokens[1]),
-                address(tokens[0]),
-                amountIn,
-                address(depositor),
-                0,
-                0
-            );
-            logState(address(eulerSwap));
-            vm.stopPrank();
-        }*/
-
-        // Nothing available
-        /*{
-            uint256 amountOut =
-                periphery.quoteExactInput(address(eulerSwap), address(assetTST2), address(assetTST), 1e18);
-            assertEq(amountOut, 0);
-        }*/
-
-        // Swap in available direction
-        /*{
-            uint256 amountIn = 1e18;
-            uint256 amountOut =
-                periphery.quoteExactInput(address(eulerSwap), address(assetTST), address(assetTST2), amountIn);
-            assertApproxEqAbs(amountOut, 0.9974e18, 0.0001e18);
-
-            assetTST.mint(address(this), amountIn);
-
-            assetTST.transfer(address(eulerSwap), amountIn);
-            eulerSwap.swap(0, amountOut, address(this), "");
-
-            assertEq(assetTST2.balanceOf(address(this)), amountOut);
-        }*/
-
-        // Quote back exact amount in
-        /*{
-            uint256 amountIn = assetTST2.balanceOf(address(this));
-            uint256 amountOut =
-                periphery.quoteExactInput(address(eulerSwap), address(assetTST2), address(assetTST), amountIn);
-            assertEq(amountOut, 1e18);
-        }*/
-
-        // Swap back with some extra, no more available
-        /*{
-            uint256 amountIn = assetTST2.balanceOf(address(this)) + 1e18;
-            uint256 amountOut =
-                periphery.quoteExactInput(address(eulerSwap), address(assetTST2), address(assetTST), amountIn);
-            assertEq(amountOut, 1e18);
-        }*/
-
-        // Quote exact out amount in, and do swap
-        /*{
-            uint256 amountIn;
-
-            vm.expectRevert(QuoteLib.SwapLimitExceeded.selector);
-            amountIn = periphery.quoteExactOutput(address(eulerSwap), address(assetTST2), address(assetTST), 1e18);
-
-            uint256 amountOut = 1e18 - 1;
-            amountIn = periphery.quoteExactOutput(address(eulerSwap), address(assetTST2), address(assetTST), amountOut);
-
-            assertEq(amountIn, assetTST2.balanceOf(address(this)));
-
-            assetTST2.transfer(address(eulerSwap), amountIn);
-            eulerSwap.swap(amountOut, 0, address(this), "");
-        }*/
-
-        // Nothing available again (except dust left-over from previous swap)
-        /*{
-            uint256 amountOut =
-                periphery.quoteExactInput(address(eulerSwap), address(assetTST2), address(assetTST), 1e18);
-            assertEq(amountOut, 1);
-        }*/
     }
 }

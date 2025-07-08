@@ -43,14 +43,14 @@ contract DeltaLP is Test {
 
     /// @notice Main function to check conditions and trigger rebalancing if needed.
     function rebalance(uint256 currentMarketPrice0, uint256 currentMarketPrice1) external {
-        console.log("--- Running Delta LP Rebalancer ---");
+        //console.log("--- Running Delta LP Rebalancer ---");
 
         uint256 currentHealthFactor = _getHealthFactor();
         IEulerSwap.Params memory currentParams = eulerSwap.getParams();
 
         // --- Scenario 1: Health Factor Rebalancing ---
-        if (currentHealthFactor < targetHealthFactor - healthFactorDelta || currentHealthFactor > targetHealthFactor + healthFactorDelta) {
-            console.log("Health factor out of bounds. Rebalancing concentration...");
+        if (currentHealthFactor < targetHealthFactor - healthFactorDelta) { //|| currentHealthFactor > targetHealthFactor + healthFactorDelta) {
+            //console.log("Health factor out of bounds. Rebalancing concentration...");
 
             uint256 newCx = currentParams.concentrationX;
             uint256 newCy = currentParams.concentrationY;
@@ -62,11 +62,13 @@ contract DeltaLP is Test {
             // we make it more profitable for arbitrageurs to sell the debt-asset back to the pool,
             // thus reducing the holder's liability and improving their health factor.
             if (liability0 > liability1) {
-                console.log("Liability in vault0 is higher. Increasing concentrationY to attract asset0.");
-                newCy = (newCy * 101) / 100; // Increase concentration by 1%
+                //console.log("Liability in vault0 is higher. Increasing concentrationY to attract asset0.");
+                newCy = (newCy * 150) / 100; // Increase concentration by 50%
+                newCx = (newCx * 50) / 100; // Reduce the concentration by 50%
             } else if (liability1 > liability0) {
-                console.log("Liability in vault1 is higher. Increasing concentrationX to attract asset1.");
-                newCx = (newCx * 101) / 100; // Increase concentration by 1%
+                //console.log("Liability in vault1 is higher. Increasing concentrationX to attract asset1.");
+                newCx = (newCx * 150) / 100; // Increase concentration by 50%
+                newCy = (newCy * 50) / 100; // Reduce the concentration by 50%
             }
             // If liabilities are equal or zero, no change is made, but we still proceed to reinstall
             // with potentially updated market prices if the price ratio is also out of bounds.
@@ -78,9 +80,12 @@ contract DeltaLP is Test {
         // --- Scenario 2: Price Ratio Rebalancing ---
         uint256 initialPriceRatio = (currentParams.priceY * 1e18) / currentParams.priceX;
         uint256 currentPriceRatio = (currentMarketPrice1 * 1e18) / currentMarketPrice0;
+        uint256 deltaInPercentage    = initialPriceRatio * priceRatioDelta / 100;
 
-        if (currentPriceRatio < initialPriceRatio - priceRatioDelta || currentPriceRatio > initialPriceRatio + priceRatioDelta) {
-            console.log("Price ratio out of bounds. Rebalancing prices...");
+        if (currentPriceRatio < initialPriceRatio - deltaInPercentage || currentPriceRatio > initialPriceRatio + deltaInPercentage) {
+            //console.log("Initial Price Ratio:", initialPriceRatio);
+            //console.log("Current Price Ratio:", currentPriceRatio);
+            //console.log("Price ratio out of bounds. Rebalancing prices...");
 
             // Keep concentration the same, just update prices
             eulerSwap = utils.reinstallOperator(
@@ -94,7 +99,7 @@ contract DeltaLP is Test {
             return;
         }
 
-        console.log("No rebalancing needed.");
+        //console.log("No rebalancing needed.");
         vm.stopPrank();
     }
 

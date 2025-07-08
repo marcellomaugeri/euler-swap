@@ -329,8 +329,8 @@ contract EulerSwapTestBase is EVaultTestBase {
         uint256 factoryProtocolFee = eulerSwapFactory.protocolFee();
         address factoryProtocolFeeRecipient = eulerSwapFactory.protocolFeeRecipient();
 
-        console.log("factoryProtocolFee:", factoryProtocolFee);
-        console.log("factoryProtocolFeeRecipient:", factoryProtocolFeeRecipient);
+        //console.log("factoryProtocolFee:", factoryProtocolFee);
+        //console.log("factoryProtocolFeeRecipient:", factoryProtocolFeeRecipient);
 
         // Construct the struct directly in this function to avoid a deep stack call.
         IEulerSwap.Params memory params = IEulerSwap.Params({
