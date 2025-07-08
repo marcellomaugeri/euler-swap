@@ -11,6 +11,14 @@ The current project demonstrates two different point of views:
 
 This repository contains the proof-of-concept and backtesting environment for the arbitrage bot, showcasing how EulerSwap's mechanics can be used for advanced, targeted financial strategies.
 
+The plots below illustrate the difference in health factor of the LP under the effects of a simple arbitrage bot without rebalancing the LP's position (left) and using the proposed Delta-LP rebalancing bot (right).
+
+| Arbitrage Bot (w/o rebalancing)                               | Arbitrage Bot (With Delta-LP rebalancing)                               |
+| -------------------------------------- | ------------------------------------ |
+| ![Alt text A](test/poc/plots_no_delta/plot_1_health_and_profit.jpeg) | ![Alt text B](test/poc/plots_with_delta/plot_1_health_and_profit.jpeg) |
+
+
+
 **Important:** the current implementation is a **proof-of-concept** written in Solidity. This is intended to backtest the strategies and the environment (which can be tuned with the config.json file).
 Real bots can be implemented in any language and easily interact with the EulerSwap contracts via the provided interfaces and is left as future work.
 
