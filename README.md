@@ -56,6 +56,8 @@ Since the entire AMM logic is encapsulated within a swappable `operator` contrac
 
 This atomic, low-cost operation allows an LP to adjust their exposure in response to market movements. A planned feature of Eulibra is to build a system that automates this process on-chain, creating a truly delta-neutral LP strategy for volatile, uncorrelated pairs.
 
+---
+
 ## Arbitrage Bot Logic
 
 The predatory arbitrage bot operates on a simple yet effective loop. It's configured with several key parameters that dictate its behavior.
@@ -124,16 +126,116 @@ FUNCTION runArbitrageRound:
 
 ```
 
+## Delta-LP System
+
+Eulibra provides "Delta-LP" rebalancer for market makers.  
+Every round it:
+
+1.  Checks the LP's health factor (collateral ÷ liability).  
+2.  If health is out of a target band, it boosts the AMM's concentration parameters to attract the more-profitable side of the pool, shifting swaps in your favor.  
+3.  If the price ratio drifts from your original curve parameters, it uninstalls the old operator and installs a fresh one with updated prices.
+
+This low-gas "operator swap" lets LPs hedge impermanent loss by rewriting the entire AMM logic atomically.
+Note that the effectiveness is not immediate, as it depends on the reaction of the market to the new curve parameters.
+However, this could be combined with other solutions which perform hedging also by leveraging a perpetual market, for example like [NoetherBot by Telos Consilium](https://github.com/Telos-Consilium/noether-bot).
+
+---
+
+## Running the Full Simulation
+
+You can backtest both bots and log every round’s CSV metrics:
+
+```bash
+forge test --match-path test/poc/TestEulibra.t.sol -vv
+```
+
+Note that it takes a while to run. Also, you can disable the calls to the arbitrage bot or the delta LP by commenting the respective calls in the `TestEulibra` contract.
+
+You will see a CSV dump like:
+```
+round,timestamp,healthFactor,collateralValue,liabilityValue,reserve0,reserve1,marketPrice0,marketPrice1,botHoldings
+0,1743465600000,2000000000000000000,218524000000000000000000,109262000000000000000000,10000000000000,10000000000000000000,999989000000000000000000,2185259801013775237120,100000000000000000000
+1,1743552000000,1800000000000000000,196000000000000000000000,108889000000000000000000,10010000000000,9990000000000000000000,999950000000000000000000,2285434269922083733504,200000000000000000000
+…  
+```
+
+You can copy and paste this into the `test/poc/log.csv` file to analyse the results with this Python script:
+
+```bash
+python3 plot_metrics.py
+```
+
+It will generate three JPEGs under `test/poc/plots/`:
+
+#### LP Health vs. Bot Profit
+Blue: LP health factor over time
+Green: cumulative bot holdings in USDC
+You should see health steadily decay as the bot profits.
+
+#### Pool Reserves vs. Market Price
+Orange & purple: on-chain reserve levels
+Teal dashed: external market price (wstETH ↔ USDC)
+Watch how arbitrage and reinstallation keep the pool near equilibrium.
+
+#### Impermanent Loss Over Time
+Red: difference between a HODL portfolio and actual LP P&L
+Ideally your Delta-LP rebalancer flattens this line.
+
+
+### Run the simulations with other data
+The code is undergoing a refactor to allow for more flexible simulations.
+In general, you can run the simulations with different data by changing the `config.json` file.
+But there could be hardcoded values in the code that need to be changed as well, this will be fixed soon, as the code is being refactored to be more modular and flexible.
+
+The backtesting environment is designed in rounds, where each round contains the prices for the assets.
+These can be created from real-world data extracted from CoinGecko and there is a script to fill the rounds from two JSON files from CoinGecko.
+
+You can call `python3 fill_rounds.py` to populate the rounds. Note that there are two hardcoded json files that you can change to use different data. This will be refactored in the future to allow for more flexible data input.
+
 ## Code Structure
 
-*(Placeholder)*
+This folder contains the proof-of-concept simulation for both the Predatory Arbitrage Bot and the Delta-LP rebalancer.
 
-This section will detail the structure of the contracts and testing environment.
-
--   `/src`: Core contracts for the EulerSwap pool and operator logic.
--   `/test`: Foundry test suites, including the proof-of-concept for the arbitrage bot.
--   `/scripts`: Deployment and interaction scripts.
--   `/docs`: Project documentation and the EulerSwap whitepaper
+```plaintext
+test/poc/
+├── [ArbitrageBot.sol]
+│   Monitors pool vs. market prices, executes “pressure” trades to worsen the LP’s position.
+│
+├── DeltaLP.sol
+│   Checks LP health factor each round and, if needed, updates the AMM operator (price/concentration) to hedge impermanent loss.
+│
+├── EulerSwapUtils.t.sol
+│   Shared test utilities and helpers.  
+│   - JSON config parsing (assets / rounds)  
+│   - Vault & pool deployment (createEulerSwap*)  
+│   - Price updates, logging, health-factor helper
+│
+├── TestEulibra.t.sol
+│   Main Foundry integration test.  
+│   - Initialises both bots  
+│   - Iterates over rounds from config.json  
+│   - Logs CSV metrics (health, reserves, bot holdings)  
+│
+├── config.json
+│   Simulation parameters:  
+│     • "assets"  → name, symbol, decimals, initialPrice
+│     • "eulerSwap" → initial pool reserves & curve params  
+│     • "rounds" → timestamp + raw prices for each test step
+│
+├── wsteth-to-usd-*.json
+│   Historical WSTETH/USD price feed (Coingecko format).
+│
+├── usdc-to-usd-*.json
+│   Historical USDC/USD price feed (Coingecko format).
+│
+├── log_no_delta.csv
+│   Example CSV output from TestEulibra.t.sol with Delta-LP disabled.
+│
+├── plots_no_delta/
+│   Pre-generated JPEGs from `log_no_delta.csv`:  
+│
+└── plots_with_delta/
+    Placeholder for plots when Delta-LP is enabled.
   
 
 ### IMPORTANT
