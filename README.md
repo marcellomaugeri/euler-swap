@@ -2,6 +2,8 @@
 
 ![Eulibra Logo](logo.jpg)
 **Submission for the EulerSwap Builder Competition.**
+- [📺 Watch the demo](https://youtu.be/mdDzmPUI-4c)
+- [📑 View the slide deck](https://www.canva.com/design/DAGsZTwZGLE/tyEk9s5RSLYSdx2rnqj11w/edit?utm_content=DAGsZTwZGLE&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
 
 Eulibra aims in designing strategies and bots that leverage the unique capabilities of **EulerSwap** to maintain the desired **equilibrium** in the case of uncorrelated (or weekly correlated) pairs such as **WSTETH/USDC**.
 The current project demonstrates two different point of views:
